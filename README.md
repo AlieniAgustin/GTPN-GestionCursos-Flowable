@@ -1,34 +1,110 @@
-# Gestión de Cursos de Capacitación - GTPN
+# Gestión de Cursos de Capacitación — GTPN
 
-Este repositorio contiene el desarrollo del proyecto final para la asignatura **Gestión y Tecnologías de Procesos de Negocio**.
+[![Java 17](https://img.shields.io/badge/Java-17-ED8B00?style=flat-square&logo=openjdk&logoColor=white)](https://openjdk.org/)
+[![Flowable](https://img.shields.io/badge/Flowable-7.0.0-009688?style=flat-square)](https://www.flowable.com/)
+[![Maven](https://img.shields.io/badge/Apache%20Maven-3.9+-C71A36?style=flat-square&logo=apache-maven&logoColor=white)](https://maven.apache.org/)
+[![H2 Database](https://img.shields.io/badge/H2-In--Memory-003B57?style=flat-square)](https://www.h2database.com/)
 
-## 📋 Resumen del Proyecto
+Repositorio del proyecto final para la asignatura **Gestión y Tecnologías de Procesos de Negocio (GTPN)**. Contiene el modelado BPMN 2.0 optimizado para ejecución, la documentación de diseño y el proyecto Java con el motor **Flowable Engine** configurado en modo Standalone sobre base de datos H2.
 
-El objetivo principal es implementar y automatizar el proceso de negocio de una institución dedicada a organizar cursos de capacitación para empresas. Tomando como base un modelo **BPMN 2.0** y utilizando el motor de procesos **Flowable**, el sistema orquesta las siguientes etapas:
+---
 
-1. **Viabilidad y Acuerdo:** Evaluación automática de solicitudes según reglas de negocio (límite de cursos activos), registro de propuestas, envío a la empresa, iteración de modificaciones y control de tiempos (recordatorios y archivo por falta de respuesta).
-2. **Preparación del Curso:** Subproceso paralelo donde se confecciona la lista de inscriptos, se preparan materiales didácticos y se gestionan los recursos necesarios (aulas físicas, virtuales o equipamiento especial).
-3. **Desarrollo y Finalización:** Asignación de docentes a través de aplicaciones externas, registro del dictado, elaboración de informes de resultados y posterior liberación compensatoria de recursos.
-4. **Manejo de Excepciones:** Flujos de cancelación durante la preparación y manejo de errores, con sus respectivas tareas de compensación.
+## Contenido del Repositorio
 
-El ecosistema se completará integrando el motor de Flowable con un sitio web, aplicaciones de escritorio y una app móvil mediante APIs REST y Java.
+- **Modelos BPMN 2.0:**
+  - `cursosNuestraVersion.bpmn`: Modelo refinado adaptado para el motor de procesos, aplicando las 7 Guías de Modelado (7PMG) y resolviendo aspectos técnicos como listeners de ejecución y eventos de mensaje.
+  - `cursosOriginal.bpmn`: Diagrama conceptual base provisto por la cátedra.
+- **Documentación Técnica:**
+  - `informeDeJustificacionDeCambiosyDecisionesDeModeladoBPMN.md`: Justificación detallada de cada cambio estructural respecto al modelo original.
+  - `ProyectoCursos.pdf`: Enunciado oficial de la cátedra con los requerimientos funcionales y escenarios de evaluación.
+- **Módulo Flowable (`flowable/`):**
+  - Proyecto Maven con Flowable 7.0.0, base de datos H2 en memoria y configuración de perfiles para desarrollo y empaquetado.
 
-## 📂 Archivos del Repositorio
+> [!NOTE]
+> Para conocer el detalle de las decisiones de diseño (como la incorporación de compuertas XOR convergentes y el reemplazo de tareas de recepción por eventos intermedios), consulta el [Informe de Justificación de Cambios y Decisiones BPMN](informeDeJustificacionDeCambiosyDecisionesDeModeladoBPMN.md).
 
-Actualmente, el repositorio cuenta con los siguientes artefactos y documentos:
+---
 
-- `ProyectoCursos.pdf`: Documento oficial de la cátedra con el enunciado detallado, responsabilidades, reglas de negocio y requisitos técnicos de implementación.
-- `cursosOriginal.bpmn`: Modelo BPMN conceptual base provisto por la cátedra como referencia inicial.
-- `cursosNuestraVersion.bpmn`: Modelo BPMN refinado y adaptado por el equipo, aplicando las guías de modelado 7PMG, buenas prácticas de BPMN 2.0 y ajustes orientados a su futura ejecución en Flowable.
-- `justificacion_cambios_bpmn.md`: Informe técnico donde se detallan y justifican las decisiones de diseño y las modificaciones realizadas sobre el modelo original, junto con las consultas planteadas a la cátedra.
+## Requisitos Previos
 
-## 👥 Equipo de Trabajo
+- **Java Development Kit (JDK) 17** o superior
+- **Apache Maven 3.8+**
+- **Git**
 
-- **Materia:** Gestión y Tecnologías de Procesos de Negocio
+---
+
+## Inicio Rápido
+
+1. **Clonar el repositorio:**
+   ```bash
+   git clone https://github.com/AlieniAgustin/GTPN-GestionCursos-Flowable.git
+   cd GTPN-GestionCursos-Flowable/flowable
+   ```
+
+2. **Compilar el proyecto:**
+   ```bash
+   mvn clean compile
+   ```
+
+3. **Ejecutar las pruebas unitarias:**
+   ```bash
+   mvn test
+   ```
+
+---
+
+## Perfiles de Desarrollo y Ejecución (Maven Profiles)
+
+El módulo [`flowable/pom.xml`](flowable/pom.xml) cuenta con dos perfiles para separar el flujo de trabajo en desarrollo del empaquetado final:
+
+### 1. Perfil de Desarrollo (`dev`)
+
+Permite ejecutar el punto de entrada principal [`com.flowable.app.App`](flowable/src/main/java/com/flowable/app/App.java) de forma directa mediante `exec-maven-plugin`, agilizando las pruebas locales sin generar archivos empaquetados:
+
+```bash
+mvn compile exec:java -Pdev
+```
+
+### 2. Perfil de Producción / Empaquetado (`prod`)
+
+Utiliza `maven-shade-plugin` para compilar y empaquetar un *uber-jar* (fat JAR) autocontenido con todas las dependencias y el manifiesto configurado:
+
+```bash
+mvn clean package -Pprod
+```
+
+El archivo ejecutable se genera en `target/` y se ejecuta con:
+
+```bash
+java -jar target/flowable-1.0-SNAPSHOT.jar
+```
+ El JAR generado con `-Pprod` incluye Flowable Engine y la base de datos H2 embebida, permitiendo su ejecución sin necesidad de contar con Maven en el entorno destino.
+
+---
+
+## Estructura de Archivos
+
+```text
+├── cursosNuestraVersion.bpmn        # Modelo BPMN 2.0 refinado y preparado para Flowable
+├── cursosOriginal.bpmn              # Modelo BPMN conceptual base de la cátedra
+├── informeDeJustificacionDeCambiosyDecisionesDeModeladoBPMN.md # Justificación técnica y 7PMG
+├── ProyectoCursos.pdf               # Enunciado y requerimientos de la materia
+└── flowable/                        # Proyecto del motor de procesos
+    ├── pom.xml                      # Dependencias y perfiles Maven (dev / prod)
+    └── src/
+        ├── main/java/com/flowable/app/App.java   # Bootstrap del ProcessEngine Standalone (H2)
+        └── test/java/com/flowable/app/AppTest.java  # Pruebas unitarias
+```
+
+---
+
+## Equipo de Trabajo
+
+- **Materia:** Gestión y Tecnologías de Procesos de Negocio (GTPN)
 - **Profesor:** Dr. Ariel Gonzalez
 - **Integrantes:**
   - Agustin Alieni
   - Agustin Cesari
   - Damian Dalio
   - Hernan Jara
-  - Fran Natale
+  - Francisco Natale
