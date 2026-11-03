@@ -2,15 +2,10 @@ base de datos de la institucion
 
 tomar decision al momento de relizar los cursos, como se maneja el almacenamiento de los datos
 
-opciones: 
-1. guardamos los datos que nos manda el cliente y se los entregamos a flowabley actualizamos el id cuando nos responde
-(asignamos id interno, se lo mandamos a flowable, y flowable nos dice, para este curso con id 1, se le asigno el id de instancia tanto)
-
-2. le pegamos a flowable, y el motor se encarga de darnos ya los datos
-y el backend se encarga de recibir los mismo
-(flowable habla con nuestro backend, y recibe todo el objeto completo)
-
-3. ?
+opcion elegida (backend como proxy / BFF):
+1. guardamos los datos que nos manda el cliente y se los entregamos a flowable y actualizamos el id cuando nos responde
+(asignamos id interno en nuestra DB, se lo mandamos a flowable como businessKey, y flowable nos responde con el id de instancia asignado, que guardamos en la DB del backend)
+-> El backend hace de proxy/intermediario: valida, guarda los datos pesados del curso en su DB (y genera PDFs si hace falta), y luego le habla a Flowable por API REST.
 
 
 Objetivo:
@@ -45,25 +40,21 @@ tarea: definir el docente que desarrollara el curso, y elaborar informe de resul
 
 
 ### usuarios y grupos:
-hay qeu definir que es lo mas viable, tenemos varias forams de plantearlo
-1. hablar con flowable y que nos devuelva que podemos hacer, el problema es
-en caso de tener que generar el pdf, si o si necesitamos pasar por el backend
-1. 
-por lo tanto en este caso el flujo se encargaria de preguntar por el jwt que manda el usuario, de ahi el backend tiene autenticacion de quien es, y hace la peticion directamente con las credenciales tecnicas del backend, es decir
+Definido: Usamos el backend como proxy entre el frontend y Flowable.
 
-user desde frontend -> backend -> pregunta de quien es jwt a flowable -> devuelve rol y datos -> si no tiene permisos o lo que sea para hacer eso se rechaza o bien, se acepta
-2. 
-y la otra es que flowable dispare que tenemos que generar el documento de pdf
-es decir user desde el frontend -> resuelve tarea -> flowable registra -> nos avisan que tenemos datos para guardar en el backend y nos mandan a generar el pdf (podria ser valido de todos modos, podria ser una tarea que se tenga que procesar y cuando se termina se le muestra al usuario)
+1. Autenticacion:
+- Personal de la institucion: ingresan con su usuario y pass de Flowable. El backend valida contra Flowable y le genera el JWT/sesion al usuario.
+- Empresas: tienen cuenta propia en la DB del backend (no en Flowable).
+- Flujo:
+user desde frontend -> backend -> valida credenciales / JWT -> backend hace la peticion a Flowable con credenciales tecnicas -> devuelve datos enriquecidos al frontend.
 
-
-
+2. Formularios y PDFs (propuesta, revision, informe):
+Flowable NO genera PDFs. Por lo tanto el flujo es:
+user desde frontend -> manda formulario al backend -> backend valida y genera el PDF (lo guarda en disco/DB) -> backend completa la tarea en Flowable mandandole las variables correspondientes y URL del PDF.
 
 por ejemplo:
-
-se registra una soliciutd en el backend, y el backend es el encargado de hablar con flowable
-
-para pedir los formularios/tareas directamente se piden desde flowable
+se registra una solicitud en el backend, y el backend es el encargado de hablar con flowable e iniciar la instancia.
+para pedir los formularios/tareas, el frontend se los pide al backend y el backend se los pide a Flowable.
 
 
 ### listeners
@@ -72,13 +63,10 @@ para pedir los formularios/tareas directamente se piden desde flowable
 hacer una consulta contando tareas pendientes del grupo de administracion
 y quedandonos con el usuario con menos
 
-## execution listener (completed)
- cuando termina el proceso, el execution larga un evento, pegandole
- al backend, indicando que curso termino, asi el backend actualiza
- sus propios datos
+## execution listener (completed y eventos de Flowable):
+cuando termina el proceso (o cambia de estado clave en Flowable), el listener que corre en Flowable le pega por HTTP al backend (ej: POST /api/cursos/{id}/estado con el resultado: finalizado, cancelado, rechazado, etc.).
+Asi el backend actualiza el estado en su propia DB sin tener que estar haciendo polling a Flowable.
 
- podria ponerse una variable en el estado, guardando el resultado
- para que al finalizar simplemente el fin, largue el evento
 
 4. aplicaciones externas
 
@@ -104,10 +92,9 @@ flowable -> backend -> empresa
 
 4.1.3 funciones para administracion:
 
-1. consultas a flowable
-2. claims y resoluciones al motor
-3. podria considerarse como execution listener completes la generacion de los pdfs
-4. lo mismo para propuesta (avisar al backend genera este pdf)
+1. consultas a flowable (a traves del backend)
+2. claims y resoluciones al motor (a traves del backend)
+3. generacion de PDFs en el backend al completar la tarea (propuesta, revision e informe)
 
 5, 6, ... . mas cosas de flowable
 
