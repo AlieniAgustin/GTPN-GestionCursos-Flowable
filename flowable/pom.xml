@@ -48,6 +48,12 @@
             <version>${flowable.version}</version>
         </dependency>
 
+        <!-- Spring Security (Autenticación, autorización y manejo de sesiones) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
         <!-- Base de datos en memoria H2 -->
         <dependency>
             <groupId>com.h2database</groupId>
@@ -66,6 +72,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
