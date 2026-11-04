@@ -48,6 +48,13 @@
             <version>${flowable.version}</version>
         </dependency>
 
+        <!-- Flowable Spring Boot REST Starter (API REST oficial de Flowable: /process-api/**) -->
+        <dependency>
+            <groupId>org.flowable</groupId>
+            <artifactId>flowable-spring-boot-starter-rest</artifactId>
+            <version>${flowable.version}</version>
+        </dependency>
+
         <!-- Spring Security (Autenticación, autorización y manejo de sesiones) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -8,15 +8,24 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    private final FlowableAuthenticationProvider authenticationProvider;
+
+    public SecurityConfig(FlowableAuthenticationProvider authenticationProvider) {
+        this.authenticationProvider = authenticationProvider;
+    }
 
     private static final String[] ALLOWED_ORIGINS = {
         "*"
@@ -24,22 +33,36 @@ public class SecurityConfig {
 
     private static final String[] PUBLIC_URLS = {
         "/health",
-        "/groups"
+        "/groups",
     };
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        HttpSessionSecurityContextRepository securityContextRepository =
+                new HttpSessionSecurityContextRepository();
+
         http
             .cors(Customizer.withDefaults())
             .csrf(AbstractHttpConfigurer::disable)
+            .requestCache(cache -> cache.disable())
+            .authenticationProvider(authenticationProvider)
+            .securityContext(context -> context
+                .securityContextRepository(securityContextRepository)
+            )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
             )
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(PUBLIC_URLS).permitAll()
+                .requestMatchers(
+                    Arrays.stream(PUBLIC_URLS)
+                        .map(AntPathRequestMatcher::antMatcher)
+                        .toArray(AntPathRequestMatcher[]::new)
+                ).permitAll()
                 .anyRequest().authenticated()
             )
-            .httpBasic(Customizer.withDefaults());
+            .httpBasic(basic -> basic
+                .securityContextRepository(securityContextRepository)
+            );
 
         return http.build();
     }
