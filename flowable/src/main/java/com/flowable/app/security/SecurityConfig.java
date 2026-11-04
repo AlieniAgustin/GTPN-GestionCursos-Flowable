@@ -1,4 +1,4 @@
-package com.flowable.app;
+package com.flowable.app.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,17 +18,10 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    /**
-     * Allowed origins for CORS (places from which incoming calls are accepted).
-     * Add frontend or BFF URLs here (e.g. "http://localhost:3000", "https://institucion.edu.ar").
-     */
     private static final String[] ALLOWED_ORIGINS = {
         "*"
     };
 
-    /**
-     * Public endpoints accessible without authentication or session.
-     */
     private static final String[] PUBLIC_URLS = {
         "/health",
         "/groups"
