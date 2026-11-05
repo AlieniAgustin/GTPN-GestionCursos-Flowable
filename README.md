@@ -20,6 +20,8 @@ Repositorio del proyecto final para la asignatura **Gestión y Tecnologías de P
   - `ProyectoCursos.pdf`: Enunciado oficial de la cátedra con los requerimientos funcionales y escenarios de evaluación.
 - **Módulo Flowable (`flowable/`):**
   - Aplicación Spring Boot 3 con Flowable 7.0.0, soporte REST (`spring-boot-starter-web`), validación de datos (`spring-boot-starter-validation`), Lombok y base de datos H2.
+- **Módulo Backend Proxy (`backend/`):**
+  - Backend-for-Frontend (BFF) en Spring Boot 3 para intermediación con Flowable, gestión delegada de sesiones (`JSESSIONID`), filtros HTTP y tratamiento unificado de errores. Para más detalles, consulta la [Documentación del Backend Proxy](backend/README.md).
 
 > [!NOTE]
 > Para conocer el detalle de las decisiones de diseño (como la incorporación de compuertas XOR convergentes y el reemplazo de tareas de recepción por eventos intermedios), consulta el [Informe de Justificación de Cambios y Decisiones BPMN](informeDeJustificacionDeCambiosyDecisionesDeModeladoBPMN.md).

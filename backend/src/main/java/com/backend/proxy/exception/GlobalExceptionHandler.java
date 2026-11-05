@@ -6,31 +6,26 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.RestClientResponseException;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(FlowableSessionExpiredException.class)
-    public ResponseEntity<ApiErrorResponse> handleFlowableSessionExpired(
-            FlowableSessionExpiredException ex,
+    @ExceptionHandler(RestClientResponseException.class)
+    public ResponseEntity<ApiErrorResponse> handleRestClientResponseException(
+            RestClientResponseException ex,
             HttpServletRequest request
     ) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            session.invalidate();
-        }
-
         ApiErrorResponse error = new ApiErrorResponse(
-            Instant.now(),
-            HttpStatus.UNAUTHORIZED.value(),
-            "FLOWABLE_SESSION_EXPIRED",
-            ex.getMessage(),
-            request.getRequestURI()
+                Instant.now(),
+                ex.getStatusCode().value(),
+                "FLOWABLE_INTEGRATION_ERROR",
+                "Error en la comunicación con Flowable: " + ex.getStatusText(),
+                request.getRequestURI()
         );
 
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+        return ResponseEntity.status(ex.getStatusCode()).body(error);
     }
 }

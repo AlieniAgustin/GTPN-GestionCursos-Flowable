@@ -5,18 +5,22 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
 
-import com.backend.proxy.client.FlowableClientInterceptor;
-
 @Configuration
 public class RestClientConfig {
 
-    // en la peticion a flowable, incorpora la cookie
+    /**
+     * Cliente HTTP para comunicarse con el motor Flowable utilizando
+     * una cuenta técnica única (Service Account / Basic Auth).
+     */
     @Bean
-    public RestClient flowableRestClient( @Value("${flowable.base-url:http://localhost:8080}") String flowableBaseUrl,
-    FlowableClientInterceptor flowableClientInterceptor) {
+    public RestClient flowableRestClient(
+            @Value("${flowable.base-url:http://localhost:8080}") String flowableBaseUrl,
+            @Value("${flowable.username:admin}") String flowableUsername,
+            @Value("${flowable.password:test}") String flowablePassword
+    ) {
         return RestClient.builder()
                 .baseUrl(flowableBaseUrl)
-                .requestInterceptor(flowableClientInterceptor)
+                .defaultHeaders(headers -> headers.setBasicAuth(flowableUsername, flowablePassword))
                 .build();
     }
 }
