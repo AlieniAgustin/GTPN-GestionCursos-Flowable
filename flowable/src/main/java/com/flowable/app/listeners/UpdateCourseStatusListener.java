@@ -2,7 +2,12 @@ package com.flowable.app.listeners;
 
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.ExecutionListener;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
+
+import com.flowable.app.dto.CourseStatusUpdateDTO;
 
 @Component("updateCourseStatus")
 public class UpdateCourseStatusListener implements ExecutionListener {
@@ -11,6 +16,12 @@ public class UpdateCourseStatusListener implements ExecutionListener {
 
     // Variable que cada camino de cierre marca antes de terminar el proceso
     public static final String RESULT_VARIABLE = "resultadoCurso";
+
+    private final RestClient backendRestClient;
+
+    public UpdateCourseStatusListener(@Qualifier("backendRestClient") RestClient backendRestClient) {
+        this.backendRestClient = backendRestClient;
+    }
 
     @Override
     public void notify(DelegateExecution execution) {
@@ -32,8 +43,18 @@ public class UpdateCourseStatusListener implements ExecutionListener {
 
         System.out.println("Resultado del curso: " + result);
 
-        // Pendiente: actualizar el estado del curso en la base de la institución
-        // (o llamar al endpoint del backend) usando businessKey y result.
+        try {
+            backendRestClient.put()
+                    .uri("/api/flowable/courses/{processId}", processInstanceId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new CourseStatusUpdateDTO(result.toString().trim()))
+                    .retrieve()
+                    .toBodilessEntity();
+
+            System.out.println("Estado del curso actualizado con éxito en Backend");
+        } catch (Exception e) {
+            System.err.println("Error al actualizar el estado del curso en Backend: " + e.getMessage());
+        }
 
         System.out.println("*************************************");
     }

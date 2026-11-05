@@ -1,20 +1,33 @@
 package com.backend.proxy.controller;
 
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import com.backend.proxy.types.CourseStatus;
+import com.backend.proxy.dto.CourseStatusUpdateDTO;
+import com.backend.proxy.service.CourseService;
 
+import jakarta.validation.Valid;
+
+@RestController
 @RequestMapping("/api/flowable/courses")
 public class CourseController {
 
-    @PutMapping("/{processId}")
-    public void updateStatus(@PathVariable String processId, @RequestBody CourseStatus status){
-    
+    private final CourseService courseService;
+
+    public CourseController(CourseService courseService) {
+        this.courseService = courseService;
     }
-    
+
+    @PutMapping("/{processId}")
+    public ResponseEntity<Void> updateStatus(
+            @PathVariable String processId,
+            @Valid @RequestBody CourseStatusUpdateDTO dto
+    ) {
+        courseService.updateCourse(processId, dto.status());
+        return ResponseEntity.noContent().build();
+    }
 }
