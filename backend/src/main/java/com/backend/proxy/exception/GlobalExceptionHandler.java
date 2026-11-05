@@ -22,7 +22,7 @@ public class GlobalExceptionHandler {
                 Instant.now(),
                 ex.getStatusCode().value(),
                 "FLOWABLE_INTEGRATION_ERROR",
-                "Error en la comunicación con Flowable: " + ex.getStatusText(),
+                "Error in communication with flowable: " + ex.getStatusText(),
                 request.getRequestURI()
         );
 
