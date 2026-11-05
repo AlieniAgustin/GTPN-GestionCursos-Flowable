@@ -1,13 +1,10 @@
 package com.backend.proxy.auth;
 
 import java.net.HttpCookie;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -38,18 +35,16 @@ public class FlowableAuthService {
     }
 
     public boolean login(String username, String password, HttpServletRequest request) {
-        String basicAuthHeader = "Basic " + Base64.getEncoder().encodeToString(
-                (username + ":" + password).getBytes(StandardCharsets.UTF_8)
-        );
-
         ResponseEntity<Void> response = restClient.get()
-                .uri("/groups")
-                .header(HttpHeaders.AUTHORIZATION, basicAuthHeader)
+                .uri("/me")
+                .headers(headers -> headers.setBasicAuth(username, password))
                 .retrieve()
                 .toBodilessEntity();
 
         if (response.getStatusCode().is2xxSuccessful()) {
             List<String> setCookies = response.getHeaders().get(HttpHeaders.SET_COOKIE);
+            
+            // se pregunta ya que podria un retorno 200 por un endpoint publico
             String flowableJSessionId = extractJSessionId(setCookies);
 
             if (flowableJSessionId != null) {
