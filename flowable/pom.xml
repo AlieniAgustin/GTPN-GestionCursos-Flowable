@@ -68,6 +68,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Motor Groovy para los script tasks del BPMN -->
+        <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy-jsr223</artifactId>
+        </dependency>
+
         <!-- Lombok para evitar código boilerplate (getters, setters, constructores) -->
         <dependency>
             <groupId>org.projectlombok</groupId>
