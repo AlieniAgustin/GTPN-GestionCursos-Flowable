@@ -13,9 +13,6 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
-
 @RestController
 public class MeController {
 
@@ -26,13 +23,8 @@ public class MeController {
     }
 
     @GetMapping("/me")
-    public Map<String, Object> getMe(Authentication authentication, HttpServletRequest request) {
+    public Map<String, Object> getMe(Authentication authentication) {
         Map<String, Object> response = new LinkedHashMap<>();
-
-        if (authentication == null) {
-            response.put("authenticated", false);
-            return response;
-        }
 
         String username = authentication.getName();
         response.put("authenticated", authentication.isAuthenticated());
@@ -57,16 +49,6 @@ public class MeController {
             userDetails.put("lastName", user.getLastName());
             userDetails.put("email", user.getEmail());
             response.put("user", userDetails);
-        }
-
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            Map<String, Object> sessionInfo = new LinkedHashMap<>();
-            sessionInfo.put("id", session.getId());
-            sessionInfo.put("creationTime", session.getCreationTime());
-            sessionInfo.put("lastAccessedTime", session.getLastAccessedTime());
-            sessionInfo.put("maxInactiveInterval", session.getMaxInactiveInterval());
-            response.put("session", sessionInfo);
         }
 
         return response;

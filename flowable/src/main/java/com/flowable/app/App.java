@@ -40,6 +40,14 @@ public class App {
             List<String> docentes = List.of("docente1", "docente2", "jefedocente");
             List<String> administrativos = List.of("jefeadministrativo", "administrativo1", "administrativo2");
 
+            if (repository.createUserQuery().userId("admin").count() == 0) {
+                User adminUser = repository.newUser("admin");
+                adminUser.setPassword("test");
+                adminUser.setFirstName("Admin");
+                adminUser.setLastName("System");
+                repository.saveUser(adminUser);
+            }
+
             docentes.forEach(docente -> {
                 if (repository.createUserQuery().userId(docente).count() == 0) {
                     User docenteUser = repository.newUser(docente);

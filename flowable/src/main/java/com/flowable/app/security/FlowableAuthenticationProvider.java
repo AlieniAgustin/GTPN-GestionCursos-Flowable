@@ -28,8 +28,6 @@ public class FlowableAuthenticationProvider implements AuthenticationProvider {
         String password = authentication.getCredentials() != null ? authentication.getCredentials().toString() : "";
         if (!identityService.checkPassword(username, password)) {
             throw new BadCredentialsException("Invalid credentials for user: " + username);
-        } else {
-            System.out.println("good");
         }
 
         List<Group> groups = identityService.createGroupQuery().groupMember(username).list();
