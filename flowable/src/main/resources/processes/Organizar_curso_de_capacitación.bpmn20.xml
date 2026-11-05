@@ -136,7 +136,11 @@
       <userTask id="Equipo" name="Contratar equipamiento" flowable:candidateGroups="administracion" flowable:formFieldValidation="true"></userTask>
       <inclusiveGateway id="OrFin" name="Todos los recursos seleccionados listos"></inclusiveGateway>
       <parallelGateway id="ParFin" name="Preparación completa"></parallelGateway>
-      <endEvent id="SubFin"></endEvent>
+      <endEvent id="SubFin">
+        <extensionElements>
+          <flowable:executionListener event="start" delegateExpression="${closeCancellation}"></flowable:executionListener>
+        </extensionElements>
+      </endEvent>
       <userTask id="Activity_12i2hpf" name="Evaluar
 Recursos" flowable:candidateGroups="administracion" flowable:formFieldValidation="true"></userTask>
       <subProcess id="Activity_048d5em" name="Cancelación" triggeredByEvent="true">
