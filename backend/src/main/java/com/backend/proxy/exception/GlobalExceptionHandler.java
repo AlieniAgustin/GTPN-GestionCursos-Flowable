@@ -1,7 +1,5 @@
 package com.backend.proxy.exception;
 
-import java.time.Instant;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,14 +16,18 @@ public class GlobalExceptionHandler {
             RestClientResponseException ex,
             HttpServletRequest request
     ) {
-        ApiErrorResponse error = new ApiErrorResponse(
-                Instant.now(),
-                ex.getStatusCode().value(),
+        ApiErrorResponse error = ApiErrorResponse.of(
                 "FLOWABLE_INTEGRATION_ERROR",
                 "Error in communication with flowable: " + ex.getStatusText(),
                 request.getRequestURI()
         );
 
         return ResponseEntity.status(ex.getStatusCode()).body(error);
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<String> handleResourceNotFoundException(ResourceNotFoundException exception) {
+
+        return ResponseEntity.status(404).body(exception.getMessage());
     }
 }

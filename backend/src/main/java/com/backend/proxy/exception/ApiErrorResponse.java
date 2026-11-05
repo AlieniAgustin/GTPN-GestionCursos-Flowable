@@ -3,12 +3,15 @@ package com.backend.proxy.exception;
 import java.time.Instant;
 
 /**
- * Estructura estándar y expresiva para respuestas de error de la API.
+ * Standard structure for API error responses.
  */
 public record ApiErrorResponse(
     Instant timestamp,
-    int status,
     String error,
     String message,
     String path
-) {}
+) {
+    public static ApiErrorResponse of(String error, String message, String path) {
+        return new ApiErrorResponse(Instant.now(), error, message, path);
+    }
+}

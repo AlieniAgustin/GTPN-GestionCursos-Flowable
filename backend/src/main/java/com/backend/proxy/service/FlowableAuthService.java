@@ -1,4 +1,4 @@
-package com.backend.proxy.auth;
+package com.backend.proxy.service;
 
 import java.util.Collections;
 
