@@ -33,7 +33,7 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(PUBLIC_URLS).permitAll()
-                .anyRequest().authenticated()
+                .anyRequest().authenticated() // valida la jsession, en caso de que sea invalida, lo patea
             );
 
         return http.build();
