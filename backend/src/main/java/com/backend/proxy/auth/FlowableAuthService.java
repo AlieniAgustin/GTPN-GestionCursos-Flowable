@@ -14,11 +14,7 @@ import org.springframework.web.client.RestClient;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
-/**
- * Servicio de autenticación para empleados institucionales.
- * Valida credenciales contra Flowable y, si son correctas, establece
- * la sesión de Spring Security de manera nativa en el Backend.
- */
+// auth for institucional employees
 @Service
 public class FlowableAuthService {
 

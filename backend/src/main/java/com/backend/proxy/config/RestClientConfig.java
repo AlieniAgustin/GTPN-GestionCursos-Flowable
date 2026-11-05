@@ -8,10 +8,7 @@ import org.springframework.web.client.RestClient;
 @Configuration
 public class RestClientConfig {
 
-    /**
-     * Cliente HTTP para comunicarse con el motor Flowable utilizando
-     * una cuenta técnica única (Service Account / Basic Auth).
-     */
+    // client http for comunicate with flowable motor using technical account
     @Bean
     public RestClient flowableRestClient(
             @Value("${flowable.base-url:http://localhost:8080}") String flowableBaseUrl,
