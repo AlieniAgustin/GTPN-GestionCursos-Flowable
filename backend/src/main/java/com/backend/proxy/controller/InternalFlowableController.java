@@ -11,15 +11,13 @@ import com.backend.proxy.dto.CourseStatusUpdateDTO;
 import com.backend.proxy.service.CourseService;
 
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/flowable")
+@RequiredArgsConstructor
 public class InternalFlowableController {
     private final CourseService courseService;
-
-    public InternalFlowableController(CourseService courseService) {
-        this.courseService = courseService;
-    }
 
     @PutMapping("/courses/{processId}")
     public ResponseEntity<Void> updateStatus(
