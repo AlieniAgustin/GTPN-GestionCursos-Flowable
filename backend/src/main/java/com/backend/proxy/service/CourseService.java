@@ -22,12 +22,13 @@ public class CourseService {
         this.courseRepository = courseRepository;
     }
 
-    public void processCourse(CourseRequestDTO request) {
+    public Course processCourse(CourseRequestDTO request) {
         CompanyContactDTO contact = request.contact();
         Company company = getOrCreate(contact);
         Course course = new Course(company, request.name(), request.description(), request.possibleDates());
         courseRepository.save(course);
         // send info to flowable and await a response for extract a process_id assigned
+        return course;
     }
 
     public void updateCourse(String processId, CourseStatus courseStatus) {
