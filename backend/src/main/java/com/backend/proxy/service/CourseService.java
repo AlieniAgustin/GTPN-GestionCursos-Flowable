@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 import com.backend.proxy.client.FlowableClient;
 import com.backend.proxy.dto.CompanyContactDTO;
 import com.backend.proxy.dto.CourseRequestDTO;
-import com.backend.proxy.dto.FlowableProcessInstanceRequest;
 import com.backend.proxy.dto.FlowableProcessInstanceResponse;
 import com.backend.proxy.dto.FlowableVariable;
 import com.backend.proxy.entity.Company;
@@ -35,7 +34,7 @@ public class CourseService {
         Course course = new Course(company, request.name(), request.description(), request.possibleDates());
         course = courseRepository.save(course);
 
-        var flowableRequest = new FlowableProcessInstanceRequest(
+        FlowableProcessInstanceResponse response = flowableClient.startProcessInstance(
                 PROCESS_KEY,
                 String.valueOf(course.getId()),
                 List.of(
@@ -43,12 +42,6 @@ public class CourseService {
                         new FlowableVariable("courseName", course.getName())
                 )
         );
-
-        FlowableProcessInstanceResponse response = flowableClient.post()
-                .uri("/process-api/runtime/process-instances")
-                .body(flowableRequest)
-                .retrieve()
-                .body(FlowableProcessInstanceResponse.class);
 
         if (response != null && response.id() != null) {
             course.setProcessInstanceId(response.id());

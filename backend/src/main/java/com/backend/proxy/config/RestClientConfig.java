@@ -15,7 +15,8 @@ public class RestClientConfig {
     public RestClient flowableRestClient(
             @Value("${flowable.base-url:http://localhost:8080}") String flowableBaseUrl,
             @Value("${flowable.username:admin}") String flowableUsername,
-            @Value("${flowable.password:test}") String flowablePassword
+            @Value("${flowable.password:test}") String flowablePassword,
+            FlowableClientLoggingInterceptor loggingInterceptor
     ) {
         return RestClient.builder()
                 .baseUrl(flowableBaseUrl)
@@ -24,6 +25,7 @@ public class RestClientConfig {
                     headers.set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                     headers.set(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
                 })
+                .requestInterceptor(loggingInterceptor)
                 .build();
     }
 }

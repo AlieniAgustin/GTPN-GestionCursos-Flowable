@@ -1,8 +1,17 @@
 package com.backend.proxy.client;
 
+import java.util.List;
+
 import org.springframework.http.MediaType;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+
+import com.backend.proxy.dto.FlowableProcessInstanceRequest;
+import com.backend.proxy.dto.FlowableProcessInstanceResponse;
+import com.backend.proxy.dto.FlowableVariable;
 
 import lombok.RequiredArgsConstructor;
 
@@ -10,7 +19,31 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class FlowableClient {
 
+    private static final String PROCESS_INSTANCES_URI = "/process-api/runtime/process-instances";
+
     private final RestClient restClient;
+
+    @Retryable(
+            retryFor = RestClientException.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 1000, multiplier = 2.0)
+    )
+    public FlowableProcessInstanceResponse startProcessInstance(FlowableProcessInstanceRequest request) {
+        return restClient.post()
+                .uri(PROCESS_INSTANCES_URI)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .body(FlowableProcessInstanceResponse.class);
+    }
+
+    public FlowableProcessInstanceResponse startProcessInstance(
+            String processDefinitionKey,
+            String businessKey,
+            List<FlowableVariable> variables
+    ) {
+        return startProcessInstance(new FlowableProcessInstanceRequest(processDefinitionKey, businessKey, variables));
+    }
 
     public RestClient.RequestBodyUriSpec post() {
         return restClient.post();
