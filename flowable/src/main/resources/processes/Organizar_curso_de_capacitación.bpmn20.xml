@@ -31,9 +31,9 @@
         <flowNodeRef>Fecha</flowNodeRef>
         <flowNodeRef>Informe</flowNodeRef>
         <flowNodeRef>FechaDictar</flowNodeRef>
-        <flowNodeRef>Flow_1sdjeh6</flowNodeRef>
         <flowNodeRef>InformeEnviar</flowNodeRef>
         <flowNodeRef>Flow_0lscijk</flowNodeRef>
+        <flowNodeRef>Flow_1sdjeh6</flowNodeRef>
       </lane>
       <lane id="Lane_04yvzzz" name="Administración">
         <flowNodeRef>Inicio</flowNodeRef>
@@ -61,6 +61,7 @@
         <flowNodeRef>Activity_12e0et1</flowNodeRef>
         <flowNodeRef>Confirmar</flowNodeRef>
         <flowNodeRef>Activity_1xw400l</flowNodeRef>
+        <flowNodeRef>sid-76ABE2EC-E76E-42DC-9377-3C5BB5702055</flowNodeRef>
         <flowNodeRef>main3</flowNodeRef>
         <flowNodeRef>wait3</flowNodeRef>
         <flowNodeRef>wait0</flowNodeRef>
@@ -85,8 +86,9 @@
         <flowNodeRef>Flow_00ve97r</flowNodeRef>
         <flowNodeRef>Flow_0qbgu99</flowNodeRef>
         <flowNodeRef>Flow_01ac3ff</flowNodeRef>
-        <flowNodeRef>InformeArchivar</flowNodeRef>
         <flowNodeRef>Flow_175t1j3</flowNodeRef>
+        <flowNodeRef>sid-D1892B43-0BF2-4E27-A966-60DD77418A1C</flowNodeRef>
+        <flowNodeRef>sid-3A466603-1325-4B99-8B2C-624412037203</flowNodeRef>
       </lane>
     </laneSet>
     <dataObject id="propuesta" name="propuesta" itemSubjectRef="xsd:string">
@@ -123,6 +125,9 @@
       <messageEventDefinition messageRef="Msg_sol"></messageEventDefinition>
     </startEvent>
     <subProcess id="Preparar" name="Preparar curso">
+      <extensionElements>
+        <flowable:executionListener event="start" delegateExpression="${closeCancellation}"></flowable:executionListener>
+      </extensionElements>
       <startEvent id="SubInicio" flowable:formFieldValidation="true"></startEvent>
       <parallelGateway id="ParInicio" name="Preparación en paralelo"></parallelGateway>
       <userTask id="Lista" name="Confeccionar lista definitiva" flowable:candidateGroups="administracion" flowable:formFieldValidation="true">
@@ -141,8 +146,7 @@
           <flowable:executionListener event="start" delegateExpression="${closeCancellation}"></flowable:executionListener>
         </extensionElements>
       </endEvent>
-      <userTask id="Activity_12i2hpf" name="Evaluar
-Recursos" flowable:candidateGroups="administracion" flowable:formFieldValidation="true"></userTask>
+      <userTask id="Activity_12i2hpf" name="Evaluar Recursos" flowable:candidateGroups="administracion" flowable:formFieldValidation="true"></userTask>
       <subProcess id="Activity_048d5em" name="Cancelación" triggeredByEvent="true">
         <intermediateThrowEvent id="Event_1rvo4k6">
           <compensateEventDefinition></compensateEventDefinition>
@@ -209,10 +213,9 @@ execution.setVariable('aulaVirtualLiberada', true)]]></script>
     <exclusiveGateway id="Gateway_10gftrn" name="Es viable?"></exclusiveGateway>
     <endEvent id="Event_18edb9q" name="Solicitud finalizada"></endEvent>
     <scriptTask id="Activity_0iibzwu" name="Notificar Decisión" scriptFormat="groovy" flowable:autoStoreVariables="false">
-      <script><![CDATA[println "Solicitud no viable: hay ${execution.getVariable('cursosActivos')} cursos activos"]]></script>
+      <script><![CDATA[println "Solicitud no viable: hay ${execution.getVariable('cantidadCursosActivos')} cursos activos"]]></script>
     </scriptTask>
-    <endEvent id="Fin" name="Liberar recursos.
- Curso finalizado"></endEvent>
+    <endEvent id="Fin" name="Curso finalizado"></endEvent>
     <userTask id="EnviarInforme" name="Enviar informe a empresa y Archivar expediente." flowable:assignee="jefeadministrativo" flowable:formFieldValidation="true">
       <extensionElements>
         <modeler:initiator-can-complete xmlns:modeler="http://flowable.org/modeler"><![CDATA[false]]></modeler:initiator-can-complete>
@@ -292,11 +295,12 @@ if (n <= 2) {
           <flowable:string><![CDATA[false]]></flowable:string>
         </flowable:field>
         <flowable:executionListener event="start" delegateExpression="${countActiveCourses}"></flowable:executionListener>
-        <flowable:decisionReferenceType xmlns:flowable="http://flowable.org/bpmn"><![CDATA[decisionService]]></flowable:decisionReferenceType>
       </extensionElements>
     </serviceTask>
+    <intermediateThrowEvent id="sid-76ABE2EC-E76E-42DC-9377-3C5BB5702055" name="Liberar recurso">
+      <compensateEventDefinition></compensateEventDefinition>
+    </intermediateThrowEvent>
     <sequenceFlow id="FechaDictar" sourceRef="Fecha" targetRef="Dictar"></sequenceFlow>
-    <sequenceFlow id="Flow_1sdjeh6" sourceRef="Dictar" targetRef="Informe"></sequenceFlow>
     <sequenceFlow id="InformeEnviar" sourceRef="Informe" targetRef="EnviarInforme"></sequenceFlow>
     <sequenceFlow id="Flow_0lscijk" sourceRef="Activity_1018bdz" targetRef="Fecha"></sequenceFlow>
     <sequenceFlow id="main3" sourceRef="Enviar" targetRef="Esperar"></sequenceFlow>
@@ -322,8 +326,7 @@ if (n <= 2) {
     <sequenceFlow id="Flow_0k38d9g" name="si" sourceRef="Gateway_10gftrn" targetRef="Propuesta">
       <conditionExpression xsi:type="tFormalExpression"><![CDATA[${viable}]]></conditionExpression>
     </sequenceFlow>
-    <sequenceFlow id="Flow_0qk2yh0" name="no
-" sourceRef="Limite" targetRef="Esperar">
+    <sequenceFlow id="Flow_0qk2yh0" name="no " sourceRef="Limite" targetRef="Esperar">
       <conditionExpression xsi:type="tFormalExpression"><![CDATA[${recordatorios <= 2}]]></conditionExpression>
     </sequenceFlow>
     <sequenceFlow id="sid-768AA20B-DE4C-4051-AC23-FEFE60EA3B95" sourceRef="Revisar" targetRef="Enviar"></sequenceFlow>
@@ -343,14 +346,16 @@ if (n <= 2) {
       </extensionElements>
       <conditionExpression xsi:type="tFormalExpression"><![CDATA[${recordatorios > 2}]]></conditionExpression>
     </sequenceFlow>
-    <sequenceFlow id="InformeArchivar" sourceRef="EnviarInforme" targetRef="Fin">
-      <extensionElements>
-        <flowable:executionListener event="take" expression="${execution.setVariable('resultadoCurso','FINALIZADO')}"></flowable:executionListener>
-      </extensionElements>
-    </sequenceFlow>
     <sequenceFlow id="Flow_175t1j3" sourceRef="Activity_12e0et1" targetRef="Event_0w2kitf">
       <extensionElements>
         <flowable:executionListener event="take" expression="${execution.setVariable('resultadoCurso','CANCELADO')}"></flowable:executionListener>
+      </extensionElements>
+    </sequenceFlow>
+    <sequenceFlow id="sid-D1892B43-0BF2-4E27-A966-60DD77418A1C" sourceRef="sid-76ABE2EC-E76E-42DC-9377-3C5BB5702055" targetRef="Fin"></sequenceFlow>
+    <sequenceFlow id="Flow_1sdjeh6" sourceRef="Dictar" targetRef="Informe"></sequenceFlow>
+    <sequenceFlow id="sid-3A466603-1325-4B99-8B2C-624412037203" sourceRef="EnviarInforme" targetRef="sid-76ABE2EC-E76E-42DC-9377-3C5BB5702055">
+      <extensionElements>
+        <flowable:executionListener event="take" expression="${execution.setVariable('resultadoCurso','FINALIZADO')}"></flowable:executionListener>
       </extensionElements>
     </sequenceFlow>
   </process>
@@ -447,10 +452,10 @@ if (n <= 2) {
         <omgdc:Bounds height="30.0" width="30.0" x="576.9999926884975" y="741.999985376995"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Event_0rm0c02" id="BPMNShape_Event_0rm0c02">
-        <omgdc:Bounds height="30.0" width="30.0" x="875.3222459266977" y="1105.1402324282128"></omgdc:Bounds>
+        <omgdc:Bounds height="30.0" width="30.0" x="875.3511161300859" y="1105.936314554564"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Event_1gsyqer" id="BPMNShape_Event_1gsyqer">
-        <omgdc:Bounds height="30.0" width="30.0" x="875.5577262154494" y="1265.549594928547"></omgdc:Bounds>
+        <omgdc:Bounds height="30.0" width="30.0" x="875.9999926884975" y="1265.999985376995"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Gateway_10gftrn" id="BPMNShape_Gateway_10gftrn">
         <omgdc:Bounds height="40.0" width="40.0" x="394.999977350236" y="449.9999865889553"></omgdc:Bounds>
@@ -462,7 +467,7 @@ if (n <= 2) {
         <omgdc:Bounds height="80.0" width="100.0" x="359.9999923706061" y="554.9999882380177"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Fin" id="BPMNShape_Fin">
-        <omgdc:Bounds height="28.0" width="28.0" x="1486.9999295552639" y="1705.9999282413123"></omgdc:Bounds>
+        <omgdc:Bounds height="28.0" width="28.0" x="1544.9999672571844" y="1705.9998559528087"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="EnviarInforme" id="BPMNShape_EnviarInforme">
         <omgdc:Bounds height="80.0" width="100.0" x="1279.9999461703878" y="1679.9999287923242"></omgdc:Bounds>
@@ -486,10 +491,10 @@ if (n <= 2) {
         <omgdc:Bounds height="40.0" width="40.0" x="980.0" y="355.0"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Plazo" id="BPMNShape_Plazo">
-        <omgdc:Bounds height="31.0" width="31.0" x="1102.0" y="372.0"></omgdc:Bounds>
+        <omgdc:Bounds height="31.0" width="31.0" x="1101.9999766455776" y="359.49999238120245"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Recordatorio" id="BPMNShape_Recordatorio">
-        <omgdc:Bounds height="80.0" width="100.0" x="1250.0" y="350.0"></omgdc:Bounds>
+        <omgdc:Bounds height="80.0" width="100.0" x="1249.999973509049" y="334.9999929004251"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Archivar" id="BPMNShape_Archivar">
         <omgdc:Bounds height="80.0" width="140.0" x="1369.9999591708195" y="466.99998608231584"></omgdc:Bounds>
@@ -507,7 +512,7 @@ if (n <= 2) {
         <omgdc:Bounds height="30.0" width="30.0" x="1094.9999767939269" y="209.9999955495202"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Event_0farfur" id="BPMNShape_Event_0farfur">
-        <omgdc:Bounds height="30.0" width="30.0" x="409.22258326206065" y="1565.6289802765666"></omgdc:Bounds>
+        <omgdc:Bounds height="30.0" width="30.0" x="408.9999926884975" y="1565.999985376995"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Event_0w2kitf" id="BPMNShape_Event_0w2kitf">
         <omgdc:Bounds height="28.0" width="28.0" x="602.0" y="1702.0"></omgdc:Bounds>
@@ -521,21 +526,24 @@ if (n <= 2) {
       <bpmndi:BPMNShape bpmnElement="Activity_1xw400l" id="BPMNShape_Activity_1xw400l">
         <omgdc:Bounds height="80.0" width="100.0" x="207.24999560780032" y="429.9999774760684"></omgdc:Bounds>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-76ABE2EC-E76E-42DC-9377-3C5BB5702055" id="BPMNShape_sid-76ABE2EC-E76E-42DC-9377-3C5BB5702055">
+        <omgdc:Bounds height="30.0" width="30.0" x="1439.9999694824244" y="1704.9998921076565"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_0qbgu99" id="BPMNEdge_Flow_0qbgu99" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="70.0" flowable:targetDockerY="40.0">
         <omgdi:waypoint x="1131.9499995456408" y="506.9999993536678"></omgdi:waypoint>
         <omgdi:waypoint x="1369.9999584171583" y="506.99998909637816"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Preparado" id="BPMNEdge_Preparado" flowable:sourceDockerX="441.0" flowable:sourceDockerY="889.0000000000001" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="785.9920561114402" y="1579.9499853769948"></omgdi:waypoint>
-        <omgdi:waypoint x="785.3170506767598" y="1664.9999294281072"></omgdi:waypoint>
+      <bpmndi:BPMNEdge bpmnElement="Preparado" id="BPMNEdge_Preparado" flowable:sourceDockerX="630.0" flowable:sourceDockerY="445.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
+        <omgdi:waypoint x="826.6666383427257" y="1579.9499853769948"></omgdi:waypoint>
+        <omgdi:waypoint x="798.316652976385" y="1664.9999294281072"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_05lo8yc" id="BPMNEdge_Flow_05lo8yc" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="21.621605909529308" flowable:targetDockerY="25.0">
-        <omgdi:waypoint x="1349.95" y="390.0"></omgdi:waypoint>
-        <omgdi:waypoint x="1425.0" y="390.0"></omgdi:waypoint>
+      <bpmndi:BPMNEdge bpmnElement="Flow_05lo8yc" id="BPMNEdge_Flow_05lo8yc" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
+        <omgdi:waypoint x="1349.949973509049" y="378.56785190119507"></omgdi:waypoint>
+        <omgdi:waypoint x="1421.2958034476692" y="383.6666660186393"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_0k38d9g" id="BPMNEdge_Flow_0k38d9g" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="70.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="414.999977350236" y="449.9999865889553"></omgdi:waypoint>
-        <omgdi:waypoint x="414.999977350236" y="330.0"></omgdi:waypoint>
+        <omgdi:waypoint x="414.85813655506144" y="450.1348308179639"></omgdi:waypoint>
+        <omgdi:waypoint x="414.0" y="330.0"></omgdi:waypoint>
         <omgdi:waypoint x="510.0" y="330.0"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_00ve97r" id="BPMNEdge_Flow_00ve97r" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
@@ -550,33 +558,33 @@ if (n <= 2) {
         <omgdi:waypoint x="1337.4499903049614" y="1446.999985376995"></omgdi:waypoint>
         <omgdi:waypoint x="1396.9999926884975" y="1446.999985376995"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="sid-6238BB42-8B11-404E-A93D-1B228E6F6244" id="BPMNEdge_sid-6238BB42-8B11-404E-A93D-1B228E6F6244" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="890.5577262154494" y="1295.4995832074019"></omgdi:waypoint>
-        <omgdi:waypoint x="890.5577262154494" y="1319.9999457465328"></omgdi:waypoint>
-        <omgdi:waypoint x="994.9999716015467" y="1319.9999457465328"></omgdi:waypoint>
+      <bpmndi:BPMNEdge bpmnElement="sid-6238BB42-8B11-404E-A93D-1B228E6F6244" id="BPMNEdge_sid-6238BB42-8B11-404E-A93D-1B228E6F6244" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="0.0" flowable:targetDockerY="40.0">
+        <omgdi:waypoint x="890.6053928176214" y="1295.9449128408614"></omgdi:waypoint>
+        <omgdi:waypoint x="890.0" y="1319.0"></omgdi:waypoint>
+        <omgdi:waypoint x="994.9999716016961" y="1319.9999457465328"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="s1" id="BPMNEdge_s1" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
         <omgdi:waypoint x="399.94593774240445" y="986.6471399301164"></omgdi:waypoint>
         <omgdi:waypoint x="450.4597628034388" y="985.4586060666502"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="s2" id="BPMNEdge_s2" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="15.0" flowable:targetDockerY="15.0">
-        <omgdi:waypoint x="469.9999926884975" y="964.999985376995"></omgdi:waypoint>
-        <omgdi:waypoint x="469.9999926884975" y="756.999985376995"></omgdi:waypoint>
-        <omgdi:waypoint x="576.9999926884975" y="756.999985376995"></omgdi:waypoint>
+        <omgdi:waypoint x="469.91303679424846" y="965.0826293769197"></omgdi:waypoint>
+        <omgdi:waypoint x="469.0" y="756.0"></omgdi:waypoint>
+        <omgdi:waypoint x="577.0001933604632" y="756.8780398799365"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_0w8xn3l" id="BPMNEdge_Flow_0w8xn3l" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="414.999977350236" y="489.9372145039974"></omgdi:waypoint>
-        <omgdi:waypoint x="414.999977350236" y="547.9999994913737"></omgdi:waypoint>
-        <omgdi:waypoint x="414.2499806208794" y="554.9999882380177"></omgdi:waypoint>
+        <omgdi:waypoint x="414.7435728710877" y="489.69422312100477"></omgdi:waypoint>
+        <omgdi:waypoint x="414.0" y="547.0"></omgdi:waypoint>
+        <omgdi:waypoint x="413.3291662029388" y="554.9999882380177"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="s5" id="BPMNEdge_s5" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="70.0" flowable:targetDockerY="40.0">
         <omgdi:waypoint x="489.94762197378896" y="984.9999834711091"></omgdi:waypoint>
         <omgdi:waypoint x="820.3222277931311" y="984.9999519885149"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="s6" id="BPMNEdge_s6" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="469.9999926884975" y="1004.945996971953"></omgdi:waypoint>
-        <omgdi:waypoint x="469.9999926884975" y="1234.999960051646"></omgdi:waypoint>
-        <omgdi:waypoint x="529.9999887676352" y="1234.999960051646"></omgdi:waypoint>
+        <omgdi:waypoint x="469.91999327575735" y="1004.8701859627869"></omgdi:waypoint>
+        <omgdi:waypoint x="469.0" y="1234.0"></omgdi:waypoint>
+        <omgdi:waypoint x="529.9999887678334" y="1234.5495275503702"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_0r6hcyb" id="BPMNEdge_Flow_0r6hcyb" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
         <omgdi:waypoint x="629.9499887674357" y="1234.9999705933224"></omgdi:waypoint>
@@ -589,14 +597,14 @@ if (n <= 2) {
         <omgdi:waypoint x="1001.2468749999999" y="356.25"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="or0" id="BPMNEdge_or0" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="699.9999926884975" y="1214.999985376995"></omgdi:waypoint>
-        <omgdi:waypoint x="699.9999926884975" y="1079.999985376995"></omgdi:waypoint>
-        <omgdi:waypoint x="824.9999926883781" y="1079.999985376995"></omgdi:waypoint>
+        <omgdi:waypoint x="699.8726050670698" y="1215.121080701572"></omgdi:waypoint>
+        <omgdi:waypoint x="699.0" y="1079.0"></omgdi:waypoint>
+        <omgdi:waypoint x="824.9999926884968" y="1079.7158986103652"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="or2" id="BPMNEdge_or2" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="70.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="699.9999926884975" y="1254.9448726143094"></omgdi:waypoint>
-        <omgdi:waypoint x="699.9999926884975" y="1429.999985376995"></omgdi:waypoint>
-        <omgdi:waypoint x="824.9999926884975" y="1429.999985376995"></omgdi:waypoint>
+        <omgdi:waypoint x="699.8974293396767" y="1254.8476784365462"></omgdi:waypoint>
+        <omgdi:waypoint x="699.0" y="1429.0"></omgdi:waypoint>
+        <omgdi:waypoint x="824.999992688461" y="1429.6428477290312"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="or1" id="BPMNEdge_or1" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="70.0" flowable:targetDockerY="40.0">
         <omgdi:waypoint x="719.4465069313718" y="1235.4987353769952"></omgdi:waypoint>
@@ -611,67 +619,69 @@ if (n <= 2) {
         <omgdi:waypoint x="1329.999951874141" y="1759.9499287923243"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="oj0" id="BPMNEdge_oj0" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
-        <omgdi:waypoint x="924.9499926884974" y="1079.999985376995"></omgdi:waypoint>
-        <omgdi:waypoint x="1172.9999926884975" y="1079.999985376995"></omgdi:waypoint>
-        <omgdi:waypoint x="1172.9999926884975" y="1214.999985376995"></omgdi:waypoint>
+        <omgdi:waypoint x="924.9499926884803" y="1079.8316376745745"></omgdi:waypoint>
+        <omgdi:waypoint x="1172.0" y="1079.0"></omgdi:waypoint>
+        <omgdi:waypoint x="1172.8726050670698" y="1215.0843256442483"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="oj2" id="BPMNEdge_oj2" flowable:sourceDockerX="70.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
-        <omgdi:waypoint x="964.9499926877834" y="1429.999985376995"></omgdi:waypoint>
-        <omgdi:waypoint x="1172.9999926884975" y="1429.999985376995"></omgdi:waypoint>
-        <omgdi:waypoint x="1172.9999926884975" y="1254.905077732049"></omgdi:waypoint>
+        <omgdi:waypoint x="964.9499926884965" y="1429.7472814977818"></omgdi:waypoint>
+        <omgdi:waypoint x="1172.0" y="1429.0"></omgdi:waypoint>
+        <omgdi:waypoint x="1172.8974293396766" y="1254.8476784365462"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_175t1j3" id="BPMNEdge_Flow_175t1j3" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
         <omgdi:waypoint x="564.9499901453662" y="1718.0197841952295"></omgdi:waypoint>
         <omgdi:waypoint x="602.0107596454754" y="1716.5520457834602"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="oj1" id="BPMNEdge_oj1" flowable:sourceDockerX="70.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
+        <omgdi:waypoint x="964.9499926884874" y="1238.7409925712398"></omgdi:waypoint>
+        <omgdi:waypoint x="1153.3533495789488" y="1235.3524588752282"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="main3" id="BPMNEdge_main3" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
-        <omgdi:waypoint x="909.9499656676907" y="329.99999385409933"></omgdi:waypoint>
-        <omgdi:waypoint x="950.0" y="329.99999385409933"></omgdi:waypoint>
+        <omgdi:waypoint x="909.9499656677255" y="329.4444419248592"></omgdi:waypoint>
+        <omgdi:waypoint x="950.0" y="329.0"></omgdi:waypoint>
         <omgdi:waypoint x="950.0" y="375.0"></omgdi:waypoint>
         <omgdi:waypoint x="980.0" y="375.0"></omgdi:waypoint>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="oj1" id="BPMNEdge_oj1" flowable:sourceDockerX="70.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="22.312661344253456" flowable:targetDockerY="25.0">
-        <omgdi:waypoint x="964.9499926884974" y="1239.999985376995"></omgdi:waypoint>
-        <omgdi:waypoint x="1157.9999926884975" y="1239.999985376995"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_0h5si5f" id="BPMNEdge_Flow_0h5si5f" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
         <omgdi:waypoint x="1426.9499903851026" y="1446.9999802228663"></omgdi:waypoint>
         <omgdi:waypoint x="1486.9999609571673" y="1446.9999595891818"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-BECD46BE-BF2E-46B2-82E3-33193D216508" id="BPMNEdge_sid-BECD46BE-BF2E-46B2-82E3-33193D216508" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="0.0" flowable:targetDockerY="40.0">
+        <omgdi:waypoint x="894.6053928176211" y="1485.9449128408717"></omgdi:waypoint>
+        <omgdi:waypoint x="894.0" y="1509.0"></omgdi:waypoint>
+        <omgdi:waypoint x="994.9999926884975" y="1509.999985376995"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_0g8vm9l" id="BPMNEdge_Flow_0g8vm9l" flowable:sourceDockerX="15.25" flowable:sourceDockerY="15.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
         <omgdi:waypoint x="257.24999946436577" y="361.94999883184425"></omgdi:waypoint>
         <omgdi:waypoint x="257.24999703437277" y="429.9999774760684"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="sid-BECD46BE-BF2E-46B2-82E3-33193D216508" id="BPMNEdge_sid-BECD46BE-BF2E-46B2-82E3-33193D216508" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="894.9999926884975" y="1485.9499733839252"></omgdi:waypoint>
-        <omgdi:waypoint x="894.9999926884975" y="1509.999985376995"></omgdi:waypoint>
-        <omgdi:waypoint x="994.999992688377" y="1509.999985376995"></omgdi:waypoint>
+      <bpmndi:BPMNEdge bpmnElement="Flow_0kbnm1d" id="BPMNEdge_Flow_0kbnm1d" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
+        <omgdi:waypoint x="307.19999560768565" y="469.9999803615756"></omgdi:waypoint>
+        <omgdi:waypoint x="394.999977350236" y="469.99998543359715"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_0kbnm1d" id="BPMNEdge_Flow_0kbnm1d" flowable:sourceDockerX="99.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
-        <omgdi:waypoint x="307.19999560780036" y="449.9999774760684"></omgdi:waypoint>
-        <omgdi:waypoint x="344.9999866088238" y="449.9999774760684"></omgdi:waypoint>
-        <omgdi:waypoint x="344.9999866088238" y="469.9999865889553"></omgdi:waypoint>
-        <omgdi:waypoint x="394.999977350236" y="469.9999865889553"></omgdi:waypoint>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="sid-BD579652-CC2C-455E-97FA-A9E2A9994D3E" id="BPMNEdge_sid-BD579652-CC2C-455E-97FA-A9E2A9994D3E" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="890.3222459266977" y="1135.0902250865959"></omgdi:waypoint>
-        <omgdi:waypoint x="890.3222459266977" y="1169.999985376995"></omgdi:waypoint>
-        <omgdi:waypoint x="1004.9999926882624" y="1169.999985376995"></omgdi:waypoint>
+      <bpmndi:BPMNEdge bpmnElement="sid-BD579652-CC2C-455E-97FA-A9E2A9994D3E" id="BPMNEdge_sid-BD579652-CC2C-455E-97FA-A9E2A9994D3E" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="0.0" flowable:targetDockerY="40.0">
+        <omgdi:waypoint x="890.2415405884981" y="1135.8859240020988"></omgdi:waypoint>
+        <omgdi:waypoint x="890.0" y="1169.0"></omgdi:waypoint>
+        <omgdi:waypoint x="1004.9999926884946" y="1169.999985376995"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="PlazoLimite" id="BPMNEdge_PlazoLimite" flowable:sourceDockerX="15.5" flowable:sourceDockerY="15.5" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="1132.9485236768357" y="387.71162441607373"></omgdi:waypoint>
-        <omgdi:waypoint x="1249.9999999999973" y="389.31506849315065"></omgdi:waypoint>
+        <omgdi:waypoint x="1132.949974420392" y="374.99999242515855"></omgdi:waypoint>
+        <omgdi:waypoint x="1249.9999735089025" y="374.99999275817237"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="ModificarProp" id="BPMNEdge_ModificarProp" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="70.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="1124.9499752838842" y="224.9999955495202"></omgdi:waypoint>
-        <omgdi:waypoint x="1219.999968801937" y="224.9999955495202"></omgdi:waypoint>
-        <omgdi:waypoint x="1219.999968801937" y="236.99999412894266"></omgdi:waypoint>
-        <omgdi:waypoint x="1314.9999608099156" y="236.99999412894266"></omgdi:waypoint>
+        <omgdi:waypoint x="1124.949360646953" y="224.86238718397058"></omgdi:waypoint>
+        <omgdi:waypoint x="1219.0" y="224.0"></omgdi:waypoint>
+        <omgdi:waypoint x="1219.0" y="236.0"></omgdi:waypoint>
+        <omgdi:waypoint x="1314.9999608099472" y="236.57830975814858"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_1ymw5qe" id="BPMNEdge_Flow_1ymw5qe" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="424.3059728433916" y="1595.5787225500637"></omgdi:waypoint>
-        <omgdi:waypoint x="424.9999926884975" y="1719.9999643961617"></omgdi:waypoint>
-        <omgdi:waypoint x="464.9999901453662" y="1719.9999643961617"></omgdi:waypoint>
+        <omgdi:waypoint x="423.9999926884975" y="1595.9499844171642"></omgdi:waypoint>
+        <omgdi:waypoint x="424.0" y="1719.0"></omgdi:waypoint>
+        <omgdi:waypoint x="464.9999901453613" y="1719.4505333497602"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-D1892B43-0BF2-4E27-A966-60DD77418A1C" id="BPMNEdge_sid-D1892B43-0BF2-4E27-A966-60DD77418A1C" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
+        <omgdi:waypoint x="1469.9499677956526" y="1719.999886893015"></omgdi:waypoint>
+        <omgdi:waypoint x="1544.999967257185" y="1719.9998608024262"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_0pbsav2" id="BPMNEdge_Flow_0pbsav2" flowable:sourceDockerX="70.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
         <omgdi:waypoint x="960.2722285418045" y="984.999951044399"></omgdi:waypoint>
@@ -682,27 +692,23 @@ if (n <= 2) {
         <omgdi:waypoint x="942.0026087680974" y="1907.1702807384245"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="s11" id="BPMNEdge_s11" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
-        <omgdi:waypoint x="1192.945176174464" y="1234.999985376995"></omgdi:waypoint>
-        <omgdi:waypoint x="1379.9999926884975" y="1234.999985376995"></omgdi:waypoint>
-        <omgdi:waypoint x="1379.9999926884975" y="1004.9039569656304"></omgdi:waypoint>
+        <omgdi:waypoint x="1192.8536172828178" y="1234.9033684289452"></omgdi:waypoint>
+        <omgdi:waypoint x="1379.0" y="1234.0"></omgdi:waypoint>
+        <omgdi:waypoint x="1379.9199932757574" y="1004.8701859627868"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_1topamj" id="BPMNEdge_Flow_1topamj" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="784.9999844233207" y="1744.9499294281072"></omgdi:waypoint>
-        <omgdi:waypoint x="784.9999844233207" y="1814.99997496605"></omgdi:waypoint>
-        <omgdi:waypoint x="839.9999832577189" y="1814.99997496605"></omgdi:waypoint>
-        <omgdi:waypoint x="839.9999832577189" y="1864.999960475501"></omgdi:waypoint>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="InformeArchivar" id="BPMNEdge_InformeArchivar" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
-        <omgdi:waypoint x="1379.9499461703879" y="1719.9999286312097"></omgdi:waypoint>
-        <omgdi:waypoint x="1486.9999295552639" y="1719.9999282862632"></omgdi:waypoint>
+        <omgdi:waypoint x="784.6330179000611" y="1744.9499294281072"></omgdi:waypoint>
+        <omgdi:waypoint x="784.0" y="1814.0"></omgdi:waypoint>
+        <omgdi:waypoint x="839.0" y="1814.0"></omgdi:waypoint>
+        <omgdi:waypoint x="839.5604299864895" y="1864.999960475501"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="s12" id="BPMNEdge_s12" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
         <omgdi:waypoint x="1399.778432491928" y="985.1635099671588"></omgdi:waypoint>
         <omgdi:waypoint x="1487.0001732745006" y="985.8842867676207"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_1ffpwga" id="BPMNEdge_Flow_1ffpwga" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="819.0" flowable:targetDockerY="1.0000000000000002">
-        <omgdi:waypoint x="1205.4166480890597" y="634.9499882380177"></omgdi:waypoint>
-        <omgdi:waypoint x="1164.7025966999386" y="689.999985376995"></omgdi:waypoint>
+      <bpmndi:BPMNEdge bpmnElement="Flow_1ffpwga" id="BPMNEdge_Flow_1ffpwga" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="630.0" flowable:targetDockerY="445.0">
+        <omgdi:waypoint x="1215.7407168439406" y="634.9499882380177"></omgdi:waypoint>
+        <omgdi:waypoint x="1189.2351643402897" y="689.999985376995"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_1sdjeh6" id="BPMNEdge_Flow_1sdjeh6" flowable:sourceDockerX="70.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="70.0" flowable:targetDockerY="40.0">
         <omgdi:waypoint x="1179.949954753353" y="1909.999904639197"></omgdi:waypoint>
@@ -710,14 +716,14 @@ if (n <= 2) {
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_0q7jhff" id="BPMNEdge_Flow_0q7jhff" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="15.0" flowable:targetDockerY="15.0">
         <omgdi:waypoint x="1000.0" y="355.0"></omgdi:waypoint>
-        <omgdi:waypoint x="1000.0" y="224.9999955495202"></omgdi:waypoint>
-        <omgdi:waypoint x="1094.9999767939269" y="224.9999955495202"></omgdi:waypoint>
+        <omgdi:waypoint x="1000.0" y="224.0"></omgdi:waypoint>
+        <omgdi:waypoint x="1095.0002626392888" y="224.8636380095654"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="sid-768AA20B-DE4C-4051-AC23-FEFE60EA3B95" id="BPMNEdge_sid-768AA20B-DE4C-4051-AC23-FEFE60EA3B95" flowable:sourceDockerX="35.0" flowable:sourceDockerY="1.0" flowable:targetDockerX="50.0" flowable:targetDockerY="1.0">
-        <omgdi:waypoint x="1344.2940869718052" y="196.99999412894266"></omgdi:waypoint>
-        <omgdi:waypoint x="1315.9999608099472" y="191.9999852498372"></omgdi:waypoint>
-        <omgdi:waypoint x="859.9999656677277" y="191.9999852498372"></omgdi:waypoint>
-        <omgdi:waypoint x="859.9999656677277" y="289.99999385409933"></omgdi:waypoint>
+      <bpmndi:BPMNEdge bpmnElement="sid-768AA20B-DE4C-4051-AC23-FEFE60EA3B95" id="BPMNEdge_sid-768AA20B-DE4C-4051-AC23-FEFE60EA3B95" flowable:sourceDockerX="70.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
+        <omgdi:waypoint x="1324.1077129340001" y="196.99999412894266"></omgdi:waypoint>
+        <omgdi:waypoint x="1315.0" y="191.0"></omgdi:waypoint>
+        <omgdi:waypoint x="859.0" y="191.0"></omgdi:waypoint>
+        <omgdi:waypoint x="859.7122057506223" y="289.99999385409933"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="wait0" id="BPMNEdge_wait0" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="15.0" flowable:targetDockerY="15.0">
         <omgdi:waypoint x="1000.0" y="394.9455087798289"></omgdi:waypoint>
@@ -728,9 +734,9 @@ if (n <= 2) {
         <omgdi:waypoint x="606.9499924894842" y="756.9999846247568"></omgdi:waypoint>
         <omgdi:waypoint x="824.9999752044699" y="756.9999736897228"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="wait3" id="BPMNEdge_wait3" flowable:sourceDockerX="34.27173284199307" flowable:sourceDockerY="32.5" flowable:targetDockerX="15.5" flowable:targetDockerY="15.5">
-        <omgdi:waypoint x="1014.2717328419931" y="387.5"></omgdi:waypoint>
-        <omgdi:waypoint x="1102.0" y="387.5"></omgdi:waypoint>
+      <bpmndi:BPMNEdge bpmnElement="wait3" id="BPMNEdge_wait3" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="15.5" flowable:targetDockerY="15.5">
+        <omgdi:waypoint x="1019.9415191473837" y="374.9999987031832"></omgdi:waypoint>
+        <omgdi:waypoint x="1101.999976402524" y="374.99999338299347"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="wait1" id="BPMNEdge_wait1" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="15.0" flowable:targetDockerY="15.0">
         <omgdi:waypoint x="1000.0" y="394.9424489023467"></omgdi:waypoint>
@@ -745,14 +751,18 @@ if (n <= 2) {
         <omgdi:waypoint x="1131.9478963883985" y="596.7457969364799"></omgdi:waypoint>
         <omgdi:waypoint x="1184.9999748865785" y="595.8466035665977"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-3A466603-1325-4B99-8B2C-624412037203" id="BPMNEdge_sid-3A466603-1325-4B99-8B2C-624412037203" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="15.517212576360864" flowable:targetDockerY="15.517203277793797">
+        <omgdi:waypoint x="1379.9499461703879" y="1720.205736952007"></omgdi:waypoint>
+        <omgdi:waypoint x="1439.9999824959611" y="1720.4531606026774"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="CerrarSolicitud" id="BPMNEdge_CerrarSolicitud" flowable:sourceDockerX="70.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
         <omgdi:waypoint x="1509.9499486936331" y="506.9999857158278"></omgdi:waypoint>
         <omgdi:waypoint x="1573.999953091146" y="506.99998538049135"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_1q09oq9" id="BPMNEdge_Flow_1q09oq9" flowable:sourceDockerX="70.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
-        <omgdi:waypoint x="964.9499752044699" y="756.9999701817858"></omgdi:waypoint>
-        <omgdi:waypoint x="1379.9999926884975" y="756.9999701817858"></omgdi:waypoint>
-        <omgdi:waypoint x="1379.9999926884975" y="964.999985376995"></omgdi:waypoint>
+        <omgdi:waypoint x="964.9499752044636" y="756.855346402573"></omgdi:waypoint>
+        <omgdi:waypoint x="1379.0" y="756.0"></omgdi:waypoint>
+        <omgdi:waypoint x="1379.9130367942485" y="965.0417057379278"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

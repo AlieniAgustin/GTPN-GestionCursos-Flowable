@@ -11,6 +11,7 @@ Este documento resume lo que se hizo para que el proceso **Organizar curso de ca
 | `flowable/src/main/java/com/flowable/app/listeners/AssignLeastBusyListener.java` | Task listener de asignación |
 | `flowable/src/main/java/com/flowable/app/listeners/UpdateCourseStatusListener.java` | Execution listener de fin de proceso |
 | `flowable/src/main/java/com/flowable/app/listeners/CountActiveCoursesListener.java` | Execution listener que cuenta los cursos activos antes de evaluar la viabilidad |
+| `flowable/src/main/java/com/flowable/app/listeners/CloseCancellationListener.java` | Execution listener que deja cerrar el subproceso Preparar curso (ver 3.5) |
 | `flowable/src/main/resources/dmn/evaluarViabilidad.dmn` | Tabla de decisión de viabilidad (se despliega sola al arrancar) |
 
 ## 2. Cambios en el BPMN
@@ -97,6 +98,10 @@ La entrada la carga el listener `${countActiveCourses}` (ver 3.4) en el evento `
 | ¿Se enviaron 2 recordatorios? | no (vuelve a esperar) / sí (archivar) | `${recordatorios <= 2}` / `${recordatorios > 2}` |
 | Recursos necesarios (inclusiva) | Presencial / Virtual / Equipamiento especial | `${requiereAula}` / `${requierePlataforma}` / `${requiereEquipamiento}` |
 
+### 2.8 Liberación de recursos al finalizar (1.4)
+
+Entre *Enviar informe a empresa y Archivar expediente* y el fin *Curso finalizado* se agregó un **evento intermedio de lanzamiento de compensación** ("Liberar recursos"). Lanza las compensaciones de los recursos gestionados en *Preparar curso* (Liberar aula, Liberar Aula Virtual, Liberar Equipamiento) y el proceso termina recién cuando terminan. Probado: con aula presencial, al finalizar queda `aulaLiberada = true`.
+
 ## 3. Listeners (sección 3.4 de la consigna)
 
 ### 3.1 Task listener — asignar al menos cargado
@@ -119,7 +124,7 @@ La consigna pide que el resultado se establezca en cada camino de cierre. Se hac
 | No viable | Notificar Decisión → Solicitud finalizada | `NO_VIABLE` |
 | Rechazo | Rechazo → Archivar solicitud | `RECHAZADO` |
 | Sin respuesta | "sí" (2 recordatorios) → Archivar solicitud | `SIN_RESPUESTA` |
-| Curso dictado | Enviar informe → Curso finalizado | `FINALIZADO` |
+| Curso dictado | Enviar informe → Liberar recursos | `FINALIZADO` |
 | Cancelación | Notificar Cierre → Fin | `CANCELADO` |
 
 Expresión: `${execution.setVariable('resultadoCurso','VALOR')}`, evento **`take`** (las flechas solo disparan `take`; con `start` el listener no se ejecuta).
@@ -140,7 +145,16 @@ Expresión: `${execution.setVariable('resultadoCurso','VALOR')}`, evento **`take
 - **Qué hace:** consulta al motor las instancias activas de `Process_Curso`, descarta la propia comparando por id y guarda el total en `cantidadCursosActivos`.
 - Se filtra por id en vez de restar 1 porque la instancia actual puede no estar guardada todavía en la base cuando corre el listener.
 
-### 3.5 ¿Por qué delegate expression y no class?
+### 3.5 Execution listener — cerrar la espera de cancelación
+
+- **Dónde:** en el evento de fin interno de *Preparar curso* (`SubFin`), evento `start`.
+- **BPMN:** `delegateExpression="${closeCancellation}"`.
+- **Clase:** `CloseCancellationListener` (bean `@Component("closeCancellation")`).
+- **Por qué:** Flowable (6.8 y 7.0) no cierra un subproceso que tiene a la vez un evento de borde (el error de cancelación) y un subproceso de evento (Recibir Cancelación). La espera del mensaje de cancelación queda viva y el proceso se traba al terminar la preparación.
+- **Qué hace:** cuando la preparación termina, borra esa espera. El subproceso se cierra y el proceso sigue a *Enviar confirmación*.
+- **Ojo:** este listener se agregó a mano en el XML. Hay que agregarlo también en Flowable UI antes de volver a exportar.
+
+### 3.6 ¿Por qué delegate expression y no class?
 
 Como el motor corre **embebido en Spring Boot**, los listeners son beans (`@Component`) y el BPMN los llama por nombre (`${assignLeastBusy}`). No hace falta escribir el paquete completo ni empaquetar un JAR para el contenedor de Flowable UI (lo que muestra el PDF de tips de la cátedra aplica al motor en Docker).
 
@@ -183,4 +197,4 @@ Para verificarlo: `http://localhost:8081/process-api/repository/process-definiti
 ## 7. Pendientes
 
 - **Guardar el estado del curso (3.2):** completar `UpdateCourseStatusListener` cuando exista la base de la institución.
-- **Cancelación:** el subproceso de evento de cancelación dentro de *Preparar curso* puede no comportarse como se espera en Flowable 7 (compensación y fin del subproceso). Hay que probar ese escenario.
+- **Cancelación:** el camino feliz ya funciona (con `closeCancellation`). Falta probar mandar el mensaje `Cancelación` durante la preparación: compensación de los recursos, error hacia el borde y Notificar Cierre.
