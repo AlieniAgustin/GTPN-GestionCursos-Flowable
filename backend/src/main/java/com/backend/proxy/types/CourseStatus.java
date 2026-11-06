@@ -5,5 +5,11 @@ public enum CourseStatus {
     RECHAZADO,
     SIN_RESPUESTA,
     FINALIZADO,
-    CANCELADO
+    CANCELADO;
+
+    public boolean isTerminal() {
+        return switch (this) {
+            case NO_VIABLE, RECHAZADO, SIN_RESPUESTA, FINALIZADO, CANCELADO -> true;
+        };
+    }
 }

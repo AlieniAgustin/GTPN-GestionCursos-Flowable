@@ -59,9 +59,15 @@ public class CourseService {
     }
 
     public void updateCourse(String processId, CourseStatus courseStatus) {
+        if (processId == null || processId.isBlank()) {
+            throw new IllegalArgumentException("Process instance ID must not be blank");
+        }
+        if (courseStatus == null) {
+            throw new IllegalArgumentException("Course status is required");
+        }
         Course course = courseRepository.findByprocessInstanceId(processId)
             .orElseThrow(() -> new ResourceNotFoundException("Course not found"));
-        course.setStatus(courseStatus);
+        course.transitionTo(courseStatus);
         courseRepository.save(course);
     }
 

@@ -8,6 +8,7 @@ import java.util.List;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import com.backend.proxy.exception.InvalidCourseStateException;
 import com.backend.proxy.types.CourseStatus;
 
 import jakarta.persistence.Column;
@@ -64,5 +65,15 @@ public class Course {
         this.description = description;
         this.budget = new BigDecimal("0.0");
         this.possibleDates = possibleDates;
+    }
+
+    public void transitionTo(CourseStatus newStatus) {
+        if (newStatus == null) {
+            throw new IllegalArgumentException("Course status cannot be null");
+        }
+        if (this.status != null && this.status.isTerminal()) {
+            throw new InvalidCourseStateException("Cannot transition from terminal status: " + this.status);
+        }
+        this.status = newStatus;
     }
 }
