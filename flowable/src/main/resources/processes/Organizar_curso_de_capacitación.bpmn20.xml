@@ -56,19 +56,19 @@
         <flowNodeRef>FinSinCurso</flowNodeRef>
         <flowNodeRef>Revisar</flowNodeRef>
         <flowNodeRef>Modificar</flowNodeRef>
-        <flowNodeRef>Event_0farfur</flowNodeRef>
         <flowNodeRef>Event_0w2kitf</flowNodeRef>
         <flowNodeRef>Activity_12e0et1</flowNodeRef>
         <flowNodeRef>Confirmar</flowNodeRef>
         <flowNodeRef>Activity_1xw400l</flowNodeRef>
         <flowNodeRef>sid-76ABE2EC-E76E-42DC-9377-3C5BB5702055</flowNodeRef>
+        <flowNodeRef>sid-C0E19679-0C86-4D17-91C2-E2FF37510631</flowNodeRef>
+        <flowNodeRef>sid-A1650A89-98A5-40FA-A8F6-7BF43F338480</flowNodeRef>
         <flowNodeRef>main3</flowNodeRef>
         <flowNodeRef>wait3</flowNodeRef>
         <flowNodeRef>wait0</flowNodeRef>
         <flowNodeRef>wait1</flowNodeRef>
         <flowNodeRef>CerrarSolicitud</flowNodeRef>
         <flowNodeRef>PlazoLimite</flowNodeRef>
-        <flowNodeRef>Preparado</flowNodeRef>
         <flowNodeRef>Flow_0g8vm9l</flowNodeRef>
         <flowNodeRef>Flow_0kbnm1d</flowNodeRef>
         <flowNodeRef>Flow_1topamj</flowNodeRef>
@@ -76,7 +76,6 @@
         <flowNodeRef>Flow_1ffpwga</flowNodeRef>
         <flowNodeRef>Flow_08xlbn8</flowNodeRef>
         <flowNodeRef>Flow_05lo8yc</flowNodeRef>
-        <flowNodeRef>Flow_1ymw5qe</flowNodeRef>
         <flowNodeRef>ModificarProp</flowNodeRef>
         <flowNodeRef>Flow_0q7jhff</flowNodeRef>
         <flowNodeRef>Flow_0w8xn3l</flowNodeRef>
@@ -89,6 +88,10 @@
         <flowNodeRef>Flow_175t1j3</flowNodeRef>
         <flowNodeRef>sid-D1892B43-0BF2-4E27-A966-60DD77418A1C</flowNodeRef>
         <flowNodeRef>sid-3A466603-1325-4B99-8B2C-624412037203</flowNodeRef>
+        <flowNodeRef>sid-D788AC7F-63E9-4BDF-8D12-A35F47E7E9E3</flowNodeRef>
+        <flowNodeRef>sid-D1E19A1D-23B7-4064-98FA-78C0B6273426</flowNodeRef>
+        <flowNodeRef>sid-DA7547E2-528B-4C23-A2D5-176572230309</flowNodeRef>
+        <flowNodeRef>sid-72DB10C4-9964-4051-883C-E0552B031016</flowNodeRef>
       </lane>
     </laneSet>
     <dataObject id="propuesta" name="propuesta" itemSubjectRef="xsd:string">
@@ -148,17 +151,16 @@
       </endEvent>
       <userTask id="Activity_12i2hpf" name="Evaluar Recursos" flowable:candidateGroups="administracion" flowable:formFieldValidation="true"></userTask>
       <subProcess id="Activity_048d5em" name="Cancelación" triggeredByEvent="true">
-        <intermediateThrowEvent id="Event_1rvo4k6">
-          <compensateEventDefinition></compensateEventDefinition>
-        </intermediateThrowEvent>
         <startEvent id="Event_1g4xmqo" name="Recibir Cancelación" isInterrupting="true">
           <messageEventDefinition messageRef="Msg_cancel"></messageEventDefinition>
         </startEvent>
-        <endEvent id="Event_0snigbc">
-          <errorEventDefinition errorRef="errCancelacion" flowable:errorVariableLocalScope="false" flowable:errorVariableTransient="false"></errorEventDefinition>
-        </endEvent>
-        <sequenceFlow id="Flow_099pqle" sourceRef="Event_1g4xmqo" targetRef="Event_1rvo4k6"></sequenceFlow>
-        <sequenceFlow id="Flow_0h5si5f" sourceRef="Event_1rvo4k6" targetRef="Event_0snigbc"></sequenceFlow>
+        <scriptTask id="sid-5F01127F-6BB9-4C4D-9465-E85E24A167D0" name="Registrar Cancelacion" scriptFormat="groovy" flowable:autoStoreVariables="false">
+          <script><![CDATA[println "Cancelación recibida: se interrumpe la preparación"
+execution.setVariable('cancelado', true)]]></script>
+        </scriptTask>
+        <endEvent id="sid-6E0FA441-C809-413E-851C-9F1E02091217"></endEvent>
+        <sequenceFlow id="sid-5D91C57E-D1A3-467B-A6A2-778161F1C450" sourceRef="Event_1g4xmqo" targetRef="sid-5F01127F-6BB9-4C4D-9465-E85E24A167D0"></sequenceFlow>
+        <sequenceFlow id="sid-3C132EBF-D24C-4BBE-AAF1-85F214957AE3" sourceRef="sid-5F01127F-6BB9-4C4D-9465-E85E24A167D0" targetRef="sid-6E0FA441-C809-413E-851C-9F1E02091217"></sequenceFlow>
       </subProcess>
       <boundaryEvent id="Event_1ypcc1j" attachedToRef="Equipo" cancelActivity="false">
         <compensateEventDefinition></compensateEventDefinition>
@@ -270,9 +272,6 @@ if (n <= 2) {
     <intermediateCatchEvent id="Modificar" name="Modificaciones">
       <messageEventDefinition messageRef="Msg_mod"></messageEventDefinition>
     </intermediateCatchEvent>
-    <boundaryEvent id="Event_0farfur" attachedToRef="Preparar">
-      <errorEventDefinition errorRef="errCancelacion" flowable:errorVariableLocalScope="false" flowable:errorVariableTransient="false"></errorEventDefinition>
-    </boundaryEvent>
     <endEvent id="Event_0w2kitf"></endEvent>
     <scriptTask id="Activity_12e0et1" name="Notificar Cierre" scriptFormat="groovy" flowable:autoStoreVariables="false">
       <script><![CDATA[println "Cierre notificado a la empresa"]]></script>
@@ -300,6 +299,10 @@ if (n <= 2) {
     <intermediateThrowEvent id="sid-76ABE2EC-E76E-42DC-9377-3C5BB5702055" name="Liberar recurso">
       <compensateEventDefinition></compensateEventDefinition>
     </intermediateThrowEvent>
+    <exclusiveGateway id="sid-C0E19679-0C86-4D17-91C2-E2FF37510631" name="Cancelado?"></exclusiveGateway>
+    <intermediateThrowEvent id="sid-A1650A89-98A5-40FA-A8F6-7BF43F338480" name="Liberar recursos gestionados">
+      <compensateEventDefinition></compensateEventDefinition>
+    </intermediateThrowEvent>
     <sequenceFlow id="FechaDictar" sourceRef="Fecha" targetRef="Dictar"></sequenceFlow>
     <sequenceFlow id="InformeEnviar" sourceRef="Informe" targetRef="EnviarInforme"></sequenceFlow>
     <sequenceFlow id="Flow_0lscijk" sourceRef="Activity_1018bdz" targetRef="Fecha"></sequenceFlow>
@@ -309,7 +312,6 @@ if (n <= 2) {
     <sequenceFlow id="wait1" sourceRef="Esperar" targetRef="Rechazar"></sequenceFlow>
     <sequenceFlow id="CerrarSolicitud" sourceRef="Archivar" targetRef="FinSinCurso"></sequenceFlow>
     <sequenceFlow id="PlazoLimite" sourceRef="Plazo" targetRef="Recordatorio"></sequenceFlow>
-    <sequenceFlow id="Preparado" sourceRef="Preparar" targetRef="Confirmar"></sequenceFlow>
     <sequenceFlow id="Flow_0g8vm9l" sourceRef="Inicio" targetRef="Activity_1xw400l"></sequenceFlow>
     <sequenceFlow id="Flow_0kbnm1d" sourceRef="Activity_1xw400l" targetRef="Gateway_10gftrn"></sequenceFlow>
     <sequenceFlow id="Flow_1topamj" sourceRef="Confirmar" targetRef="Activity_1018bdz"></sequenceFlow>
@@ -317,7 +319,6 @@ if (n <= 2) {
     <sequenceFlow id="Flow_1ffpwga" sourceRef="Activity_1eg7zcl" targetRef="Preparar"></sequenceFlow>
     <sequenceFlow id="Flow_08xlbn8" sourceRef="Propuesta" targetRef="Enviar"></sequenceFlow>
     <sequenceFlow id="Flow_05lo8yc" sourceRef="Recordatorio" targetRef="Limite"></sequenceFlow>
-    <sequenceFlow id="Flow_1ymw5qe" sourceRef="Event_0farfur" targetRef="Activity_12e0et1"></sequenceFlow>
     <sequenceFlow id="ModificarProp" sourceRef="Modificar" targetRef="Revisar"></sequenceFlow>
     <sequenceFlow id="Flow_0q7jhff" sourceRef="Esperar" targetRef="Modificar"></sequenceFlow>
     <sequenceFlow id="Flow_0w8xn3l" name="no" sourceRef="Gateway_10gftrn" targetRef="Activity_0iibzwu">
@@ -357,6 +358,14 @@ if (n <= 2) {
       <extensionElements>
         <flowable:executionListener event="take" expression="${execution.setVariable('resultadoCurso','FINALIZADO')}"></flowable:executionListener>
       </extensionElements>
+    </sequenceFlow>
+    <sequenceFlow id="sid-D788AC7F-63E9-4BDF-8D12-A35F47E7E9E3" sourceRef="Preparar" targetRef="sid-C0E19679-0C86-4D17-91C2-E2FF37510631"></sequenceFlow>
+    <sequenceFlow id="sid-D1E19A1D-23B7-4064-98FA-78C0B6273426" sourceRef="sid-A1650A89-98A5-40FA-A8F6-7BF43F338480" targetRef="Activity_12e0et1"></sequenceFlow>
+    <sequenceFlow id="sid-DA7547E2-528B-4C23-A2D5-176572230309" name="si" sourceRef="sid-C0E19679-0C86-4D17-91C2-E2FF37510631" targetRef="sid-A1650A89-98A5-40FA-A8F6-7BF43F338480">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${execution.getVariable('cancelado') == true}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="sid-72DB10C4-9964-4051-883C-E0552B031016" name="no" sourceRef="sid-C0E19679-0C86-4D17-91C2-E2FF37510631" targetRef="Confirmar">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${execution.getVariable('cancelado') != true}]]></conditionExpression>
     </sequenceFlow>
   </process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_Collaboration">
@@ -424,14 +433,14 @@ if (n <= 2) {
       <bpmndi:BPMNShape bpmnElement="Activity_048d5em" id="BPMNShape_Activity_048d5em">
         <omgdc:Bounds height="120.0" width="300.0" x="1274.9999926884975" y="1399.999985376995"></omgdc:Bounds>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Event_1rvo4k6" id="BPMNShape_Event_1rvo4k6">
-        <omgdc:Bounds height="30.0" width="30.0" x="1396.9999926884975" y="1431.999985376995"></omgdc:Bounds>
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Event_1g4xmqo" id="BPMNShape_Event_1g4xmqo">
         <omgdc:Bounds height="30.0" width="30.5" x="1306.9999926884975" y="1431.999985376995"></omgdc:Bounds>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Event_0snigbc" id="BPMNShape_Event_0snigbc">
-        <omgdc:Bounds height="28.0" width="28.0" x="1486.9999610688985" y="1432.9999547958414"></omgdc:Bounds>
+      <bpmndi:BPMNShape bpmnElement="sid-5F01127F-6BB9-4C4D-9465-E85E24A167D0" id="BPMNShape_sid-5F01127F-6BB9-4C4D-9465-E85E24A167D0">
+        <omgdc:Bounds height="80.0" width="100.0" x="1382.4999926884975" y="1406.999985376995"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-6E0FA441-C809-413E-851C-9F1E02091217" id="BPMNShape_sid-6E0FA441-C809-413E-851C-9F1E02091217">
+        <omgdc:Bounds height="28.0" width="28.0" x="1527.4999926884975" y="1432.999985376995"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Event_1ypcc1j" id="BPMNShape_Event_1ypcc1j">
         <omgdc:Bounds height="30.0" width="30.0" x="879.9999926884975" y="1455.999985376995"></omgdc:Bounds>
@@ -511,17 +520,14 @@ if (n <= 2) {
       <bpmndi:BPMNShape bpmnElement="Modificar" id="BPMNShape_Modificar">
         <omgdc:Bounds height="30.0" width="30.0" x="1094.9999767939269" y="209.9999955495202"></omgdc:Bounds>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Event_0farfur" id="BPMNShape_Event_0farfur">
-        <omgdc:Bounds height="30.0" width="30.0" x="408.9999926884975" y="1565.999985376995"></omgdc:Bounds>
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Event_0w2kitf" id="BPMNShape_Event_0w2kitf">
-        <omgdc:Bounds height="28.0" width="28.0" x="602.0" y="1702.0"></omgdc:Bounds>
+        <omgdc:Bounds height="28.0" width="28.0" x="644.9999863306692" y="1720.9999276055296"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Activity_12e0et1" id="BPMNShape_Activity_12e0et1">
-        <omgdc:Bounds height="80.0" width="100.0" x="464.9999901453662" y="1679.9999643961617"></omgdc:Bounds>
+        <omgdc:Bounds height="80.0" width="100.0" x="485.99995201826573" y="1694.9999281565413"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Confirmar" id="BPMNShape_Confirmar">
-        <omgdc:Bounds height="80.0" width="100.0" x="734.9999844233207" y="1664.9999294281072"></omgdc:Bounds>
+        <omgdc:Bounds height="80.0" width="100.0" x="734.9999688466418" y="1694.9999640782703"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Activity_1xw400l" id="BPMNShape_Activity_1xw400l">
         <omgdc:Bounds height="80.0" width="100.0" x="207.24999560780032" y="429.9999774760684"></omgdc:Bounds>
@@ -529,13 +535,15 @@ if (n <= 2) {
       <bpmndi:BPMNShape bpmnElement="sid-76ABE2EC-E76E-42DC-9377-3C5BB5702055" id="BPMNShape_sid-76ABE2EC-E76E-42DC-9377-3C5BB5702055">
         <omgdc:Bounds height="30.0" width="30.0" x="1439.9999694824244" y="1704.9998921076565"></omgdc:Bounds>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-C0E19679-0C86-4D17-91C2-E2FF37510631" id="BPMNShape_sid-C0E19679-0C86-4D17-91C2-E2FF37510631">
+        <omgdc:Bounds height="40.0" width="40.0" x="764.999983787538" y="1619.99986256495"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-A1650A89-98A5-40FA-A8F6-7BF43F338480" id="BPMNShape_sid-A1650A89-98A5-40FA-A8F6-7BF43F338480">
+        <omgdc:Bounds height="30.0" width="30.0" x="520.9999512765191" y="1625.499638843595"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_0qbgu99" id="BPMNEdge_Flow_0qbgu99" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="70.0" flowable:targetDockerY="40.0">
         <omgdi:waypoint x="1131.9499995456408" y="506.9999993536678"></omgdi:waypoint>
         <omgdi:waypoint x="1369.9999584171583" y="506.99998909637816"></omgdi:waypoint>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Preparado" id="BPMNEdge_Preparado" flowable:sourceDockerX="630.0" flowable:sourceDockerY="445.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="826.6666383427257" y="1579.9499853769948"></omgdi:waypoint>
-        <omgdi:waypoint x="798.316652976385" y="1664.9999294281072"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_05lo8yc" id="BPMNEdge_Flow_05lo8yc" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
         <omgdi:waypoint x="1349.949973509049" y="378.56785190119507"></omgdi:waypoint>
@@ -554,14 +562,14 @@ if (n <= 2) {
         <omgdi:waypoint x="972.9478857911238" y="1907.7532360347295"></omgdi:waypoint>
         <omgdi:waypoint x="1039.999954753456" y="1908.8524070873013"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_099pqle" id="BPMNEdge_Flow_099pqle" flowable:sourceDockerX="15.25" flowable:sourceDockerY="15.0" flowable:targetDockerX="15.0" flowable:targetDockerY="15.0">
-        <omgdi:waypoint x="1337.4499903049614" y="1446.999985376995"></omgdi:waypoint>
-        <omgdi:waypoint x="1396.9999926884975" y="1446.999985376995"></omgdi:waypoint>
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="sid-6238BB42-8B11-404E-A93D-1B228E6F6244" id="BPMNEdge_sid-6238BB42-8B11-404E-A93D-1B228E6F6244" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="0.0" flowable:targetDockerY="40.0">
         <omgdi:waypoint x="890.6053928176214" y="1295.9449128408614"></omgdi:waypoint>
         <omgdi:waypoint x="890.0" y="1319.0"></omgdi:waypoint>
         <omgdi:waypoint x="994.9999716016961" y="1319.9999457465328"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-D788AC7F-63E9-4BDF-8D12-A35F47E7E9E3" id="BPMNEdge_sid-D788AC7F-63E9-4BDF-8D12-A35F47E7E9E3" flowable:sourceDockerX="441.0" flowable:sourceDockerY="889.0" flowable:targetDockerX="20.5" flowable:targetDockerY="20.5">
+        <omgdi:waypoint x="785.99186244623" y="1579.9499853769948"></omgdi:waypoint>
+        <omgdi:waypoint x="785.6608740440108" y="1620.6611560551485"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="s1" id="BPMNEdge_s1" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
         <omgdi:waypoint x="399.94593774240445" y="986.6471399301164"></omgdi:waypoint>
@@ -629,8 +637,12 @@ if (n <= 2) {
         <omgdi:waypoint x="1172.8974293396766" y="1254.8476784365462"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_175t1j3" id="BPMNEdge_Flow_175t1j3" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
-        <omgdi:waypoint x="564.9499901453662" y="1718.0197841952295"></omgdi:waypoint>
-        <omgdi:waypoint x="602.0107596454754" y="1716.5520457834602"></omgdi:waypoint>
+        <omgdi:waypoint x="585.9499315995226" y="1734.9999279325527"></omgdi:waypoint>
+        <omgdi:waypoint x="644.9999863306692" y="1734.9999276680223"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-3C132EBF-D24C-4BBE-AAF1-85F214957AE3" id="BPMNEdge_sid-3C132EBF-D24C-4BBE-AAF1-85F214957AE3" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
+        <omgdi:waypoint x="1482.4499926884976" y="1446.999985376995"></omgdi:waypoint>
+        <omgdi:waypoint x="1527.4999926884975" y="1446.999985376995"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="oj1" id="BPMNEdge_oj1" flowable:sourceDockerX="70.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
         <omgdi:waypoint x="964.9499926884874" y="1238.7409925712398"></omgdi:waypoint>
@@ -642,10 +654,6 @@ if (n <= 2) {
         <omgdi:waypoint x="950.0" y="375.0"></omgdi:waypoint>
         <omgdi:waypoint x="980.0" y="375.0"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_0h5si5f" id="BPMNEdge_Flow_0h5si5f" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
-        <omgdi:waypoint x="1426.9499903851026" y="1446.9999802228663"></omgdi:waypoint>
-        <omgdi:waypoint x="1486.9999609571673" y="1446.9999595891818"></omgdi:waypoint>
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="sid-BECD46BE-BF2E-46B2-82E3-33193D216508" id="BPMNEdge_sid-BECD46BE-BF2E-46B2-82E3-33193D216508" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="0.0" flowable:targetDockerY="40.0">
         <omgdi:waypoint x="894.6053928176211" y="1485.9449128408717"></omgdi:waypoint>
         <omgdi:waypoint x="894.0" y="1509.0"></omgdi:waypoint>
@@ -654,6 +662,10 @@ if (n <= 2) {
       <bpmndi:BPMNEdge bpmnElement="Flow_0g8vm9l" id="BPMNEdge_Flow_0g8vm9l" flowable:sourceDockerX="15.25" flowable:sourceDockerY="15.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
         <omgdi:waypoint x="257.24999946436577" y="361.94999883184425"></omgdi:waypoint>
         <omgdi:waypoint x="257.24999703437277" y="429.9999774760684"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-DA7547E2-528B-4C23-A2D5-176572230309" id="BPMNEdge_sid-DA7547E2-528B-4C23-A2D5-176572230309" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="15.517235425936013" flowable:targetDockerY="15.517149414364793">
+        <omgdi:waypoint x="765.5414207628783" y="1640.5411959478522"></omgdi:waypoint>
+        <omgdi:waypoint x="551.9843894479449" y="1640.9845722140317"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_0kbnm1d" id="BPMNEdge_Flow_0kbnm1d" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
         <omgdi:waypoint x="307.19999560768565" y="469.9999803615756"></omgdi:waypoint>
@@ -674,11 +686,6 @@ if (n <= 2) {
         <omgdi:waypoint x="1219.0" y="236.0"></omgdi:waypoint>
         <omgdi:waypoint x="1314.9999608099472" y="236.57830975814858"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_1ymw5qe" id="BPMNEdge_Flow_1ymw5qe" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="423.9999926884975" y="1595.9499844171642"></omgdi:waypoint>
-        <omgdi:waypoint x="424.0" y="1719.0"></omgdi:waypoint>
-        <omgdi:waypoint x="464.9999901453613" y="1719.4505333497602"></omgdi:waypoint>
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="sid-D1892B43-0BF2-4E27-A966-60DD77418A1C" id="BPMNEdge_sid-D1892B43-0BF2-4E27-A966-60DD77418A1C" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
         <omgdi:waypoint x="1469.9499677956526" y="1719.999886893015"></omgdi:waypoint>
         <omgdi:waypoint x="1544.999967257185" y="1719.9998608024262"></omgdi:waypoint>
@@ -697,8 +704,8 @@ if (n <= 2) {
         <omgdi:waypoint x="1379.9199932757574" y="1004.8701859627868"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_1topamj" id="BPMNEdge_Flow_1topamj" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="784.6330179000611" y="1744.9499294281072"></omgdi:waypoint>
-        <omgdi:waypoint x="784.0" y="1814.0"></omgdi:waypoint>
+        <omgdi:waypoint x="784.9999688466418" y="1774.9499640782703"></omgdi:waypoint>
+        <omgdi:waypoint x="784.9999688466418" y="1814.0"></omgdi:waypoint>
         <omgdi:waypoint x="839.0" y="1814.0"></omgdi:waypoint>
         <omgdi:waypoint x="839.5604299864895" y="1864.999960475501"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
@@ -759,10 +766,22 @@ if (n <= 2) {
         <omgdi:waypoint x="1509.9499486936331" y="506.9999857158278"></omgdi:waypoint>
         <omgdi:waypoint x="1573.999953091146" y="506.99998538049135"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-5D91C57E-D1A3-467B-A6A2-778161F1C450" id="BPMNEdge_sid-5D91C57E-D1A3-467B-A6A2-778161F1C450" flowable:sourceDockerX="15.5" flowable:sourceDockerY="15.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
+        <omgdi:waypoint x="1337.9499910218233" y="1446.999985376995"></omgdi:waypoint>
+        <omgdi:waypoint x="1382.4999926884975" y="1446.999985376995"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-D1E19A1D-23B7-4064-98FA-78C0B6273426" id="BPMNEdge_sid-D1E19A1D-23B7-4064-98FA-78C0B6273426" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="50.0" flowable:targetDockerY="1.0">
+        <omgdi:waypoint x="535.9999512765191" y="1655.449632917054"></omgdi:waypoint>
+        <omgdi:waypoint x="535.999952004901" y="1694.9999281565413"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_1q09oq9" id="BPMNEdge_Flow_1q09oq9" flowable:sourceDockerX="70.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
         <omgdi:waypoint x="964.9499752044636" y="756.855346402573"></omgdi:waypoint>
         <omgdi:waypoint x="1379.0" y="756.0"></omgdi:waypoint>
         <omgdi:waypoint x="1379.9130367942485" y="965.0417057379278"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-72DB10C4-9964-4051-883C-E0552B031016" id="BPMNEdge_sid-72DB10C4-9964-4051-883C-E0552B031016" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
+        <omgdi:waypoint x="785.3989170308631" y="1659.54048716946"></omgdi:waypoint>
+        <omgdi:waypoint x="785.2113505972316" y="1694.9999640782703"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
