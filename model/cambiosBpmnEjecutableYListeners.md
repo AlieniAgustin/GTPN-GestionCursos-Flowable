@@ -52,7 +52,6 @@ Todas tienen *Script format* `groovy`. Por ahora son simulaciones (imprimen en c
 | Habilitar acceso de la empresa | Imprime |
 | Enviar confirmación | Imprime |
 | Notificar Cierre | Imprime |
-| Registrar cancelación (subproceso Cancelación) | Imprime y pone `cancelado = true` |
 | Liberar Aula Virtual (compensación) | Pone `aulaVirtualLiberada = true` |
 
 ### 1.5 Service tasks
@@ -85,31 +84,11 @@ La entrada la carga el listener `${countActiveCourses}` (ver 2.4) en el evento `
 |---|---|---|
 | ¿Es viable? | sí / no | `${viable}` / `${!viable}` |
 | ¿Se enviaron 2 recordatorios? | no (vuelve a esperar) / sí (archivar) | `${recordatorios <= 2}` / `${recordatorios > 2}` |
-| ¿Cancelado? (después de Preparar curso) | sí (compensar) / no (Enviar confirmación) | `${execution.getVariable('cancelado') == true}` / `${execution.getVariable('cancelado') != true}` |
 | Recursos necesarios (inclusiva) | Presencial / Virtual / Equipamiento especial | `${requiereAula}` / `${requierePlataforma}` / `${requiereEquipamiento}` |
 
 ### 1.8 Liberación de recursos al finalizar (1.4)
 
 Entre *Enviar informe a empresa y Archivar expediente* y el fin *Curso finalizado* se agregó un **evento intermedio de lanzamiento de compensación** ("Liberar recursos"). Lanza las compensaciones de los recursos gestionados en *Preparar curso* (Liberar aula, Liberar Aula Virtual, Liberar Equipamiento) y el proceso termina recién cuando terminan.
-
-### 1.9 Cancelación durante la preparación (1.3)
-
-**Cómo quedó:**
-
-- Dentro de *Preparar curso*, el subproceso de evento *Cancelación* arranca con el mensaje `Cancelación` (inicio **interrumpiente**: corta las tareas pendientes de la preparación). Hace *Registrar cancelación* (`cancelado = true`) y termina con un fin común.
-- Al terminar el subproceso de evento, *Preparar curso* se cierra y sale por su flecha normal hacia la compuerta **¿Cancelado?**.
-- Si `cancelado` es `true`: evento intermedio de lanzamiento de compensación ("Liberar recursos gestionados") → *Notificar Cierre* → fin (`CANCELADO`).
-- Si no: *Enviar confirmación*, como antes.
-- Se quitó el evento de borde de error de *Preparar curso* y el fin de error del subproceso de evento.
-
-**Por qué se cambió:** antes la compensación y el error estaban dentro del subproceso de evento, y eso no funcionaba en Flowable (lo confirmamos leyendo el código fuente de Flowable 7.0):
-
-1. Un evento de compensación sin actividad indicada solo compensa las actividades de **su mismo subproceso**. Dentro de *Cancelación* no hay aula ni equipamiento, así que no liberaba nada.
-2. El inicio interrumpiente borra todo lo que hay dentro de *Preparar curso*, incluido el evento de borde de error. Cuando salía el error no había quién lo atrapara, y el proceso quedaba trabado en el fin de error.
-
-Lanzada **afuera** de *Preparar curso*, la compensación funciona igual que la del camino feliz (1.8). Solo se compensan las actividades que llegaron a completarse, así que se liberan únicamente los recursos efectivamente gestionados.
-
-**Limitación:** Flowable no espera a que termine la compensación antes de seguir (no implementa `waitForCompletion`). Por eso *Notificar Cierre* puede ejecutarse antes de que se complete *Liberar Equipamiento*, que es una tarea de usuario. El proceso igual termina recién cuando se libera.
 
 ## 2. Listeners (sección 3.4 de la consigna)
 
@@ -158,8 +137,7 @@ Expresión: `${execution.setVariable('resultadoCurso','VALOR')}`, evento **`take
 - **Dónde:** en el evento de fin interno de *Preparar curso* (`SubFin`), evento `start`.
 - **BPMN:** `delegateExpression="${closeCancellation}"`.
 - **Clase:** `CloseCancellationListener` (bean `@Component("closeCancellation")`).
-- **Por qué:** Flowable (6.8 y 7.0) no cierra un subproceso que tiene a la vez un evento de borde y un subproceso de evento. La espera del mensaje de cancelación queda viva y el proceso se traba al terminar la preparación. Se agregó cuando *Preparar curso* tenía el borde de error de cancelación.
-- **Ahora:** como ese borde se quitó (ver 1.9), probablemente ya no haga falta. Se dejó porque no molesta.
+- **Por qué:** Flowable (6.8 y 7.0) no cierra un subproceso que tiene a la vez un evento de borde (el error de cancelación) y un subproceso de evento (Recibir Cancelación). La espera del mensaje de cancelación queda viva y el proceso se traba al terminar la preparación.
 - **Qué hace:** cuando la preparación termina, borra esa espera. El subproceso se cierra y el proceso sigue a *Enviar confirmación*.
 
 ### 2.6 ¿Por qué delegate expression y no class?
@@ -178,6 +156,5 @@ Como el motor corre **embebido en Spring Boot**, los listeners son beans (`@Comp
 | `aulaAsignada`, `aulaLiberada`, `aulaVirtualLiberada` | Service/script tasks | Recursos |
 | `docenteSeleccionado` | Definir docente (al completar la tarea) | Assignee de Desarrollar curso |
 | `fechaCurso` | Al acordar la propuesta | Timer "Fecha programada" |
-| `cancelado` | Registrar cancelación | Compuerta ¿Cancelado? |
 | `resultadoCurso` | Marcas de cierre | Listener de fin de proceso |
 | `propuesta`, `informe`, `listaDefinitiva` | Data objects | Documentos del proceso |
