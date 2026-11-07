@@ -1,21 +1,13 @@
 package com.flowable;
 
-import java.io.InputStream;
-
-import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
-import org.flowable.engine.TaskService;
-import org.flowable.engine.repository.Deployment;
-import org.flowable.engine.runtime.Execution;
 import org.flowable.engine.runtime.ProcessInstance;
-import org.flowable.task.api.Task;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.client.RestTemplate;
 
@@ -25,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 @SpringBootTest(classes = App.class)
+@DirtiesContext
 @TestPropertySource(properties = {
     "spring.datasource.url=jdbc:h2:mem:flowable;DB_CLOSE_DELAY=-1",
     "spring.datasource.driverClassName=org.h2.Driver",
@@ -36,71 +29,28 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class CourseLimitExceededTest {
 
     @Autowired
-    private RepositoryService repositoryService;
-
-    @Autowired
     private RuntimeService runtimeService;
 
     @Autowired
-    private TaskService taskService;
+    private CourseProcessFixture fixture;
 
     @MockBean(name = "backendRestTemplate")
     private RestTemplate backendRestTemplate;
-
-    private Deployment deployment;
-
-    @BeforeEach
-    void setUp() throws Exception {
-        try (InputStream bpmnStream = getClass().getClassLoader()
-                .getResourceAsStream("processes/Institución_de_capacitación.bpmn20.xml")) {
-            deployment = repositoryService.createDeployment()
-                    .name("Training Institution Deployment - Test")
-                    .addInputStream("Institución_de_capacitación.bpmn20.xml", bpmnStream)
-                    .addClasspathResource("dmn/evaluarViabilidad.dmn")
-                    .deploy();
-        }
-    }
-
-    @AfterEach
-    void tearDown() {
-        if (deployment != null) {
-            repositoryService.deleteDeployment(deployment.getId(), true);
-        }
-    }
 
     @Test
     @DisplayName("6. Course limit: with 5 courses in preparation, the sixth is not viable")
     void testCourseNotViableWhenLimitExceeded() {
         // The DMN evaluates as viable when there are fewer than 5 active courses
         for (int i = 0; i < 5; i++) {
-            startCourseInPreparation();
+            fixture.startCourseInPreparation();
         }
 
-        ProcessInstance processInstance =
-                runtimeService.startProcessInstanceByMessage("Solicitud de curso");
+        ProcessInstance processInstance = fixture.startProcessInstance();
         assertNotNull(processInstance, "Process instance should have started");
 
         ProcessInstance activeInstance = runtimeService.createProcessInstanceQuery()
                 .processInstanceId(processInstance.getId())
                 .singleResult();
         assertNull(activeInstance, "Process instance should have ended");
-    }
-
-    // Advances a request to 'prepararcurso', where it counts as active
-    private void startCourseInPreparation() {
-        ProcessInstance processInstance =
-                runtimeService.startProcessInstanceByMessage("Solicitud de curso");
-
-        Task proposalTask = taskService.createTaskQuery()
-                .processInstanceId(processInstance.getId())
-                .taskDefinitionKey("registraryelaborarpropuesta")
-                .singleResult();
-        taskService.complete(proposalTask.getId());
-
-        Execution acceptanceExecution = runtimeService.createExecutionQuery()
-                .processInstanceId(processInstance.getId())
-                .messageEventSubscriptionName("Aceptación")
-                .singleResult();
-        runtimeService.messageEventReceived("Aceptación", acceptanceExecution.getId());
     }
 }

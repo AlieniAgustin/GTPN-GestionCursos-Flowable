@@ -23,7 +23,7 @@ public class App {
 
     @Profile("dev")
     @Bean
-    CommandLineRunner initGroups(IdentityService repository) {
+    CommandLineRunner seed(IdentityService repository) {
         return args -> {
             if (repository.createGroupQuery().groupId(ADMINISTRACION_ID).count() == 0) {
                 Group administracionGroup = repository.newGroup(ADMINISTRACION_ID);
