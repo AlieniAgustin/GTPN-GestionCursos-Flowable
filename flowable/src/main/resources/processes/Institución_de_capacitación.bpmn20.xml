@@ -281,6 +281,9 @@ if (n <= 2) {
     </scriptTask>
     <serviceTask id="evaluarviabilidad" name="Evaluar Viabilidad" flowable:type="dmn">
       <extensionElements>
+        <flowable:field name="decisionTableReferenceKey">
+          <flowable:string><![CDATA[evaluarViabilidad]]></flowable:string>
+        </flowable:field>
         <flowable:field name="decisionTaskThrowErrorOnNoHits">
           <flowable:string><![CDATA[false]]></flowable:string>
         </flowable:field>
@@ -352,7 +355,7 @@ if (n <= 2) {
     </sequenceFlow>
     <sequenceFlow id="flow_errorcancelacion_a_notificarcierre" sourceRef="errorcancelacion" targetRef="notificarcierre"></sequenceFlow>
     <sequenceFlow id="flow_habilitaracceso_a_prepararcurso" sourceRef="habilitaraccesodelaempresa" targetRef="prepararcurso"></sequenceFlow>
-    <sequenceFlow id="flow_recordatorio_salida" sourceRef="enviarrecordatorio"></sequenceFlow>
+    <sequenceFlow id="flow_recordatorio_salida" sourceRef="enviarrecordatorio" targetRef="seenviaron2recordatorios"></sequenceFlow>
   </process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_Collaboration">
     <bpmndi:BPMNPlane bpmnElement="Collaboration" id="BPMNPlane_Collaboration">
