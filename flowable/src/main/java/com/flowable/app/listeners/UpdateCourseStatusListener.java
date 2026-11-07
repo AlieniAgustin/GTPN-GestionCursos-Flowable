@@ -3,9 +3,12 @@ package com.flowable.app.listeners;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.ExecutionListener;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestTemplate;
 
 import com.flowable.app.dto.CourseStatusUpdateDTO;
 
@@ -17,10 +20,10 @@ public class UpdateCourseStatusListener implements ExecutionListener {
     // Variable que cada camino de cierre marca antes de terminar el proceso
     public static final String RESULT_VARIABLE = "resultadoCurso";
 
-    private final RestClient backendRestClient;
+    private final RestTemplate backendRestTemplate;
 
-    public UpdateCourseStatusListener(@Qualifier("backendRestClient") RestClient backendRestClient) {
-        this.backendRestClient = backendRestClient;
+    public UpdateCourseStatusListener(@Qualifier("backendRestTemplate") RestTemplate backendRestTemplate) {
+        this.backendRestTemplate = backendRestTemplate;
     }
 
     @Override
@@ -44,12 +47,14 @@ public class UpdateCourseStatusListener implements ExecutionListener {
         System.out.println("Resultado del curso: " + result);
 
         try {
-            backendRestClient.put()
-                    .uri("/api/flowable/courses/{processId}", processInstanceId)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(new CourseStatusUpdateDTO(result.toString().trim()))
-                    .retrieve()
-                    .toBodilessEntity();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            backendRestTemplate.exchange(
+                    "/api/flowable/courses/{processId}",
+                    HttpMethod.PUT,
+                    new HttpEntity<>(new CourseStatusUpdateDTO(result.toString().trim()), headers),
+                    Void.class,
+                    processInstanceId);
 
             System.out.println("Estado del curso actualizado con éxito en Backend");
         } catch (Exception e) {

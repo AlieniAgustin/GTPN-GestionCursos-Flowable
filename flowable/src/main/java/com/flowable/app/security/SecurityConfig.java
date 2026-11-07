@@ -48,7 +48,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     Arrays.stream(PUBLIC_URLS)
-                        .map(AntPathRequestMatcher::antMatcher)
+                        .map(AntPathRequestMatcher::new)
                         .toArray(AntPathRequestMatcher[]::new)
                 ).permitAll()
                 .anyRequest().authenticated()

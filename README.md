@@ -1,12 +1,12 @@
 # Gestión de Cursos de Capacitación — GTPN
 
 [![Java 17](https://img.shields.io/badge/Java-17-ED8B00?style=flat-square&logo=openjdk&logoColor=white)](https://openjdk.org/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-6DB33F?style=flat-square&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
-[![Flowable](https://img.shields.io/badge/Flowable-7.0.0-009688?style=flat-square)](https://www.flowable.com/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.7.18-6DB33F?style=flat-square&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Flowable](https://img.shields.io/badge/Flowable-6.8.0-009688?style=flat-square)](https://www.flowable.com/)
 [![Maven](https://img.shields.io/badge/Apache%20Maven-3.9+-C71A36?style=flat-square&logo=apache-maven&logoColor=white)](https://maven.apache.org/)
 [![H2 Database](https://img.shields.io/badge/H2-In--Memory%20%26%20File-003B57?style=flat-square)](https://www.h2database.com/)
 
-Repositorio del proyecto final para la asignatura **Gestión y Tecnologías de Procesos de Negocio (GTPN)**. Contiene el modelado BPMN 2.0 optimizado para ejecución, la documentación de diseño y el proyecto Java estructurado con **Spring Boot 3** y el motor **Flowable Engine 7.0.0** sobre base de datos H2.
+Repositorio del proyecto final para la asignatura **Gestión y Tecnologías de Procesos de Negocio (GTPN)**. Contiene el modelado BPMN 2.0 optimizado para ejecución, la documentación de diseño y el proyecto Java estructurado con **Spring Boot 2.7.18** y el motor **Flowable Engine 6.8.0** sobre base de datos H2.
 
 ---
 
@@ -19,7 +19,7 @@ Repositorio del proyecto final para la asignatura **Gestión y Tecnologías de P
   - `informeDeJustificacionDeCambiosyDecisionesDeModeladoBPMN.md`: Justificación detallada de cada cambio estructural respecto al modelo original.
   - `ProyectoCursos.pdf`: Enunciado oficial de la cátedra con los requerimientos funcionales y escenarios de evaluación.
 - **Módulo Flowable (`flowable/`):**
-  - Aplicación Spring Boot 3 con Flowable 7.0.0, soporte REST (`spring-boot-starter-web`), validación de datos (`spring-boot-starter-validation`), Lombok y base de datos H2.
+  - Aplicación Spring Boot 2.7.18 con Flowable 6.8.0, soporte REST (`spring-boot-starter-web`), validación de datos (`spring-boot-starter-validation`), Lombok y base de datos H2.
 - **Módulo Backend Proxy (`backend/`):**
   - Backend-for-Frontend (BFF) en Spring Boot 3 para intermediación con Flowable, gestión delegada de sesiones (`JSESSIONID`), filtros HTTP y tratamiento unificado de errores. Para más detalles, consulta la [Documentación del Backend Proxy](backend/README.md).
 
@@ -33,6 +33,7 @@ Repositorio del proyecto final para la asignatura **Gestión y Tecnologías de P
 - **Java Development Kit (JDK) 17** o superior
 - **Apache Maven 3.8+**
 - **Git**
+- **Docker** y **Docker Compose** (solo para el despliegue con contenedores)
 
 ---
 
@@ -86,11 +87,42 @@ Repositorio del proyecto final para la asignatura **Gestión y Tecnologías de P
     ```bash
     mvn compile exec:java -Pdev
     ```
-* **Perfil `prod`:**
-  * Utiliza `maven-shade-plugin` y `spring-boot-maven-plugin` para generar el fat JAR empaquetado para distribución:
-    ```bash
-    mvn clean package -Pprod
-    ```
+
+---
+
+## Despliegue con Docker
+
+La imagen de la aplicación **no compila** el proyecto: solo copia el fat JAR ya generado por `spring-boot-maven-plugin`. Por eso el orden es siempre compilar primero y después construir/levantar los contenedores.
+
+1. **Compilar el JAR ejecutable:**
+   ```bash
+   cd flowable
+   ./build.sh
+   ```
+   El script ejecuta `mvn clean package -DskipTests` y deja el artefacto en `flowable/target/app.jar`.
+
+2. **Levantar PostgreSQL y la aplicación:**
+   ```bash
+   cd ..
+   docker compose up --build -d
+   ```
+
+3. **Servicios disponibles:**
+
+   | Servicio | URL / Puerto |
+   |---|---|
+   | API de la aplicación | `http://localhost:8080` |
+   | Flowable UI | `http://localhost:8088/flowable-ui` |
+   | PostgreSQL | `localhost:5432` (db/usuario/password: `flowable`) |
+
+4. **Ver logs o detener:**
+   ```bash
+   docker compose logs -f flowable-app
+   docker compose down
+   ```
+
+> [!IMPORTANT]
+> Si ejecutás `docker compose up --build` sin haber corrido `./build.sh`, el build falla porque `flowable/target/app.jar` todavía no existe. El JAR está en `.gitignore`, así que no se versiona.
 
 ---
 
@@ -101,8 +133,11 @@ Repositorio del proyecto final para la asignatura **Gestión y Tecnologías de P
 ├── cursosOriginal.bpmn              # Modelo BPMN conceptual base de la cátedra
 ├── informeDeJustificacionDeCambiosyDecisionesDeModeladoBPMN.md # Justificación técnica y 7PMG
 ├── ProyectoCursos.pdf               # Enunciado y requerimientos de la materia
+├── docker-compose.yml               # PostgreSQL + app + Flowable UI
 └── flowable/                        # Módulo del motor de procesos y API REST
     ├── pom.xml                      # Dependencias Spring Boot, Flowable y perfiles
+    ├── build.sh                     # Compila y deja el jar en target/app.jar
+    ├── Dockerfile                   # Imagen final: solo copia target/app.jar
     └── src/
         ├── main/
         │   ├── java/com/flowable/app/
