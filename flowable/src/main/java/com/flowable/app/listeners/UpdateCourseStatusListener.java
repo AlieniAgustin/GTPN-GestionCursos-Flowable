@@ -28,23 +28,25 @@ public class UpdateCourseStatusListener implements ExecutionListener {
 
     @Override
     public void notify(DelegateExecution execution) {
-        System.out.println("***** EXECUTION LISTENER UpdateCourseStatus *****");
+        System.out.println("[LISTENER] update course status");
 
         // El business key vincula la instancia con el curso de la base de la institución
         String businessKey = execution.getProcessInstanceBusinessKey();
         String processInstanceId = execution.getProcessInstanceId();
         Object result = execution.getVariable(RESULT_VARIABLE);
 
-        System.out.println("Instancia: " + processInstanceId
+        System.out.println("[INFO] Instancia: " + processInstanceId
                 + " | Curso (business key): " + businessKey);
 
         // Si ningún camino marcó el resultado, se avisa para revisar el modelo
         if (result == null) {
-            System.out.println("ATENCION: la instancia terminó sin " + RESULT_VARIABLE);
+            System.out.println("[WARN] Instancia: " + processInstanceId
+                    + " | ATENCION: la instancia terminó sin " + RESULT_VARIABLE);
             return;
         }
 
-        System.out.println("Resultado del curso: " + result);
+        System.out.println("[INFO] Instancia: " + processInstanceId
+                + " | Resultado del curso: " + result);
 
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -56,11 +58,11 @@ public class UpdateCourseStatusListener implements ExecutionListener {
                     Void.class,
                     processInstanceId);
 
-            System.out.println("Estado del curso actualizado con éxito en Backend");
+            System.out.println("[INFO] Instancia: " + processInstanceId
+                    + " | Estado del curso actualizado con éxito en Backend");
         } catch (Exception e) {
-            System.err.println("Error al actualizar el estado del curso en Backend: " + e.getMessage());
+            System.err.println("[ERROR] Instancia: " + processInstanceId
+                    + " | Error al actualizar el estado del curso en Backend: " + e.getMessage());
         }
-
-        System.out.println("*************************************");
     }
 }

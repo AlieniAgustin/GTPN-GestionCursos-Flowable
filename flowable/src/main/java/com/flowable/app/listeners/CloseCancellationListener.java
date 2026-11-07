@@ -22,8 +22,12 @@ import org.springframework.stereotype.Component;
 @Component("closeCancellation")
 public class CloseCancellationListener implements ExecutionListener {
 
+    private static final long serialVersionUID = 1L;
+
     @Override
     public void notify(DelegateExecution execution) {
+        System.out.println("[LISTENER] close cancellation");
+
         ExecutionEntity current = (ExecutionEntity) execution;
         ExecutionEntity subProcessScope = current.getParent();
         if (subProcessScope == null) {
@@ -40,7 +44,8 @@ public class CloseCancellationListener implements ExecutionListener {
 
             if (waitsForCancellation) {
                 executionManager.deleteExecutionAndRelatedData(child, "Preparación completa", false);
-                System.out.println("Preparación completa: ya no se escucha la cancelación (" + element.getId() + ")");
+                System.out.println("[INFO] Instancia: " + execution.getProcessInstanceId()
+                        + " | Preparación completa: ya no se escucha la cancelación (" + element.getId() + ")");
             }
         }
     }

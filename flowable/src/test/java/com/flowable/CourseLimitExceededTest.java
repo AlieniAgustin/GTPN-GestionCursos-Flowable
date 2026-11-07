@@ -2,7 +2,6 @@ package com.flowable;
 
 import java.io.InputStream;
 
-import org.flowable.engine.HistoryService;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
@@ -22,7 +21,6 @@ import org.springframework.web.client.RestTemplate;
 
 import com.flowable.app.App;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -35,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
     "flowable.database-schema-update=true",
     "flowable.async-executor-activate=false"
 })
-class LimiteCursosSuperadosTest {
+class CourseLimitExceededTest {
 
     @Autowired
     private RepositoryService repositoryService;
@@ -56,7 +54,7 @@ class LimiteCursosSuperadosTest {
         try (InputStream bpmnStream = getClass().getClassLoader()
                 .getResourceAsStream("processes/Institución_de_capacitación.bpmn20.xml")) {
             deployment = repositoryService.createDeployment()
-                    .name("Despliegue Institucion Capacitacion - Test")
+                    .name("Training Institution Deployment - Test")
                     .addInputStream("Institución_de_capacitación.bpmn20.xml", bpmnStream)
                     .addClasspathResource("dmn/evaluarViabilidad.dmn")
                     .deploy();
@@ -71,40 +69,38 @@ class LimiteCursosSuperadosTest {
     }
 
     @Test
-    @DisplayName("6. límite de cursos: con 5 cursos en preparación el sexto no es viable")
-    void testCursoNoViablePropuesta() {
-        // El DMN declara viable con menos de 5 cursos activos
+    @DisplayName("6. Course limit: with 5 courses in preparation, the sixth is not viable")
+    void testCourseNotViableWhenLimitExceeded() {
+        // The DMN evaluates as viable when there are fewer than 5 active courses
         for (int i = 0; i < 5; i++) {
-            iniciarCursoEnPreparacion();
+            startCourseInPreparation();
         }
 
         ProcessInstance processInstance =
                 runtimeService.startProcessInstanceByMessage("Solicitud de curso");
-        assertNotNull(processInstance, "La instancia del proceso debe haberse iniciado");
+        assertNotNull(processInstance, "Process instance should have started");
 
         ProcessInstance activeInstance = runtimeService.createProcessInstanceQuery()
                 .processInstanceId(processInstance.getId())
                 .singleResult();
-        assertNull(activeInstance, "La instancia del proceso debe haber finalizado");
+        assertNull(activeInstance, "Process instance should have ended");
     }
 
-    // Lleva una solicitud hasta prepararcurso, que es donde pasa a contar como activa
-    private void iniciarCursoEnPreparacion() {
+    // Advances a request to 'prepararcurso', where it counts as active
+    private void startCourseInPreparation() {
         ProcessInstance processInstance =
                 runtimeService.startProcessInstanceByMessage("Solicitud de curso");
 
-        Task propuesta = taskService.createTaskQuery()
+        Task proposalTask = taskService.createTaskQuery()
                 .processInstanceId(processInstance.getId())
                 .taskDefinitionKey("registraryelaborarpropuesta")
                 .singleResult();
-        taskService.complete(propuesta.getId());
+        taskService.complete(proposalTask.getId());
 
-        Execution aceptacion = runtimeService.createExecutionQuery()
+        Execution acceptanceExecution = runtimeService.createExecutionQuery()
                 .processInstanceId(processInstance.getId())
                 .messageEventSubscriptionName("Aceptación")
                 .singleResult();
-        runtimeService.messageEventReceived("Aceptación", aceptacion.getId());
+        runtimeService.messageEventReceived("Aceptación", acceptanceExecution.getId());
     }
-
-    
 }

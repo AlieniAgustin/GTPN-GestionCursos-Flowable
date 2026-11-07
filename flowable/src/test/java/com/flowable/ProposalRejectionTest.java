@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
     "flowable.database-schema-update=true",
     "flowable.async-executor-activate=false"
 })
-class RechazoPropuestaTest {
+class ProposalRejectionTest {
 
     @Autowired
     private RepositoryService repositoryService;
@@ -61,7 +61,7 @@ class RechazoPropuestaTest {
         try (InputStream bpmnStream = getClass().getClassLoader()
                 .getResourceAsStream("processes/Institución_de_capacitación.bpmn20.xml")) {
             deployment = repositoryService.createDeployment()
-                    .name("Despliegue Institucion Capacitacion - Test")
+                    .name("Training Institution Deployment - Test")
                     .addInputStream("Institución_de_capacitación.bpmn20.xml", bpmnStream)
                     .addClasspathResource("dmn/evaluarViabilidad.dmn")
                     .deploy();
@@ -76,68 +76,66 @@ class RechazoPropuestaTest {
     }
 
     @Test
-    @DisplayName("5. imposibilidad de continuar por el limite de cursos")
-    void testCaminoRechazoPropuesta() {
-        // reemplazar el viable harcodeado en false, con la ejecucion de logica de negocio
+    @DisplayName("5. Proposal rejection: path when proposal is rejected")
+    void testProposalRejectionPath() {
+        // Replace hardcoded viable=true with business logic execution
         Map<String, Object> variables = new HashMap<>();
         variables.put("viable", true);
 
         ProcessInstance processInstance = runtimeService.startProcessInstanceByMessage("Solicitud de curso", variables);
-        assertNotNull(processInstance, "La instancia del proceso debe haberse iniciado");
+        assertNotNull(processInstance, "Process instance should have started");
         String processInstanceId = processInstance.getId();
 
-        Task tareaPropuesta = taskService.createTaskQuery()
+        Task proposalTask = taskService.createTaskQuery()
                 .processInstanceId(processInstanceId)
                 .taskDefinitionKey("registraryelaborarpropuesta")
                 .singleResult();
 
-        assertNotNull(tareaPropuesta, "Debe existir la tarea 'Registrar y Elaborar propuesta'");
-        assertEquals("jefeadministrativo", tareaPropuesta.getAssignee());
+        assertNotNull(proposalTask, "Task 'registraryelaborarpropuesta' should exist");
+        assertEquals("jefeadministrativo", proposalTask.getAssignee());
 
-        Map<String, Object> propuestaVars = new HashMap<>();
-        propuestaVars.put("propuesta", "Propuesta Curso Flowable 2026");
-        taskService.complete(tareaPropuesta.getId(), propuestaVars);
+        Map<String, Object> proposalVars = new HashMap<>();
+        proposalVars.put("propuesta", "Propuesta Curso Flowable 2026");
+        taskService.complete(proposalTask.getId(), proposalVars);
 
-        // token esperando en rechazo, tambien lo hace en el timer y en los demas lugares
-        Execution executionRechazo = runtimeService.createExecutionQuery()
+        // Execution waiting on rejection; timers and parallel executions also wait
+        Execution rejectionExecution = runtimeService.createExecutionQuery()
                 .processInstanceId(processInstanceId)
                 .messageEventSubscriptionName("Rechazo")
                 .singleResult();
 
-        assertNotNull(executionRechazo, "El proceso debe estar esperando el mensaje de evento 'Rechazo'");
+        assertNotNull(rejectionExecution, "Process should be waiting for 'Rechazo' message event");
 
-        // se mockea la respuesta y se cancelan los demas execution que estaban esperando
-        runtimeService.messageEventReceived("Rechazo", executionRechazo.getId());
+        // Simulate received message and cancel other waiting executions
+        runtimeService.messageEventReceived("Rechazo", rejectionExecution.getId());
 
-        Task tareaArchivar = taskService.createTaskQuery()
+        Task archiveTask = taskService.createTaskQuery()
                 .processInstanceId(processInstanceId)
                 .taskDefinitionKey("archivarsolicitud")
                 .singleResult();
 
-        assertNotNull(tareaArchivar, "Debe haberse creado la tarea 'Archivar solicitud'");
-        assertEquals("jefeadministrativo", tareaArchivar.getAssignee());
+        assertNotNull(archiveTask, "Task 'archivarsolicitud' should have been created");
+        assertEquals("jefeadministrativo", archiveTask.getAssignee());
 
-        Object resultadoCurso = runtimeService.getVariable(processInstanceId, "resultadoCurso");
-        assertEquals("RECHAZADO", resultadoCurso, "El resultado del curso debe ser RECHAZADO");
+        Object courseResult = runtimeService.getVariable(processInstanceId, "resultadoCurso");
+        assertEquals("RECHAZADO", courseResult, "Course result variable should be RECHAZADO");
 
-        // se completa la tarea manual archivar solicitud
-        taskService.complete(tareaArchivar.getId());
+        // Complete manual task to archive the request
+        taskService.complete(archiveTask.getId());
 
-        // se verifica que finalizo el proceso
+        // Verify the process instance has ended
         ProcessInstance activeInstance = runtimeService.createProcessInstanceQuery()
                 .processInstanceId(processInstanceId)
                 .singleResult();
-        assertNull(activeInstance, "La instancia del proceso debe haber finalizado");
+        assertNull(activeInstance, "Process instance should have ended");
 
-        // se busca que en el historial haya quedado marcado con rechazado
-        Object historicResultado = historyService.createHistoricVariableInstanceQuery()
+        // Verify historic variable records RECHAZADO
+        Object historicResult = historyService.createHistoricVariableInstanceQuery()
                 .processInstanceId(processInstanceId)
                 .variableName("resultadoCurso")
                 .singleResult()
                 .getValue();
 
-        assertEquals("RECHAZADO", historicResultado);
+        assertEquals("RECHAZADO", historicResult);
     }
-
-    
 }

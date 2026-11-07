@@ -21,13 +21,14 @@ public class AssignLeastBusyListener implements TaskListener {
 
     @Override
     public void notify(DelegateTask task) {
-        System.out.println("***** TASK LISTENER AssignLeastBusy *****");
-        System.out.println("Instancia: " + task.getProcessInstanceId()
+        System.out.println("[LISTENER] assign least busy user");
+        System.out.println("[INFO] Instancia: " + task.getProcessInstanceId()
                 + " | Tarea: " + task.getName());
 
         // Si el modelo ya trae un usuario asignado, se respeta
         if (task.getAssignee() != null && !task.getAssignee().isBlank()) {
-            System.out.println("Ya estaba asignada a: " + task.getAssignee());
+            System.out.println("[INFO] Instancia: " + task.getProcessInstanceId()
+                    + " | Tarea ya estaba asignada a: " + task.getAssignee());
             return;
         }
 
@@ -54,7 +55,7 @@ public class AssignLeastBusyListener implements TaskListener {
             long pendingTasks = taskService.createTaskQuery()
                     .taskAssignee(user.getId())
                     .count();
-            System.out.println(user.getId() + " -> " + pendingTasks + " tareas asignadas");
+            System.out.println("[INFO] Usuario: " + user.getId() + " | Tareas asignadas: " + pendingTasks);
 
             // En caso de empate queda el primero por ID
             if (pendingTasks < lowestCount) {
@@ -65,6 +66,7 @@ public class AssignLeastBusyListener implements TaskListener {
 
         // Se usa taskService para que la tarea figure como asignada y no como "a reclamar"
         taskService.setAssignee(task.getId(), selectedUser);
-        System.out.println("Asignada a: " + selectedUser + " (tenía " + lowestCount + " tareas)");
+        System.out.println("[INFO] Instancia: " + task.getProcessInstanceId()
+                + " | Asignada a: " + selectedUser + " (" + lowestCount + " tareas previas)");
     }
 }

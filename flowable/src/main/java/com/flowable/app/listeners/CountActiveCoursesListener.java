@@ -18,7 +18,7 @@ public class CountActiveCoursesListener implements ExecutionListener {
     public void notify(DelegateExecution execution) {
         RuntimeService runtimeService =
                 CommandContextUtil.getProcessEngineConfiguration().getRuntimeService();
-              System.out.println("[LISTENER] active courses counter");
+        System.out.println("[LISTENER] active courses counter");
 
         String ownInstanceId = execution.getProcessInstanceId();
 
@@ -29,6 +29,6 @@ public class CountActiveCoursesListener implements ExecutionListener {
 
         execution.setVariable(COUNT_VARIABLE, activeCourses);
 
-      System.out.println("[INFO] Instancia: " + ownInstanceId + " | Otros cursos activos: " + activeCourses);
+        System.out.println("[INFO] Instancia: " + ownInstanceId + " | Otros cursos activos: " + activeCourses);
     }
 }
