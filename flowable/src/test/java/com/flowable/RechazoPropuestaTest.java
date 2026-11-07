@@ -1,10 +1,7 @@
 package com.flowable;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.flowable.engine.HistoryService;
@@ -61,13 +58,8 @@ class RechazoPropuestaTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        // Leemos directamente Institución_de_capacitación.bpmn20.xml desde la raíz del proyecto
-        File bpmnFile = new File("../Institución_de_capacitación.bpmn20.xml");
-        if (!bpmnFile.exists()) {
-            bpmnFile = new File("Institución_de_capacitación.bpmn20.xml");
-        }
-
-        try (InputStream bpmnStream = new FileInputStream(bpmnFile)) {
+        try (InputStream bpmnStream = getClass().getClassLoader()
+                .getResourceAsStream("processes/Institución_de_capacitación.bpmn20.xml")) {
             deployment = repositoryService.createDeployment()
                     .name("Despliegue Institucion Capacitacion - Test")
                     .addInputStream("Institución_de_capacitación.bpmn20.xml", bpmnStream)
@@ -84,8 +76,9 @@ class RechazoPropuestaTest {
     }
 
     @Test
-    @DisplayName("3. Rechazo de la propuesta: Solicitud -> Evaluar viabilidad (viable) -> Registrar y elaborar propuesta -> Enviar propuesta -> Rechazo -> Archivar solicitud -> Cerrada")
+    @DisplayName("5. imposibilidad de continuar por el limite de cursos")
     void testCaminoRechazoPropuesta() {
+        // reemplazar el viable harcodeado en false, con la ejecucion de logica de negocio
         Map<String, Object> variables = new HashMap<>();
         variables.put("viable", true);
 
@@ -142,6 +135,9 @@ class RechazoPropuestaTest {
                 .variableName("resultadoCurso")
                 .singleResult()
                 .getValue();
+
         assertEquals("RECHAZADO", historicResultado);
     }
+
+    
 }

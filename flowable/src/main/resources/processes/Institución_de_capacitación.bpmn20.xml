@@ -354,7 +354,11 @@ if (n <= 2) {
       </extensionElements>
     </sequenceFlow>
     <sequenceFlow id="flow_errorcancelacion_a_notificarcierre" sourceRef="errorcancelacion" targetRef="notificarcierre"></sequenceFlow>
-    <sequenceFlow id="flow_habilitaracceso_a_prepararcurso" sourceRef="habilitaraccesodelaempresa" targetRef="prepararcurso"></sequenceFlow>
+    <sequenceFlow id="flow_habilitaracceso_a_prepararcurso" sourceRef="habilitaraccesodelaempresa" targetRef="prepararcurso">
+      <extensionElements>
+        <flowable:executionListener event="take" expression="${execution.setVariable('cursoActivo', true)}"></flowable:executionListener>
+      </extensionElements>
+    </sequenceFlow>
     <sequenceFlow id="flow_recordatorio_salida" sourceRef="enviarrecordatorio" targetRef="seenviaron2recordatorios"></sequenceFlow>
   </process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_Collaboration">
