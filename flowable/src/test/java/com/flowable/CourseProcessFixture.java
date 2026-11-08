@@ -4,10 +4,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.flowable.engine.ManagementService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
 import org.flowable.engine.runtime.Execution;
 import org.flowable.engine.runtime.ProcessInstance;
+import org.flowable.job.api.Job;
 import org.flowable.task.api.Task;
 import org.springframework.stereotype.Component;
 
@@ -20,7 +22,8 @@ public class CourseProcessFixture {
     public static final String MESSAGE_COURSE_REQUEST = "Solicitud de curso";
     public static final String MESSAGE_ACCEPTANCE = "Aceptación";
     public static final String MESSAGE_REJECTION = "Rechazo";
-    public static final String MESSAGE_MODIFICATIONS = "Modificaciones";
+    public static final String MESSAGE_MODIFICATIONS = "Solicitud de modificaciones";
+    public static final String MESSAGE_PARTICIPANTS = "Nómina de participantes";
 
     public static final String TASK_REGISTER_PROPOSAL = "registraryelaborarpropuesta";
     public static final String TASK_ARCHIVE_REQUEST = "archivarsolicitud";
@@ -28,10 +31,13 @@ public class CourseProcessFixture {
 
     private final RuntimeService runtimeService;
     private final TaskService taskService;
+    private final ManagementService managementService;
 
-    public CourseProcessFixture(RuntimeService runtimeService, TaskService taskService) {
+    public CourseProcessFixture(RuntimeService runtimeService, TaskService taskService,
+                                ManagementService managementService) {
         this.runtimeService = runtimeService;
         this.taskService = taskService;
+        this.managementService = managementService;
     }
 
     /**
@@ -150,5 +156,52 @@ public class CourseProcessFixture {
         ProcessInstance processInstance = advanceToWaitingForProposalResponse(defaultProposalVars);
         triggerAcceptance(processInstance.getId());
         return processInstance;
+    }
+
+    /**
+     * Triggers the participant list message ('Nómina de participantes') inside the preparation subprocess.
+     */
+    public Execution triggerParticipantList(String processInstanceId) {
+        Execution execution = runtimeService.createExecutionQuery()
+                .processInstanceId(processInstanceId)
+                .messageEventSubscriptionName(MESSAGE_PARTICIPANTS)
+                .singleResult();
+
+        if (execution != null) {
+            runtimeService.messageEventReceived(MESSAGE_PARTICIPANTS, execution.getId());
+        }
+        return execution;
+    }
+
+    /**
+     * Fires the pending timer of the instance right away (the async executor is off in tests).
+     * Returns the fired timer, or null if the instance was not waiting on a timer.
+     */
+    public Job fireTimer(String processInstanceId) {
+        Job timer = managementService.createTimerJobQuery()
+                .processInstanceId(processInstanceId)
+                .singleResult();
+
+        if (timer != null) {
+            Job executable = managementService.moveTimerToExecutableJob(timer.getId());
+            managementService.executeJob(executable.getId());
+        }
+        return timer;
+    }
+
+    /**
+     * Finds the pending task with the given BPMN id and completes it with the given variables.
+     * Returns the completed task, or null if it did not exist.
+     */
+    public Task completeTask(String processInstanceId, String taskKey, Map<String, Object> variables) {
+        Task task = taskService.createTaskQuery()
+                .processInstanceId(processInstanceId)
+                .taskDefinitionKey(taskKey)
+                .singleResult();
+
+        if (task != null) {
+            taskService.complete(task.getId(), variables);
+        }
+        return task;
     }
 }
