@@ -3,10 +3,12 @@ package com.flowable;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.flowable.engine.ManagementService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
 import org.flowable.engine.runtime.Execution;
 import org.flowable.engine.runtime.ProcessInstance;
+import org.flowable.job.api.Job;
 import org.flowable.task.api.Task;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,6 +43,9 @@ class CompensationTest {
 
     @Autowired
     private RuntimeService runtimeService;
+
+    @Autowired 
+    private ManagementService managementService;
 
     @MockBean(name = "backendRestTemplate")
     private RestTemplate backendRestTemplate;
@@ -108,6 +113,10 @@ class CompensationTest {
 
         taskService.complete(freeEquipment.getId());
 
+        Job timer = managementService.createTimerJobQuery().processInstanceId(processInstanceId).singleResult();
+        assertNotNull(timer, "Should be waiting on timer 'esperarliberacion'");
+        managementService.executeJob(managementService.moveTimerToExecutableJob(timer.getId()).getId());
+        
         assertNull(runtimeService.createProcessInstanceQuery().processInstanceId(processInstanceId).singleResult());
     }
 }
