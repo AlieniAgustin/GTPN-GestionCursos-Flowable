@@ -3,6 +3,7 @@ package com.flowable;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.flowable.engine.ManagementService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
 import org.flowable.engine.runtime.Execution;
@@ -41,9 +42,6 @@ class CompensationTest {
 
     @Autowired
     private RuntimeService runtimeService;
-
-    @Autowired 
-    private ManagementService managementService;
 
     @MockBean(name = "backendRestTemplate")
     private RestTemplate backendRestTemplate;
