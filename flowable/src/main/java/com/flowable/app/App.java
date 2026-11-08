@@ -11,7 +11,7 @@ import java.util.List;
 
 import org.flowable.engine.IdentityService;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.flowable")
 public class App {
     private static final String DOCENTES_ID = "docentes";
     private static final String ADMINISTRACION_ID = "administracion";

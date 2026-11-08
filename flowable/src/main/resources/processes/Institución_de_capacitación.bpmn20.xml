@@ -56,7 +56,6 @@
         <flowNodeRef>solicitudcerrada</flowNodeRef>
         <flowNodeRef>revisarpropuesta</flowNodeRef>
         <flowNodeRef>modificaciones</flowNodeRef>
-        <flowNodeRef>errorcancelacion</flowNodeRef>
         <flowNodeRef>fincierre</flowNodeRef>
         <flowNodeRef>notificarcierre</flowNodeRef>
         <flowNodeRef>enviarconfirmacion</flowNodeRef>
@@ -85,7 +84,6 @@
         <flowNodeRef>flow_notificarcierre_a_fincierre</flowNodeRef>
         <flowNodeRef>flow_liberarrecurso_a_cursofinalizado</flowNodeRef>
         <flowNodeRef>flow_enviarinforme_a_liberarrecurso</flowNodeRef>
-        <flowNodeRef>flow_errorcancelacion_a_notificarcierre</flowNodeRef>
         <flowNodeRef>flow_habilitaracceso_a_prepararcurso</flowNodeRef>
         <flowNodeRef>flow_recordatorio_salida</flowNodeRef>
       </lane>
@@ -169,14 +167,28 @@ execution.setVariable('aulaVirtualLiberada', true)]]></script>
         <startEvent id="recibircancelacion" name="Recibir Cancelación" isInterrupting="true">
           <messageEventDefinition messageRef="Msg_cancel"></messageEventDefinition>
         </startEvent>
-        <endEvent id="finporcancelacion" name="Fin por cancelación">
-          <errorEventDefinition errorRef="cancelationthrow" flowable:errorVariableLocalScope="false" flowable:errorVariableTransient="false"></errorEventDefinition>
-        </endEvent>
+        <scriptTask id="notificarcierre" name="Notificar Cierre" scriptFormat="groovy" flowable:autoStoreVariables="false">
+          <script><![CDATA[println "Cierre notificado a la empresa"]]></script>
+        </scriptTask>
+        <endEvent id="fincierre"></endEvent>
         <intermediateThrowEvent id="compensarrecursoscancelacion">
-          <compensateEventDefinition></compensateEventDefinition>
+          <compensateEventDefinition activityRef="contratarequipamiento"></compensateEventDefinition>
+        </intermediateThrowEvent>
+        <intermediateThrowEvent id="compensarrecursoscancelacionaula">
+          <compensateEventDefinition activityRef="reservaraula"></compensateEventDefinition>
+        </intermediateThrowEvent>
+        <intermediateThrowEvent id="compensarrecursoscancelacionaulavirtual">
+          <compensateEventDefinition activityRef="solicitaraulavirtual"></compensateEventDefinition>
         </intermediateThrowEvent>
         <sequenceFlow id="flow_recibircancelacion_a_compensarrecursos" sourceRef="recibircancelacion" targetRef="compensarrecursoscancelacion"></sequenceFlow>
-        <sequenceFlow id="flow_compensarrecursos_a_finporcancelacion" sourceRef="compensarrecursoscancelacion" targetRef="finporcancelacion"></sequenceFlow>
+        <sequenceFlow id="flow_compensarrecursos_a_compensaraula" sourceRef="compensarrecursoscancelacion" targetRef="compensarrecursoscancelacionaula"></sequenceFlow>
+        <sequenceFlow id="flow_compensaraula_a_compensaraulavirtual" sourceRef="compensarrecursoscancelacionaula" targetRef="compensarrecursoscancelacionaulavirtual"></sequenceFlow>
+        <sequenceFlow id="flow_compensarrecursos_a_notificarcierre" sourceRef="compensarrecursoscancelacionaulavirtual" targetRef="notificarcierre"></sequenceFlow>
+        <sequenceFlow id="flow_notificarcierre_a_fincierre" sourceRef="notificarcierre" targetRef="fincierre">
+          <extensionElements>
+            <flowable:executionListener event="take" expression="${execution.setVariable('resultadoCurso','CANCELADO')}"></flowable:executionListener>
+          </extensionElements>
+        </sequenceFlow>
       </subProcess>
       <dataObject id="listaDefinitiva" name="listaDefinitiva" itemSubjectRef="xsd:string">
         <extensionElements>
@@ -204,10 +216,10 @@ execution.setVariable('aulaVirtualLiberada', true)]]></script>
       <sequenceFlow id="flow_equipamientoespecial" name="Equipamiento especial" sourceRef="recursosnecesarios" targetRef="contratarequipamiento">
         <conditionExpression xsi:type="tFormalExpression"><![CDATA[${requiereEquipamiento}]]></conditionExpression>
       </sequenceFlow>
-      <sequenceFlow id="flow_compensacion_a_liberaraulavirtual" sourceRef="compensacionaulavirtual" targetRef="liberaraulavirtual"></sequenceFlow>
-      <sequenceFlow id="flow_compensacion_a_liberarequipamiento" sourceRef="compensacionequipamiento" targetRef="liberarequipamiento"></sequenceFlow>
-      <sequenceFlow id="flow_compensacion_a_liberaraula" sourceRef="compensacionaula" targetRef="liberaraula"></sequenceFlow>
       <sequenceFlow id="flow_preparacionenparalelo_a_recibirnomina" sourceRef="preparacionenparalelo" targetRef="recibirnomina"></sequenceFlow>
+      <association id="flow_compensacion_a_liberaraulavirtual" associationDirection="One" sourceRef="compensacionaulavirtual" targetRef="liberaraulavirtual"></association>
+      <association id="flow_compensacion_a_liberarequipamiento" associationDirection="One" sourceRef="compensacionequipamiento" targetRef="liberarequipamiento"></association>
+      <association id="flow_compensacion_a_liberaraula" associationDirection="One" sourceRef="compensacionaula" targetRef="liberaraula"></association>
     </subProcess>
     <exclusiveGateway id="esviable" name="Es viable?"></exclusiveGateway>
     <endEvent id="solicitudfinalizada" name="Solicitud finalizada"></endEvent>
@@ -269,13 +281,6 @@ if (n <= 2) {
     <intermediateCatchEvent id="modificaciones" name="Modificaciones">
       <messageEventDefinition messageRef="Msg_mod"></messageEventDefinition>
     </intermediateCatchEvent>
-    <boundaryEvent id="errorcancelacion" attachedToRef="prepararcurso">
-      <errorEventDefinition errorRef="cancelationthrow" flowable:errorVariableLocalScope="false" flowable:errorVariableTransient="true"></errorEventDefinition>
-    </boundaryEvent>
-    <endEvent id="fincierre"></endEvent>
-    <scriptTask id="notificarcierre" name="Notificar Cierre" scriptFormat="groovy" flowable:autoStoreVariables="false">
-      <script><![CDATA[println "Cierre notificado a la empresa"]]></script>
-    </scriptTask>
     <scriptTask id="enviarconfirmacion" name="Enviar confirmación" scriptFormat="groovy" flowable:autoStoreVariables="false">
       <script><![CDATA[println "Confirmación del curso enviada a la empresa"]]></script>
     </scriptTask>
@@ -342,18 +347,12 @@ if (n <= 2) {
       </extensionElements>
       <conditionExpression xsi:type="tFormalExpression"><![CDATA[${recordatorios > 2}]]></conditionExpression>
     </sequenceFlow>
-    <sequenceFlow id="flow_notificarcierre_a_fincierre" sourceRef="notificarcierre" targetRef="fincierre">
-      <extensionElements>
-        <flowable:executionListener event="take" expression="${execution.setVariable('resultadoCurso','CANCELADO')}"></flowable:executionListener>
-      </extensionElements>
-    </sequenceFlow>
     <sequenceFlow id="flow_liberarrecurso_a_cursofinalizado" sourceRef="liberarrecurso" targetRef="cursofinalizado"></sequenceFlow>
     <sequenceFlow id="flow_enviarinforme_a_liberarrecurso" sourceRef="enviarinformeaempresayarchivarexpediente" targetRef="liberarrecurso">
       <extensionElements>
         <flowable:executionListener event="take" expression="${execution.setVariable('resultadoCurso','FINALIZADO')}"></flowable:executionListener>
       </extensionElements>
     </sequenceFlow>
-    <sequenceFlow id="flow_errorcancelacion_a_notificarcierre" sourceRef="errorcancelacion" targetRef="notificarcierre"></sequenceFlow>
     <sequenceFlow id="flow_habilitaracceso_a_prepararcurso" sourceRef="habilitaraccesodelaempresa" targetRef="prepararcurso">
       <extensionElements>
         <flowable:executionListener event="take" expression="${execution.setVariable('cursoActivo', true)}"></flowable:executionListener>
@@ -454,10 +453,16 @@ if (n <= 2) {
         <omgdc:Bounds height="30.0" width="30.5" x="1306.9999926884975" y="1431.999985376995"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="finporcancelacion" id="BPMNShape_finporcancelacion">
-        <omgdc:Bounds height="28.0" width="28.0" x="1455.0" y="1432.999985376995"></omgdc:Bounds>
+        <omgdc:Bounds height="28.0" width="28.0" x="1567.0" y="1432.999985376995"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="compensarrecursoscancelacion" id="BPMNShape_compensarrecursoscancelacion">
         <omgdc:Bounds height="30.0" width="30.0" x="1383.8000030517578" y="1431.999985376995"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="compensarrecursoscancelacionaula" id="BPMNShape_compensarrecursoscancelacionaula">
+        <omgdc:Bounds height="30.0" width="30.0" x="1455.0" y="1431.999985376995"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="compensarrecursoscancelacionaulavirtual" id="BPMNShape_compensarrecursoscancelacionaulavirtual">
+        <omgdc:Bounds height="30.0" width="30.0" x="1526.0" y="1431.999985376995"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="esviable" id="BPMNShape_esviable">
         <omgdc:Bounds height="40.0" width="40.0" x="394.999977350236" y="449.9999865889553"></omgdc:Bounds>
@@ -554,8 +559,16 @@ if (n <= 2) {
         <omgdi:waypoint x="959.9999999999045" y="1319.9999457465328"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="flow_compensarrecursos_a_finporcancelacion" id="BPMNEdge_flow_compensarrecursos_a_finporcancelacion" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
-        <omgdi:waypoint x="1413.7499993460424" y="1446.999985376995"></omgdi:waypoint>
+        <omgdi:waypoint x="1556.0" y="1446.999985376995"></omgdi:waypoint>
+        <omgdi:waypoint x="1567.0" y="1446.999985376995"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow_compensarrecursos_a_compensaraula" id="BPMNEdge_flow_compensarrecursos_a_compensaraula" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="15.0" flowable:targetDockerY="15.0">
+        <omgdi:waypoint x="1413.8000030517578" y="1446.999985376995"></omgdi:waypoint>
         <omgdi:waypoint x="1455.0" y="1446.999985376995"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow_compensaraula_a_compensaraulavirtual" id="BPMNEdge_flow_compensaraula_a_compensaraulavirtual" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="15.0" flowable:targetDockerY="15.0">
+        <omgdi:waypoint x="1485.0" y="1446.999985376995"></omgdi:waypoint>
+        <omgdi:waypoint x="1526.0" y="1446.999985376995"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="flow_inicioprepararcurso_a_preparacionenparalelo" id="BPMNEdge_flow_inicioprepararcurso_a_preparacionenparalelo" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
         <omgdi:waypoint x="399.94593774240445" y="986.6471399301164"></omgdi:waypoint>

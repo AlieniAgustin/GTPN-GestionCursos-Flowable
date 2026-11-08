@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 @SpringBootTest(classes = App.class)
 @DirtiesContext
 @TestPropertySource(properties = {
-    "spring.datasource.url=jdbc:h2:mem:flowable;DB_CLOSE_DELAY=-1",
+    "spring.datasource.url=jdbc:h2:mem:proposal_rejection;DB_CLOSE_DELAY=-1",
     "spring.datasource.driverClassName=org.h2.Driver",
     "spring.datasource.username=sa",
     "spring.datasource.password=",
@@ -57,7 +57,6 @@ class ProposalRejectionTest {
         Map<String, Object> proposalVars = new HashMap<>();
         proposalVars.put("propuesta", "Propuesta Curso Flowable 2026");
 
-        // Advance to event gateway ('esperarrespuesta') with custom proposal variables
         ProcessInstance processInstance = fixture.advanceToWaitingForProposalResponse(proposalVars);
         assertNotNull(processInstance, "Process instance should have reached the response gateway");
         String processInstanceId = processInstance.getId();
