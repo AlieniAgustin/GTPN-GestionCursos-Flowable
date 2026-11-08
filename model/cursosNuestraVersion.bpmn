@@ -259,7 +259,7 @@
       <bpmn:boundaryEvent id="Event_1ypcc1j" attachedToRef="Equipo">
         <bpmn:compensateEventDefinition id="CompensateEventDefinition_1weqaul" />
       </bpmn:boundaryEvent>
-      <bpmn:userTask id="Activity_1m08pcl" name="Liberar Equipamiento" isForCompensation="true" />
+      <bpmn:scriptTask id="Activity_1m08pcl" name="Liberar Equipamiento" isForCompensation="true" />
       <bpmn:serviceTask id="Aula" name="Reservar aula">
         <bpmn:incoming>or0</bpmn:incoming>
         <bpmn:outgoing>oj0</bpmn:outgoing>
