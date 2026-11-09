@@ -161,8 +161,8 @@
           <flowable:taskListener event="complete" expression="${task.setVariable('equipoLiberado', true)}"></flowable:taskListener>
         </extensionElements>
       </userTask>
-      <serviceTask id="reservaraula" name="Reservar aula" flowable:expression="${execution.setVariable('aulaAsignada', 'AULA-1')}"></serviceTask>
-      <serviceTask id="liberaraula" name="Liberar Aula" isForCompensation="true" flowable:expression="${execution.setVariable('aulaLiberada', true)}"></serviceTask>
+      <serviceTask id="reservaraula" name="Reservar aula" flowable:delegateExpression="${reserveClassroom}"></serviceTask>
+      <serviceTask id="liberaraula" name="Liberar Aula" isForCompensation="true" flowable:delegateExpression="${releaseClassroom}"></serviceTask>
       <scriptTask id="liberaraulavirtual" name="Liberar Aula Virtual" isForCompensation="true" scriptFormat="groovy" flowable:autoStoreVariables="false">
         <script><![CDATA[println "Aula virtual liberada"
 execution.setVariable('aulaVirtualLiberada', true)]]></script>
@@ -170,12 +170,16 @@ execution.setVariable('aulaVirtualLiberada', true)]]></script>
       <intermediateCatchEvent id="recibirnomina" name="Recibir nómina">
         <messageEventDefinition messageRef="Msg_nom"></messageEventDefinition>
       </intermediateCatchEvent>
+      <boundaryEvent id="sinaulas" attachedToRef="reservaraula">
+        <errorEventDefinition errorRef="errSinAulas" flowable:errorVariableLocalScope="true" flowable:errorVariableTransient="true"></errorEventDefinition>
+      </boundaryEvent>
       <boundaryEvent id="compensacionaula" attachedToRef="reservaraula" cancelActivity="false">
         <compensateEventDefinition></compensateEventDefinition>
       </boundaryEvent>
       <boundaryEvent id="compensacionaulavirtual" attachedToRef="solicitaraulavirtual" cancelActivity="false">
         <compensateEventDefinition></compensateEventDefinition>
       </boundaryEvent>
+      <userTask id="gestionarfaltadeaulas" name="Gestionar falta de aula" flowable:candidateGroups="administracion" flowable:formFieldValidation="true"></userTask>
       <subProcess id="cancelacion" name="Cancelación" triggeredByEvent="true">
         <startEvent id="recibircancelacion" name="Recibir Cancelación" isInterrupting="true">
           <messageEventDefinition messageRef="Msg_cancel"></messageEventDefinition>
@@ -228,6 +232,8 @@ execution.setVariable('aulaVirtualLiberada', true)]]></script>
         <conditionExpression xsi:type="tFormalExpression"><![CDATA[${requiereEquipamiento}]]></conditionExpression>
       </sequenceFlow>
       <sequenceFlow id="flow_preparacionenparalelo_a_recibirnomina" sourceRef="preparacionenparalelo" targetRef="recibirnomina"></sequenceFlow>
+      <sequenceFlow id="flow_sinaulas_a_gestionarfaltadeaulas" sourceRef="sinaulas" targetRef="gestionarfaltadeaulas"></sequenceFlow>
+      <sequenceFlow id="flow_gestionarfaltadeaulas_a_reservaraula" sourceRef="gestionarfaltadeaulas" targetRef="reservaraula"></sequenceFlow>
       <association id="flow_compensacion_a_liberaraulavirtual" associationDirection="One" sourceRef="compensacionaulavirtual" targetRef="liberaraulavirtual"></association>
       <association id="flow_compensacion_a_liberarequipamiento" associationDirection="One" sourceRef="compensacionequipamiento" targetRef="liberarequipamiento"></association>
       <association id="flow_compensacion_a_liberaraula" associationDirection="One" sourceRef="compensacionaula" targetRef="liberaraula"></association>
@@ -495,6 +501,12 @@ if (n <= 2) {
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="sid-B07198F4-A250-4F71-BC87-06934C014512" id="BPMNShape_sid-B07198F4-A250-4F71-BC87-06934C014512">
         <omgdc:Bounds height="28.0" width="28.0" x="1334.999990053475" y="1480.9999781250956"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="gestionarfaltadeaulas" id="BPMNShape_gestionarfaltadeaulas">
+        <omgdc:Bounds height="80.0" width="100.0" x="974.9999927356839" y="959.9999928474426"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sinaulas" id="BPMNShape_sinaulas">
+        <omgdc:Bounds height="30.0" width="30.0" x="910.3819016253117" y="1033.714358108538"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="esviable" id="BPMNShape_esviable">
         <omgdc:Bounds height="40.0" width="40.0" x="394.999977350236" y="449.9999865889553"></omgdc:Bounds>
@@ -821,6 +833,17 @@ if (n <= 2) {
       <bpmndi:BPMNEdge bpmnElement="flow_recibircancelacion_a_compensarrecursos" id="BPMNEdge_flow_recibircancelacion_a_compensarrecursos" flowable:sourceDockerX="15.25" flowable:sourceDockerY="15.0" flowable:targetDockerX="15.0" flowable:targetDockerY="15.0">
         <omgdi:waypoint x="1262.4499391858722" y="1396.9999427795462"></omgdi:waypoint>
         <omgdi:waypoint x="1308.7999528249152" y="1396.9999427795462"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow_sinaulas_a_gestionarfaltadeaulas" id="BPMNEdge_flow_sinaulas_a_gestionarfaltadeaulas" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
+        <omgdi:waypoint x="925.3819016253117" y="1033.714358108538"></omgdi:waypoint>
+        <omgdi:waypoint x="925.3819016253117" y="999.9999928474426"></omgdi:waypoint>
+        <omgdi:waypoint x="974.9999927356839" y="999.9999928474426"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow_gestionarfaltadeaulas_a_reservaraula" id="BPMNEdge_flow_gestionarfaltadeaulas_a_reservaraula" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
+        <omgdi:waypoint x="1024.999992735684" y="959.9999928474426"></omgdi:waypoint>
+        <omgdi:waypoint x="1024.999992735684" y="931.3332527279854"></omgdi:waypoint>
+        <omgdi:waypoint x="874.9999853769951" y="931.3332527279854"></omgdi:waypoint>
+        <omgdi:waypoint x="874.9999853769951" y="1039.9999707539903"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
