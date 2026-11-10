@@ -9,8 +9,8 @@ import com.backend.proxy.dto.task.TaskDetailResponse;
 import com.backend.proxy.strategy.task.TaskStrategy;
 
 /**
- * Servicio orquestador para la gestión y completitud de tareas humanas (User Tasks).
- * Coordina la resolución de estrategias de lectura HATEOAS y la delegación al motor Flowable.
+ * Orchestration service for human tasks (User Tasks).
+ * Coordinates polymorphic HATEOAS strategy resolution and Flowable task completion.
  */
 @Service
 public class TaskService {
@@ -22,56 +22,54 @@ public class TaskService {
     }
 
     /**
-     * Obtiene el detalle contextual e hipermedios de una tarea mediante su estrategia asociada.
+     * Retrieves task contextual details and HATEOAS metadata using the matched strategy.
      *
-     * @param taskId Identificador de la tarea en ejecución
-     * @return Respuesta agregada con actionUrl y DTO tipado
+     * @param taskId Flowable runtime task identifier
+     * @return Aggregated response with dynamic actionUrl and strongly-typed DTO
      */
     public TaskDetailResponse<?> getTaskDetail(String taskId) {
         /*
-         * PASOS A IMPLEMENTAR:
-         * 1. Consultar la tarea en Flowable REST API:
+         * IMPLEMENTATION STEPS:
+         * 1. Query task metadata from Flowable REST API:
          *    GET /process-api/runtime/tasks/{taskId}
-         *    Mapear respuesta a FlowableTaskDTO (id, name, taskDefinitionKey, assignee, processInstanceId).
+         *    Map to FlowableTaskDTO (id, name, taskDefinitionKey, assignee, processInstanceId).
          *
-         * 2. Consultar las variables asociadas a la instancia del proceso:
+         * 2. Query process instance variables:
          *    GET /process-api/runtime/process-instances/{processInstanceId}/variables
-         *    Transformar a Map<String, Object> (ej. courseName, docenteSeleccionado, fechaCurso, informe).
+         *    Transform to Map<String, Object> (e.g., courseName, docenteSeleccionado, fechaCurso, informe).
          *
-         * 3. Resolver la estrategia adecuada:
-         *    Buscar en 'strategies' la primera implementación donde strategy.supports(task.taskDefinitionKey()) == true.
-         *    Si no existe ninguna, lanzar ResourceNotFoundException.
+         * 3. Resolve strategy:
+         *    Find first strategy in 'strategies' where strategy.supports(task.taskDefinitionKey()) == true.
+         *    Throw ResourceNotFoundException if no strategy matches.
          *
-         * 4. Construir y retornar el detalle:
-         *    Invocar strategy.buildDetail(task, processVariables) que ensamblará los catálogos/datos
-         *    institucionales y la actionUrl dinámica.
+         * 4. Build and return detail:
+         *    Invoke strategy.buildDetail(task, processVariables) to assemble the domain DTO and actionUrl.
          */
         return null;
     }
 
     /**
-     * Completa una tarea en el motor de procesos inyectando las variables de negocio requeridas.
+     * Completes a task in Flowable engine injecting the necessary process variables.
      *
-     * @param taskId Identificador de la tarea a completar
-     * @param variables Variables de proceso a persistir en el avance del token
+     * @param taskId Flowable task identifier
+     * @param variables Process variables to persist upon advancing the execution token
      */
     public void complete(String taskId, Map<String, Object> variables) {
         /*
-         * PASOS A IMPLEMENTAR:
-         * 1. Validar precondiciones de la tarea en Flowable (verificar estado y asignación).
+         * IMPLEMENTATION STEPS:
+         * 1. Validate task existence and assignee state in Flowable.
          *
-         * 2. Mapear las variables del mapa 'variables' al contrato esperado por Flowable REST API:
+         * 2. Map 'variables' to the Flowable REST completion payload:
          *    {
          *      "action": "complete",
          *      "variables": [ { "name": "...", "value": "..." } ]
          *    }
          *
-         * 3. Ejecutar la completitud en Flowable:
+         * 3. Send completion request to Flowable:
          *    POST /process-api/runtime/tasks/{taskId}
-         *    vía FlowableClient utilizando la cuenta técnica.
+         *    via FlowableClient using technical service account credentials.
          *
-         * 4. Manejar excepciones (404 si la tarea ya no existe, 409 si el token ya avanzó)
-         *    y registrar logs de auditoría de la operación.
+         * 4. Handle exceptions (404 Not Found, 409 Conflict) and log audit events.
          */
     }
 }

@@ -1,7 +1,7 @@
 package com.backend.proxy.dto.task;
 
 /**
- * Representación inmutable de una tarea de usuario obtenida desde el motor Flowable.
+ * Immutable representation of a user task retrieved from the Flowable engine.
  */
 public record FlowableTaskDTO(
     String id,

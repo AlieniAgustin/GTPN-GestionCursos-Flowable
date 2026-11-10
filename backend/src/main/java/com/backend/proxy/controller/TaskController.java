@@ -10,18 +10,18 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.backend.proxy.dto.task.DefinirDocenteRequestDTO;
-import com.backend.proxy.dto.task.DesarrollarCursoRequestDTO;
-import com.backend.proxy.dto.task.ElaborarInformeRequestDTO;
-import com.backend.proxy.dto.task.EnviarInformeRequestDTO;
+import com.backend.proxy.dto.task.DefineTeacherRequestDTO;
+import com.backend.proxy.dto.task.DeliverCourseRequestDTO;
+import com.backend.proxy.dto.task.PrepareReportRequestDTO;
+import com.backend.proxy.dto.task.SendReportRequestDTO;
 import com.backend.proxy.dto.task.TaskDetailResponse;
 import com.backend.proxy.service.TaskService;
 
 import jakarta.validation.Valid;
 
 /**
- * Controlador REST para la consulta de detalles (HATEOAS) y resolución tipada
- * de tareas asignadas al personal de la institución (desarrollo, dictado y reporte/cierre).
+ * REST controller for HATEOAS task inspection and strongly-typed task completion
+ * for institutional users (development, course delivery, report and archiving).
  */
 @RestController
 @RequestMapping("/api/tasks")
@@ -34,91 +34,89 @@ public class TaskController {
     }
 
     /**
-     * Endpoint unificado de consulta agregada (Query).
-     * Despacha mediante TaskStrategy según la taskDefinitionKey de la tarea en Flowable.
+     * Unified aggregated query endpoint (Query).
+     * Dispatches dynamically via TaskStrategy based on taskDefinitionKey.
      */
     @GetMapping("/{taskId}/detail")
     public ResponseEntity<TaskDetailResponse<?>> getDetail(@PathVariable String taskId) {
         /*
-         * PASOS A IMPLEMENTAR:
-         * 1. Invocar a taskService.getTaskDetail(taskId).
-         * 2. Retornar 200 OK con el envoltorio TaskDetailResponse<?> conteniendo
-         *    actionUrl dinámica y el payload de datos tipado.
+         * IMPLEMENTATION STEPS:
+         * 1. Call taskService.getTaskDetail(taskId).
+         * 2. Return 200 OK with TaskDetailResponse<?> containing dynamic actionUrl and typed payload.
          */
         return ResponseEntity.ok(taskService.getTaskDetail(taskId));
     }
 
     /**
-     * Acción de completitud: Definir Docente.
-     * Tarea: 'definirdocentequedesarrollaelcurso' (Jefe de Equipo Docente).
+     * Completion action: Define Teacher.
+     * Task: 'definirdocentequedesarrollaelcurso' (Teaching team lead).
      */
-    @PostMapping("/{taskId}/definir-docente")
-    public ResponseEntity<Void> completarDefinirDocente(
+    @PostMapping("/{taskId}/define-teacher")
+    public ResponseEntity<Void> completeDefineTeacher(
             @PathVariable String taskId,
-            @Valid @RequestBody DefinirDocenteRequestDTO dto) {
+            @Valid @RequestBody DefineTeacherRequestDTO dto) {
         /*
-         * PASOS A IMPLEMENTAR:
-         * 1. Validar anotaciones Bean Validation (@Valid fail-fast: 400 Bad Request si userId es blanco).
-         * 2. Persistir variable de proceso 'docenteSeleccionado' con el userId provisto.
-         * 3. Completar la tarea en Flowable para habilitar la espera en el timer 'fechaprogramada'.
+         * IMPLEMENTATION STEPS:
+         * 1. Validate Bean Validation annotations (@Valid fail-fast: 400 Bad Request if userId is blank).
+         * 2. Persist process variable 'docenteSeleccionado' with provided userId.
+         * 3. Complete task in Flowable to trigger pause on intermediate timer 'fechaprogramada'.
          */
         taskService.complete(taskId, Map.of("docenteSeleccionado", dto.userId()));
         return ResponseEntity.noContent().build();
     }
 
     /**
-     * Acción de completitud: Desarrollar Curso.
-     * Tarea: 'desarrollarcurso' (Docente Asignado dinámicamente).
+     * Completion action: Deliver Course.
+     * Task: 'desarrollarcurso' (Dynamically assigned teacher).
      */
-    @PostMapping("/{taskId}/desarrollar-curso")
-    public ResponseEntity<Void> completarDesarrollarCurso(
+    @PostMapping("/{taskId}/deliver-course")
+    public ResponseEntity<Void> completeDeliverCourse(
             @PathVariable String taskId,
-            @Valid @RequestBody DesarrollarCursoRequestDTO dto) {
+            @Valid @RequestBody DeliverCourseRequestDTO dto) {
         /*
-         * PASOS A IMPLEMENTAR:
-         * 1. Registrar observaciones del dictado si fueran provistas.
-         * 2. Avanzar el token de ejecución hacia 'elaborarinformederesultados'.
+         * IMPLEMENTATION STEPS:
+         * 1. Record delivery observations if supplied.
+         * 2. Advance execution token towards 'elaborarinformederesultados'.
          */
         taskService.complete(taskId, Map.of("cursoDesarrollado", true));
         return ResponseEntity.noContent().build();
     }
 
     /**
-     * Acción de completitud: Elaborar Informe de Resultados.
-     * Tarea: 'elaborarinformederesultados' (Jefe de Equipo Docente).
+     * Completion action: Prepare Results Report.
+     * Task: 'elaborarinformederesultados' (Teaching team lead).
      */
-    @PostMapping("/{taskId}/elaborar-informe")
-    public ResponseEntity<Void> completarElaborarInforme(
+    @PostMapping("/{taskId}/prepare-report")
+    public ResponseEntity<Void> completePrepareReport(
             @PathVariable String taskId,
-            @Valid @RequestBody ElaborarInformeRequestDTO dto) {
+            @Valid @RequestBody PrepareReportRequestDTO dto) {
         /*
-         * PASOS A IMPLEMENTAR:
-         * 1. Validar que el informe no sea nulo ni vacío (@Valid).
-         * 2. Persistir el contenido en el dataObject 'informe' del proceso en Flowable.
-         * 3. Avanzar el token hacia 'enviarinformeaempresayarchivarexpediente'.
+         * IMPLEMENTATION STEPS:
+         * 1. Validate that the report content is not blank (@Valid).
+         * 2. Persist content into process dataObject 'informe'.
+         * 3. Advance execution token towards 'enviarinformeaempresayarchivarexpediente'.
          */
-        taskService.complete(taskId, Map.of("informe", dto.informe()));
+        taskService.complete(taskId, Map.of("informe", dto.report()));
         return ResponseEntity.noContent().build();
     }
 
     /**
-     * Acción de completitud: Enviar Informe y Archivar Expediente.
-     * Tarea: 'enviarinformeaempresayarchivarexpediente' (Jefe Administrativo).
+     * Completion action: Send Report and Archive File.
+     * Task: 'enviarinformeaempresayarchivarexpediente' (Administrative lead).
      */
-    @PostMapping("/{taskId}/enviar-informe")
-    public ResponseEntity<Void> completarEnviarInforme(
+    @PostMapping("/{taskId}/send-report")
+    public ResponseEntity<Void> completeSendReport(
             @PathVariable String taskId,
-            @Valid @RequestBody EnviarInformeRequestDTO dto) {
+            @Valid @RequestBody SendReportRequestDTO dto) {
         /*
-         * PASOS A IMPLEMENTAR:
-         * 1. Despachar el informe/documento a la empresa solicitante.
-         * 2. Persistir flags de auditoría ('informeEnviado', 'expedienteArchivado').
-         * 3. Completar la tarea en Flowable, lo que desencadenará el evento de compensación
-         *    'liberarrecurso' (liberando el aula reservada) y la transición al endEvent
-         *    'cursofinalizado' con status = 'FINALIZADO'.
+         * IMPLEMENTATION STEPS:
+         * 1. Dispatch final report/document to client company.
+         * 2. Persist audit flags ('informeEnviado', 'expedienteArchivado').
+         * 3. Complete task in Flowable, triggering intermediate compensation 'liberarrecurso'
+         *    and transitioning to endEvent 'cursofinalizado' with status = 'FINALIZADO'.
          */
         taskService.complete(taskId, Map.of(
-            "informeEnviado", dto.confirmarEnvio(),
+            "informeEnviado", dto.confirmSend(),
             "expedienteArchivado", true
         ));
         return ResponseEntity.noContent().build();

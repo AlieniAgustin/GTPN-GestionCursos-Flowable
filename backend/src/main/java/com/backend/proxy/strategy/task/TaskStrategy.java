@@ -6,24 +6,24 @@ import com.backend.proxy.dto.task.FlowableTaskDTO;
 import com.backend.proxy.dto.task.TaskDetailResponse;
 
 /**
- * Estrategia de agregación de contexto y generación de hipermedios para una userTask en Flowable.
+ * Strategy interface for context aggregation and dynamic HATEOAS generation for Flowable User Tasks.
  */
 public interface TaskStrategy {
 
     /**
-     * Determina si esta estrategia soporta la clave de definición de la tarea.
+     * Determines whether this strategy supports the given task definition key.
      *
-     * @param taskDefinitionKey Identificador de definición en el BPMN (ej. 'definirdocentequedesarrollaelcurso')
-     * @return true si aplica a la tarea, false en caso contrario
+     * @param taskDefinitionKey BPMN task definition key (e.g., 'definirdocentequedesarrollaelcurso')
+     * @return true if applicable, false otherwise
      */
     boolean supports(String taskDefinitionKey);
 
     /**
-     * Construye la respuesta agregada de lectura (Query) con los datos de negocio y la actionUrl correspondiente.
+     * Builds the aggregated query response containing domain context and the dynamic actionUrl.
      *
-     * @param task Datos de la tarea en Flowable
-     * @param processVariables Variables actuales del proceso
-     * @return Respuesta con hipermedio y payload tipado
+     * @param task Current Flowable task details
+     * @param processVariables Current process instance variables
+     * @return Aggregated response with dynamic HATEOAS link and typed payload
      */
     TaskDetailResponse<?> buildDetail(FlowableTaskDTO task, Map<String, Object> processVariables);
 }

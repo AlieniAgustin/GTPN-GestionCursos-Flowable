@@ -1,9 +1,9 @@
 package com.backend.proxy.dto.task;
 
 /**
- * Envoltorio estándar para la consulta agregada de una tarea de usuario.
- * Proporciona el identificador, nombre legible, URL de acción para el submit
- * desacoplado y el payload fuertemente tipado necesario para la UI.
+ * Standard HATEOAS wrapper for aggregated User Task queries.
+ * Provides the task identifier, readable name, dynamic actionUrl for decoupled submission,
+ * and the strongly-typed payload needed by the client.
  */
 public record TaskDetailResponse<T>(
     String taskId,
