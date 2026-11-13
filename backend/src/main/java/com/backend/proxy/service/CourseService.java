@@ -61,14 +61,39 @@ public class CourseService {
             course = courseRepository.save(course);
         }
 
-        return new CourseResponseDTO(
-                course.getId(),
-                course.getProcessInstanceId(),
-                course.getName(),
-                course.getDescription(),
-                course.getStatus(),
-                company.getName()
-        );
+        return CourseResponseDTO.from(course);
+    }
+
+    /**
+     * Los cursos que puede ver el usuario autenticado.
+     *
+     * <p>Una empresa ve solo los propios, resueltos por el usuario con el que entro
+     * (enunciado 4.1.2); el personal de la institucion ve todos.
+     */
+    @Transactional(readOnly = true)
+    public List<CourseResponseDTO> findVisibleFor(String username, boolean isCompany) {
+        List<Course> courses = isCompany
+                ? courseRepository.findByCompanyAccessUsernameOrderByIdDesc(username)
+                : courseRepository.findAllByOrderByIdDesc();
+
+        return courses.stream().map(CourseResponseDTO::from).toList();
+    }
+
+    /**
+     * Un curso puntual, con el mismo criterio de visibilidad que {@link #findVisibleFor}.
+     */
+    @Transactional(readOnly = true)
+    public CourseResponseDTO findOneFor(Long courseId, String username, boolean isCompany) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Course not found: " + courseId));
+
+        // Mismo 404 que si no existiera: una empresa no tiene por que enterarse de que
+        // el curso existe pero es de otra
+        if (isCompany && !username.equals(course.getCompany().getAccessUsername())) {
+            throw new ResourceNotFoundException("Course not found: " + courseId);
+        }
+
+        return CourseResponseDTO.from(course);
     }
 
     public void updateCourse(String processId, CourseStatus courseStatus) {
