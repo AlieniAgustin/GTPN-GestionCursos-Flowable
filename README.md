@@ -178,7 +178,7 @@ cd flowable && mvn clean compile
 cd flowable && mvn test -DforkCount=0
 ```
 
-Resultado esperado: **12 tests, 0 fallos** — `HappyPathTest`, `CompensationTest` (3), `ClassroomUnavailableTest`, `NoResponseTest`, `TaskAssignmentTest`, `CourseLimitExceededTest`, `ProposalRejectionTest`, `ProposalModificationsTest`, `IdentitySeederTest` y `AppTest`.
+Resultado esperado: **20 tests, 0 fallos** — `HappyPathTest`, `CompensationTest` (3), `ClassroomUnavailableTest`, `NoResponseTest`, `TaskAssignmentTest`, `CourseLimitExceededTest`, `ProposalRejectionTest`, `ProposalModificationsTest`, `ClosingPathsTest` (2), `CompanyAccessTest` (3), `CourseDateTest` (3), `IdentitySeederTest` y `AppTest`.
 
 > [!WARNING]
 > **Problema de entorno: el apóstrofe en la ruta.**
@@ -365,6 +365,33 @@ curl -s -u admin:test "http://localhost:8080/process-api/history/historic-proces
 
 ---
 
+## Acortar los plazos para la demo (§3.5)
+
+El enunciado pide cinco días de espera antes de cada recordatorio y una fecha de inicio de curso acordada en ejecución. Ninguno de los dos está fijo en el BPMN: el modelo usa `${plazoRespuesta}` y `${fechaCurso}`, y los valores por defecto salen de dos properties.
+
+| Property                     | Variable de entorno           | Default | Qué controla                                                                              |
+| ---------------------------- | ----------------------------- | ------- | ----------------------------------------------------------------------------------------- |
+| `proceso.plazo-respuesta`    | `PROCESO_PLAZO_RESPUESTA`     | `P5D`   | Espera del gateway antes de cada recordatorio (son 2 como máximo)                          |
+| `proceso.fecha-curso-offset` | `PROCESO_FECHA_CURSO_OFFSET`  | `P7D`   | Desde la aceptación hasta el inicio del curso, **solo** si la empresa no manda fecha       |
+
+Son duraciones ISO-8601 de días, horas, minutos y segundos (`P5D`, `PT1M`, `PT30S`); los meses (`P1M`) no sirven.
+
+Para la demo con Docker, descomentar las dos variables en [`docker-compose.yml`](docker-compose.yml) y `docker compose up -d flowable-app`:
+
+```bash
+PROCESO_PLAZO_RESPUESTA=PT1M PROCESO_FECHA_CURSO_OFFSET=PT2M mvn spring-boot:run
+```
+
+Los plazos también se pueden fijar por instancia, y eso le gana a la property: `plazoRespuesta` como variable al iniciarla, y `fechaCurso` (o `fechaAcordada`) en el mensaje `Aceptación`, que es de donde la toma la app de comunicaciones del enunciado §4.2.2:
+
+```bash
+curl -s -u admin:test -X PUT http://localhost:8080/process-api/runtime/executions/{executionId} -H 'Content-Type: application/json' -d '{"action":"messageEventReceived","messageName":"Aceptación","variables":[{"name":"fechaCurso","type":"string","value":"2026-03-01T09:00"}]}'
+```
+
+Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el log; la instancia nunca queda trabada esperando la variable.
+
+---
+
 ## Estado de implementación vs enunciado
 
 ### Implementado
@@ -376,7 +403,9 @@ curl -s -u admin:test "http://localhost:8080/process-api/history/historic-proces
 - Delegates `ReserveClassroomDelegate` / `ReleaseClassroomDelegate` con el **web service de aulas simulado** (`aulas.disponibles`).
 - Seguridad HTTP Basic contra el IDM de Flowable, con roles derivados de los grupos.
 - Seed de los cinco usuarios y los dos grupos de §3.3, idempotente y activo en todos los perfiles (`prod` incluido).
-- 12 tests automatizados que cubren los escenarios 1 a 8 de la defensa.
+- Actividad automática **Habilitar acceso de la empresa** (`EnableCompanyAccessDelegate`): le pide al BFF la cuenta de la empresa, que se crea la primera vez y se reutiliza en las contrataciones siguientes (§4.1.2).
+- **Plazos parametrizables** (§3.5): `proceso.plazo-respuesta` y `proceso.fecha-curso-offset`, sin fechas fijas en el modelo.
+- 20 tests automatizados: los escenarios 1 a 8 de la defensa, los cinco caminos de cierre de §3.4 y los plazos de §3.5.
 
 ### Pendiente
 
@@ -384,14 +413,13 @@ curl -s -u admin:test "http://localhost:8080/process-api/history/historic-proces
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | § 3.2 BD de la institución               | Existen las entidades `Company` y `Course` en el backend, falta cablear el alta de solicitudes y el vínculo con la instancia de proceso              |
 | § 4.1 Sitio web institucional            | No desarrollado: sección pública de solicitud + acceso por credenciales para empresas y administración                                               |
-| § 4.1.2 Acceso de la empresa             | Falta la actividad automática *Habilitar acceso de la empresa* que crea/reutiliza la cuenta                                                          |
+| § 4.1.2 Acceso de la empresa             | La cuenta ya se crea/reutiliza; falta la pantalla de login y el listado de cursos propios de la empresa                                              |
 | § 4.1.3                                  | Generación del PDF de la propuesta y de sus nuevas versiones                                                                                         |
 | § 4.2.1 App Java (API Java)              | No desarrollada: app de escritorio para *Preparar materiales* usando la API Java de Flowable                                                         |
 | § 4.2.2 App de comunicaciones (API REST) | No desarrollada: simulación de aceptación, rechazo, modificaciones, nómina y cancelación                                                             |
 | § 4.3 Análisis de ejecuciones            | No implementadas las tres consultas (resultados de solicitudes, duración de ramas paralelas, distribución de tareas)                                 |
 | § 4.4 Minería de procesos                | No implementado el análisis con PM4Py (`exportar_history.py` / `analizar.py`) ni el CSV de la etapa de negociación                                   |
 | Backend BFF                              | Faltan tests (el módulo no tiene ninguno) y los endpoints de consulta para empresas y administrativos                                                |
-| § 3.5 Temporizadores                     | Nadie setea `fechaCurso` en el flujo real: completar *Definir docente* traba la instancia. Ver detalle en [`TODO.md`](TODO.md)                       |
 
 ---
 
@@ -413,8 +441,8 @@ curl -s -u admin:test "http://localhost:8080/process-api/history/historic-proces
 │       ├── java/com/flowable/app/
 │       │   ├── App.java              # Entrypoint
 │       │   ├── config/              # IdentitySeeder: usuarios y grupos (§3.3)
-│       │   ├── delegates/            # Reservar / liberar aula
-│       │   ├── listeners/            # Viabilidad, asignación, estado, cierre
+│       │   ├── delegates/            # Reservar / liberar aula, habilitar acceso de la empresa
+│       │   ├── listeners/            # Viabilidad, asignación, estado, cierre, plazos
 │       │   └── security/             # HTTP Basic contra el IDM de Flowable
 │       └── resources/
 │           ├── processes/Institución_de_capacitación.bpmn20.xml

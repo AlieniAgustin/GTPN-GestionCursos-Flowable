@@ -57,6 +57,7 @@ sequenceDiagram
 | `RestClientConfig` | `com.backend.proxy.config` | Configura el bean `flowableRestClient` inyectando la URL base (`${flowable.base-url}`) y las credenciales técnicas fijas con HTTP Basic Auth. |
 | `FlowableAuthService` | `com.backend.proxy.auth` | Verifica credenciales institucionales contra Flowable `/me` y registra el `UsernamePasswordAuthenticationToken` en el `SecurityContext` de Spring. |
 | `SecurityConfig` | `com.backend.proxy.security` | Define las reglas de acceso con `SessionCreationPolicy.IF_REQUIRED`, CORS para entornos de desarrollo y exclusión pública de `/api/auth/login` y `/health`. |
+| `CompanyAccessService` | `com.backend.proxy.service` | Habilita el acceso de la empresa (§4.1.2) desde la actividad automática del proceso: crea la cuenta (usuario derivado de la razón social + contraseña BCrypt en `companies.access_username` / `access_password_hash`) o reutiliza la de una contratación anterior. Se expone en `POST /api/flowable/courses/{processId}/company-access`, protegido por `X-API-KEY`. |
 | `GlobalExceptionHandler` | `com.backend.proxy.exception` | `@RestControllerAdvice` que captura `RestClientResponseException` y retorna el payload estándar `ApiErrorResponse`. |
 | `ApiErrorResponse` | `com.backend.proxy.exception` | Registro inmutable (`record`) para respuestas uniformes de error (timestamp, status, error, message, path). |
 
