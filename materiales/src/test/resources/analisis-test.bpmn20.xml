@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://flowable.org/test">
+
+  <!--
+    OJO: NO es el proceso real. Es un esqueleto para los tests del análisis de §4.3, que
+    copia del modelo real solo lo que las consultas miran: la clave del proceso, el
+    subproceso de preparación con su gateway paralelo y sus tres ramas, el fin del
+    subproceso, el subproceso de evento de cancelación y los ids de las actividades.
+
+    Diferencias a propósito con el real: no tiene la etapa de negociación (la viabilidad se
+    pasa como variable) y las acciones de recursos son userTask para poder completarlas en
+    el momento exacto que quiere el test; en el real "Reservar aula" es automática. Nada de
+    eso cambia lo que miden las consultas, que es cuándo empezó y terminó cada actividad.
+
+    El proceso real está en
+    flowable/src/main/resources/processes/Institución_de_capacitación.bpmn20.xml
+  -->
+  <message id="Msg_nom" name="Nómina de participantes"></message>
+  <message id="Msg_cancel" name="Cancelación"></message>
+
+  <process id="Process_Curso" name="Institución de capacitación (esqueleto de test)" isExecutable="true">
+
+    <startEvent id="inicio"></startEvent>
+    <sequenceFlow id="flow_inicio" sourceRef="inicio" targetRef="esviable"></sequenceFlow>
+
+    <exclusiveGateway id="esviable" name="Es viable?"></exclusiveGateway>
+    <sequenceFlow id="flow_viable_si" sourceRef="esviable" targetRef="prepararcurso">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${viable}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="flow_viable_no" sourceRef="esviable" targetRef="fin">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!viable}]]></conditionExpression>
+    </sequenceFlow>
+
+    <subProcess id="prepararcurso" name="Preparar curso">
+      <startEvent id="inicioprepararcurso"></startEvent>
+      <sequenceFlow id="flow_sub_inicio" sourceRef="inicioprepararcurso" targetRef="preparacionenparalelo"></sequenceFlow>
+
+      <parallelGateway id="preparacionenparalelo" name="Preparación en paralelo"></parallelGateway>
+
+      <!-- Rama inscripciones -->
+      <sequenceFlow id="flow_a_nomina" sourceRef="preparacionenparalelo" targetRef="recibirnomina"></sequenceFlow>
+      <intermediateCatchEvent id="recibirnomina" name="Recibir nómina">
+        <messageEventDefinition messageRef="Msg_nom"></messageEventDefinition>
+      </intermediateCatchEvent>
+      <sequenceFlow id="flow_nomina_a_lista" sourceRef="recibirnomina" targetRef="confeccionarlistadefinitiva"></sequenceFlow>
+      <userTask id="confeccionarlistadefinitiva" name="Confeccionar lista definitiva"
+                flowable:candidateGroups="administracion"></userTask>
+      <sequenceFlow id="flow_lista_a_join" sourceRef="confeccionarlistadefinitiva" targetRef="preparacioncompleta"></sequenceFlow>
+
+      <!-- Rama materiales -->
+      <sequenceFlow id="flow_a_materiales" sourceRef="preparacionenparalelo" targetRef="prepararmateriales"></sequenceFlow>
+      <userTask id="prepararmateriales" name="Preparar materiales"
+                flowable:candidateGroups="administracion"></userTask>
+      <sequenceFlow id="flow_materiales_a_join" sourceRef="prepararmateriales" targetRef="preparacioncompleta"></sequenceFlow>
+
+      <!-- Rama recursos -->
+      <sequenceFlow id="flow_a_recursos" sourceRef="preparacionenparalelo" targetRef="evaluarrecursos"></sequenceFlow>
+      <userTask id="evaluarrecursos" name="Evaluar Recursos"
+                flowable:candidateGroups="administracion"></userTask>
+      <sequenceFlow id="flow_evaluar_a_inclusivo" sourceRef="evaluarrecursos" targetRef="recursosnecesarios"></sequenceFlow>
+
+      <inclusiveGateway id="recursosnecesarios" name="Recursos necesarios"></inclusiveGateway>
+      <sequenceFlow id="flow_aula" sourceRef="recursosnecesarios" targetRef="reservaraula">
+        <conditionExpression xsi:type="tFormalExpression"><![CDATA[${requiereAula}]]></conditionExpression>
+      </sequenceFlow>
+      <sequenceFlow id="flow_virtual" sourceRef="recursosnecesarios" targetRef="solicitaraulavirtual">
+        <conditionExpression xsi:type="tFormalExpression"><![CDATA[${requierePlataforma}]]></conditionExpression>
+      </sequenceFlow>
+      <sequenceFlow id="flow_equipamiento" sourceRef="recursosnecesarios" targetRef="contratarequipamiento">
+        <conditionExpression xsi:type="tFormalExpression"><![CDATA[${requiereEquipamiento}]]></conditionExpression>
+      </sequenceFlow>
+
+      <userTask id="reservaraula" name="Reservar aula" flowable:candidateGroups="administracion"></userTask>
+      <userTask id="solicitaraulavirtual" name="Solicitar Aula Virtual" flowable:candidateGroups="administracion"></userTask>
+      <userTask id="contratarequipamiento" name="Contratar equipamiento" flowable:candidateGroups="administracion"></userTask>
+
+      <sequenceFlow id="flow_aula_a_join" sourceRef="reservaraula" targetRef="todoslosrecursosseleccionadoslistos"></sequenceFlow>
+      <sequenceFlow id="flow_virtual_a_join" sourceRef="solicitaraulavirtual" targetRef="todoslosrecursosseleccionadoslistos"></sequenceFlow>
+      <sequenceFlow id="flow_equipamiento_a_join" sourceRef="contratarequipamiento" targetRef="todoslosrecursosseleccionadoslistos"></sequenceFlow>
+
+      <inclusiveGateway id="todoslosrecursosseleccionadoslistos" name="Todos los recursos listos"></inclusiveGateway>
+      <sequenceFlow id="flow_recursos_a_join" sourceRef="todoslosrecursosseleccionadoslistos" targetRef="preparacioncompleta"></sequenceFlow>
+
+      <parallelGateway id="preparacioncompleta" name="Preparación completa"></parallelGateway>
+      <sequenceFlow id="flow_join_a_fin" sourceRef="preparacioncompleta" targetRef="finprepararcurso"></sequenceFlow>
+      <endEvent id="finprepararcurso"></endEvent>
+
+      <!-- Cancelación durante la preparación: interrumpe el subproceso -->
+      <subProcess id="cancelacion" name="Cancelación" triggeredByEvent="true">
+        <startEvent id="recibircancelacion" name="Recibir Cancelación" isInterrupting="true">
+          <messageEventDefinition messageRef="Msg_cancel"></messageEventDefinition>
+        </startEvent>
+        <sequenceFlow id="flow_cancelacion" sourceRef="recibircancelacion" targetRef="fincancelacion"></sequenceFlow>
+        <endEvent id="fincancelacion"></endEvent>
+      </subProcess>
+    </subProcess>
+
+    <sequenceFlow id="flow_sub_a_fin" sourceRef="prepararcurso" targetRef="fin"></sequenceFlow>
+    <endEvent id="fin"></endEvent>
+  </process>
+</definitions>

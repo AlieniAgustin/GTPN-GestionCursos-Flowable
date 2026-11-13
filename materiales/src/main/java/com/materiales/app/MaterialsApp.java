@@ -8,6 +8,7 @@ import javax.swing.UIManager;
 
 import org.flowable.engine.ProcessEngine;
 
+import com.materiales.app.analysis.ExecutionAnalysisService;
 import com.materiales.app.engine.EngineConfig;
 import com.materiales.app.engine.EngineFactory;
 import com.materiales.app.service.MaterialsTaskService;
@@ -22,6 +23,10 @@ import com.materiales.app.ui.MaterialsWindow;
  * <p>De escritorio, local a la intranet y con alcance a la base del motor: arma un
  * {@link ProcessEngine} embebido y trabaja con la <b>API Java</b> de Flowable
  * ({@code IdentityService}, {@code TaskService}), sin pasar por la API REST ni por el BFF.
+ *
+ * <p>Incluye además el análisis de las ejecuciones del enunciado 4.3, en el botón
+ * "Análisis de ejecuciones"; por consola está en
+ * {@link com.materiales.app.analysis.AnalysisApp}.
  *
  * <pre>
  * java -jar target/app.jar
@@ -60,6 +65,8 @@ public final class MaterialsApp {
         StaffAuthenticator authenticator = new StaffAuthenticator(processEngine.getIdentityService());
         MaterialsTaskService materialsTaskService =
                 new MaterialsTaskService(processEngine.getTaskService());
+        ExecutionAnalysisService analysisService = new ExecutionAnalysisService(
+                processEngine.getHistoryService(), processEngine.getIdentityService());
 
         SwingUtilities.invokeLater(() -> {
             applySystemLookAndFeel();
@@ -69,7 +76,7 @@ public final class MaterialsApp {
                 System.exit(0);
                 return;
             }
-            new MaterialsWindow(materialsTaskService, user).setVisible(true);
+            new MaterialsWindow(materialsTaskService, analysisService, user).setVisible(true);
         });
     }
 

@@ -3,6 +3,7 @@ package com.materiales.app.ui;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.util.List;
 
 import javax.swing.BorderFactory;
@@ -13,9 +14,12 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.JTextArea;
 import javax.swing.ListSelectionModel;
 import javax.swing.WindowConstants;
 
+import com.materiales.app.analysis.AnalysisFormatter;
+import com.materiales.app.analysis.ExecutionAnalysisService;
 import com.materiales.app.service.MaterialTask;
 import com.materiales.app.service.MaterialsTaskService;
 import com.materiales.app.service.StaffUser;
@@ -29,6 +33,7 @@ public class MaterialsWindow extends JFrame {
     private static final long serialVersionUID = 1L;
 
     private final MaterialsTaskService materialsTaskService;
+    private final ExecutionAnalysisService analysisService;
     private final StaffUser user;
     private final MaterialTaskTableModel tableModel;
     private final JTable table;
@@ -36,9 +41,12 @@ public class MaterialsWindow extends JFrame {
     private final JButton completeButton = new JButton("Completar");
     private final JLabel statusLabel = new JLabel(" ");
 
-    public MaterialsWindow(MaterialsTaskService materialsTaskService, StaffUser user) {
+    public MaterialsWindow(MaterialsTaskService materialsTaskService,
+                           ExecutionAnalysisService analysisService,
+                           StaffUser user) {
         super("Preparación de materiales — " + user.displayName());
         this.materialsTaskService = materialsTaskService;
+        this.analysisService = analysisService;
         this.user = user;
         this.tableModel = new MaterialTaskTableModel(user.id());
         this.table = new JTable(tableModel);
@@ -53,9 +61,17 @@ public class MaterialsWindow extends JFrame {
         JButton refreshButton = new JButton("Actualizar");
         refreshButton.addActionListener(event -> reload());
 
+        // Enunciado 4.3: las consultas pueden incorporarse a esta app
+        JButton analysisButton = new JButton("Análisis de ejecuciones");
+        analysisButton.addActionListener(event -> showAnalysis());
+
+        JPanel headerButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        headerButtons.add(analysisButton);
+        headerButtons.add(refreshButton);
+
         JPanel north = new JPanel(new BorderLayout());
         north.add(header, BorderLayout.CENTER);
-        north.add(refreshButton, BorderLayout.EAST);
+        north.add(headerButtons, BorderLayout.EAST);
 
         claimButton.addActionListener(event -> claimSelected());
         completeButton.addActionListener(event -> completeSelected());
@@ -129,6 +145,28 @@ public class MaterialsWindow extends JFrame {
             showError("No se pudo completar la tarea", e);
         }
         reload();
+    }
+
+    /** Muestra las tres consultas del enunciado 4.3 sobre el historial del motor. */
+    private void showAnalysis() {
+        String report;
+        try {
+            report = AnalysisFormatter.format(
+                    analysisService.analyzeResults(),
+                    analysisService.analyzePreparation(),
+                    analysisService.analyzeTaskDistribution());
+        } catch (RuntimeException e) {
+            showError("No se pudo analizar el historial", e);
+            return;
+        }
+
+        JTextArea area = new JTextArea(report, 28, 72);
+        area.setEditable(false);
+        area.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        area.setCaretPosition(0);
+
+        JOptionPane.showMessageDialog(this, new JScrollPane(area),
+                "Análisis de las ejecuciones (§4.3)", JOptionPane.PLAIN_MESSAGE);
     }
 
     private MaterialTask selectedTask() {
