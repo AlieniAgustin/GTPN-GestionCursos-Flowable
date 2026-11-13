@@ -43,7 +43,7 @@ Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripc
 | `http://localhost:8080/process-api/**`                   | **API REST oficial de Flowable**: desplegar procesos, iniciar instancias, consultar y completar tareas. Es la que consumen las apps externas         | —                                                   |
 | `http://localhost:8088/flowable-ui/`                     | **Flowable UI**: Task App (bandeja de tareas), Modeler, Admin App e IDM App (usuarios y grupos). Sirve para operar el proceso a mano durante la demo | Docker                                              |
 | `localhost:5432`                                         | **PostgreSQL**: base compartida por el motor y la UI                                                                                                 | Docker                                              |
-| `http://localhost:8081`                                  | **Backend BFF**: intermediario entre las apps externas y Flowable; contiene la BD de la institución (empresas y cursos)                              | Maven, **manual** (no está en `docker-compose.yml`) |
+| `http://localhost:8081`                                  | **Backend BFF**: intermediario entre las apps externas y Flowable; contiene la BD de la institución (empresas y cursos)                              | Docker                                              |
 | `http://localhost:8081/api/flowable/courses/{processId}` | Endpoint interno que el motor usa para actualizar el estado del curso. Protegido por API key                                                         | —                                                   |
 
 > [!NOTE]
@@ -65,7 +65,7 @@ Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripc
 | `localhost:5432` (PostgreSQL)                       | `flowable`           | `flowable`            | Base `flowable`. Definido en [`docker-compose.yml`](docker-compose.yml)                                                                                       |
 | Backend → Flowable (cuenta técnica)                 | `admin`              | `test`                | `flowable.username` / `flowable.password` en [`backend/src/main/resources/application.properties`](backend/src/main/resources/application.properties)         |
 | `http://localhost:8081/api/flowable/**`             | header `X-API-KEY`   | `flowable-secret-key` | Autentica al motor contra el backend. Definido en [`flowable/.../application.properties`](flowable/src/main/resources/application.properties) y en el backend |
-| H2 del backend (`jdbc:h2:mem:backend_db`)           | `sa`                 | *(vacía)*             | BD en memoria del BFF                                                                                                                                         |
+| `http://localhost:8081/api/auth/login`              | los mismos de arriba | los mismos de arriba  | El BFF valida las credenciales contra el `/me` de Flowable y abre sesión (`JSESSIONID`)                                                                       |
 
 **De dónde sale cada uno:**
 
@@ -94,13 +94,17 @@ git clone https://github.com/AlieniAgustin/GTPN-GestionCursos-Flowable.git
 
 #### 1.1 Compilar el JAR (obligatorio antes de levantar)
 
-El `Dockerfile` **no compila**: solo copia el fat JAR ya generado. Si salteás este paso, `docker compose up --build` falla porque `flowable/target/app.jar` no existe (está en `.gitignore`, no se versiona).
+Los `Dockerfile` **no compilan**: solo copian el fat JAR ya generado. Si salteás este paso, `docker compose up --build` falla porque `target/app.jar` no existe (está en `.gitignore`, no se versiona). Hay que hacerlo en los **dos** módulos:
 
 ```bash
 cd flowable && ./build.sh
 ```
 
-El script corre `mvn clean package -DskipTests` y deja el artefacto en `flowable/target/app.jar`.
+```bash
+cd backend && ./build.sh
+```
+
+Cada script corre `mvn clean package -DskipTests` y deja el artefacto en `target/app.jar` de su módulo.
 
 #### 1.2 Levantar los contenedores
 
@@ -108,7 +112,7 @@ El script corre `mvn clean package -DskipTests` y deja el artefacto en `flowable
 docker compose up --build -d
 ```
 
-Levanta tres servicios: `flowable-postgres`, `flowable-app` (espera a que Postgres esté sano) y `flowable-ui` (espera a que la app esté sana).
+Levanta cuatro servicios en orden de dependencia: `flowable-postgres`, `flowable-app` (espera a que Postgres esté sano), `flowable-backend` y `flowable-ui` (ambos esperan a que la app esté sana).
 
 ```bash
 docker compose ps
@@ -230,9 +234,39 @@ Diferencias entre perfiles:
 cd backend && mvn spring-boot:run
 ```
 
-Arranca en `http://localhost:8081` con H2 en memoria. Espera encontrar el motor en `http://localhost:8080`.
+Solo hace falta si lo querés correr fuera de Docker: `docker compose up` ya lo levanta. Arranca en `http://localhost:8081` y espera PostgreSQL en `localhost:5432` y el motor en `http://localhost:8080`.
 
-Único endpoint operativo hoy (ver [Estado de implementación](#estado-de-implementación-vs-enunciado)):
+**Autenticación.** Las rutas de negocio necesitan sesión. Se abre con el usuario y contraseña de Flowable y se mantiene con la cookie `JSESSIONID`; sin ella, la API responde `401`.
+
+```bash
+curl -s -c cookies.txt -X POST http://localhost:8081/api/auth/login -H 'Content-Type: application/json' -d '{"username":"jefeadministrativo","password":"password"}'
+```
+
+```bash
+curl -s -b cookies.txt http://localhost:8081/api/auth/me
+```
+
+**Registrar una solicitud e iniciar su instancia** (§4.1.1). Devuelve `201` con el curso y el `processInstanceId` ya vinculado:
+
+```bash
+curl -s -b cookies.txt -X POST http://localhost:8081/api/courses -H 'Content-Type: application/json' -d '{"contact":{"name":"ACME SA","email":"contacto@acme.com","phone":"+543581234567"},"name":"Curso de Flowable","description":"Capacitacion en BPMN","participantCount":12,"possibleDates":["2027-03-01"]}'
+```
+
+**Consultar el detalle de una tarea.** Devuelve el payload tipado y el `actionUrl` al que hay que postear para completarla. Si la tarea no tiene estrategia asociada, responde `404` con el motivo:
+
+```bash
+curl -s -b cookies.txt http://localhost:8081/api/tasks/{taskId}/detail
+```
+
+**Completar una tarea** usando el `actionUrl` devuelto. Por ejemplo, *Definir docente*:
+
+```bash
+curl -s -b cookies.txt -X POST http://localhost:8081/api/tasks/{taskId}/define-teacher -H 'Content-Type: application/json' -d '{"userId":"docente1"}'
+```
+
+Las otras tres acciones son `/deliver-course`, `/prepare-report` y `/send-report`.
+
+**Endpoint interno** que usa el motor para avisar el estado final del curso. No lleva sesión sino API key:
 
 ```bash
 curl -s -X PUT http://localhost:8081/api/flowable/courses/{processId} -H 'X-API-KEY: flowable-secret-key' -H 'Content-Type: application/json' -d '{"status":"FINALIZADO"}'
@@ -356,9 +390,8 @@ curl -s -u admin:test "http://localhost:8080/process-api/history/historic-proces
 | § 4.2.2 App de comunicaciones (API REST) | No desarrollada: simulación de aceptación, rechazo, modificaciones, nómina y cancelación                                                             |
 | § 4.3 Análisis de ejecuciones            | No implementadas las tres consultas (resultados de solicitudes, duración de ramas paralelas, distribución de tareas)                                 |
 | § 4.4 Minería de procesos                | No implementado el análisis con PM4Py (`exportar_history.py` / `analizar.py`) ni el CSV de la etapa de negociación                                   |
-| Backend BFF                              | Falta el `AuthController` (`/api/auth/login` está en la lista pública pero no existe el endpoint)                                                    |
-| Backend BFF                              | La cadena de seguridad principal exige `authenticated()` sin `httpBasic` ni `formLogin`: `/api/courses` y `/api/tasks` devuelven **403** siempre     |
-| Backend BFF                              | `CourseController.updateStatus` declara un `@PathVariable processId` que no existe en el `@PostMapping`: falla en runtime                            |
+| Backend BFF                              | Faltan tests (el módulo no tiene ninguno) y los endpoints de consulta para empresas y administrativos                                                |
+| § 3.5 Temporizadores                     | Nadie setea `fechaCurso` en el flujo real: completar *Definir docente* traba la instancia. Ver detalle en [`TODO.md`](TODO.md)                       |
 
 ---
 

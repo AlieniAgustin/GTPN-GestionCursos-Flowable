@@ -12,9 +12,9 @@ Checklist del equipo, derivada del enunciado [`docs/ProyectoCursos_V3.pdf`](docs
 
 | Bloque | Estado |
 |---|---|
-| 1. Motor y modelo BPMN | Casi completo — faltan *Habilitar acceso de la empresa* y revisiones |
-| 2. BD de la institución | A medias — entidades sí, cableado no |
-| 3. Backend BFF | Bloqueante — no se puede autenticar |
+| 1. Motor y modelo BPMN | Falta *Habilitar acceso de la empresa* y 🔴 la variable `fechaCurso` traba el happy path |
+| 2. BD de la institución | Persistente y vinculada al proceso — falta completar campos y datos de prueba |
+| 3. Backend BFF | Operativo — faltan tests y endpoints de consulta |
 | 4. Sitio web institucional | No empezado |
 | 5. App Java (API Java) | No empezado |
 | 6. App de comunicaciones (API REST) | No empezado |
@@ -33,31 +33,35 @@ Lo grueso ya está: el BPMN ejecutable, el DMN de viabilidad, los dos listeners 
 - [ ] **Implementar la actividad automática *Habilitar acceso de la empresa*** (§4.1.2): crea una cuenta para la empresa si no tiene, o reutiliza la existente si ya contrató antes, y vincula el nuevo curso a esa cuenta. ( )
 - [ ] **Verificar que todos los caminos de cierre dejan seteado el resultado** del proceso (§3.4), para que el `UpdateCourseStatusListener` registre el estado correcto: `FINALIZADO`, `CANCELADO`, `RECHAZADO`, `SIN_RESPUESTA`, `NO_VIABLE`. ( )
 - [ ] **Revisar los plazos para la demo** (§3.5): dejar documentado (o parametrizado) cómo acortar los 5 días de los recordatorios y la fecha de inicio del curso para poder mostrar los escenarios en vivo. ( )
+- [ ] 🔴 **Definir `fechaCurso` durante la ejecución** (§3.5). El timer `fechaprogramada` usa `<timeDate>${fechaCurso}</timeDate>`, pero **nadie setea esa variable en el flujo real**: completar *Definir docente* revienta con `FlowableException: Unknown property used in expression: ${fechaCurso}` y la instancia queda trabada. `HappyPathTest` no lo detecta porque la inyecta como variable inicial, cosa que en producción no pasa. El enunciado dice que la fecha se acuerda **al aceptar la propuesta** y que su valor debe estar definido antes de alcanzar el evento, así que el mensaje `Aceptación` tiene que traerla (§4.2.2: "Aceptación de la propuesta, incluyendo la fecha acordada"). Verificado: seteando la variable a mano, el completado pasa a 204 y el proceso avanza al timer. Conviene además un test que recorra el happy path **sin** inyectarla al inicio. ( )
 
 ---
 
 ## 2. Base de datos de la institución (§3.2)
 
-Las entidades `Company` y `Course` ya existen en [`backend/src/main/java/com/backend/proxy/entity/`](backend/src/main/java/com/backend/proxy/entity/), pero no están cableadas al flujo.
+Las entidades `Company` y `Course` viven en [`backend/src/main/java/com/backend/proxy/entity/`](backend/src/main/java/com/backend/proxy/entity/).
 
-- [ ] Guardar la **empresa solicitante** y la **información del curso**: nombre, descripción, programa, presupuesto, fechas e informe de resultados. ( )
-- [ ] **Vincular cada curso con su instancia de proceso** en Flowable (guardar el `processInstanceId` en la BD de la institución, como sugiere el enunciado). ( )
+- [x] **Vincular cada curso con su instancia de proceso**. `POST /api/courses` da de alta empresa y curso, inicia la instancia y guarda el `processInstanceId` en la fila del curso. El sentido inverso ya andaba: el motor avisa el estado final por `PUT /api/flowable/courses/{processId}`. ( )
+- [x] **Reemplazar H2 en memoria por algo persistente.** El BFF pasó a PostgreSQL, compartiendo el servidor del stack: el motor usa las tablas `ACT_*` y la institución `companies` / `courses`. Esto además era un **bug bloqueante**: `Course.possibleDates` se mapea con `columnDefinition = "jsonb"`, que H2 no conoce, así que el `create table courses` fallaba en silencio al arrancar y cualquier alta moría con `Table "COURSES" not found`. ( )
+- [ ] Guardar el resto de la **información del curso**: programa, presupuesto, fechas acordadas e informe de resultados. Hoy se persisten nombre, descripción, fechas posibles y empresa. ( )
 - [ ] Decidir y documentar qué queda como **variable del proceso** y qué va a la BD. El enunciado permite mantener la lista de participantes y los recursos asignados como variables. ( )
-- [ ] Reemplazar H2 en memoria por algo **persistente** para la demo (hoy la BD del BFF se pierde en cada reinicio). ( )
 - [ ] Scripts de **creación y datos de prueba**. ( )
 
 ---
 
 ## 3. Backend BFF
 
-Tres defectos verificados que bloquean el resto. Detalle en [`backend/README.md`](backend/README.md).
+El BFF ya autentica y opera contra el motor. Detalle en [`backend/README.md`](backend/README.md).
 
-- [ ] **Crear el `AuthController`** con `POST /api/auth/login` y `POST /api/auth/logout`. La ruta ya está en la lista de URLs públicas de `SecurityConfig` pero **el endpoint no existe**. El `FlowableAuthService` que valida contra `/me` ya está escrito. ( )
-- [ ] **Cablear un mecanismo de autenticación** en la cadena de seguridad principal de [`SecurityConfig.java`](backend/src/main/java/com/backend/proxy/security/SecurityConfig.java). Hoy exige `.anyRequest().authenticated()` sin `httpBasic` ni `formLogin`, así que `/api/courses` y `/api/tasks` devuelven **403 siempre**, para cualquier usuario. ( )
-- [ ] **Corregir `CourseController.updateStatus`**: declara `@PathVariable String processId` pero el `@PostMapping` no tiene esa variable en la ruta. Falla en runtime. ( )
-- [ ] **Implementar los métodos de `TaskService` y `CourseService`** — los controladores tienen los pasos escritos como comentarios `IMPLEMENTATION STEPS`. ( )
-- [ ] Permitir que el `/error` sea alcanzable sin autenticación, para que los errores salgan con el formato `ApiErrorResponse` en vez de convertirse en un 403 opaco. ( )
-- [ ] **Agregar el backend a [`docker-compose.yml`](docker-compose.yml)** para que todo el stack levante con un solo comando. ( )
+- [x] **Crear el `AuthController`** con `POST /api/auth/login`, `POST /api/auth/logout` y `GET /api/auth/me`. Valida contra el `/me` de Flowable con el `FlowableAuthService` que ya existía y deja el SecurityContext en la `HttpSession`. ( )
+- [x] **Cablear un mecanismo de autenticación.** La cadena principal usa `HttpSessionSecurityContextRepository`, así que después del login alcanza con la cookie `JSESSIONID`. Sin sesión la API devuelve **401** (antes 403), que es lo correcto para una API. ( )
+- [x] **Corregir `CourseController`**: el `@PathVariable processId` que no existía en la ruta se eliminó; el endpoint quedó como `POST /api/courses` y devuelve `201` con `Location` y un `CourseResponseDTO` (no la entidad JPA, para no serializar la asociación lazy `company`). ( )
+- [x] **Implementar `TaskService` y las cuatro `TaskStrategy`.** `GET /api/tasks/{id}/detail` lee la tarea y las variables de la instancia en Flowable, resuelve la estrategia por `taskDefinitionKey` y devuelve el payload tipado con su `actionUrl`. Si ninguna estrategia aplica, 404 con el motivo. `complete()` arma el payload de Flowable y lo postea. También se completó `TeacherRepositoryStub` con los tres docentes de §2. ( )
+- [x] **`/error` alcanzable sin autenticación**, así los errores salen con el formato del `GlobalExceptionHandler` en vez de convertirse en un 403 opaco. ( )
+- [x] **Backend agregado a [`docker-compose.yml`](docker-compose.yml)** con su `Dockerfile` y `build.sh`, healthcheck sobre un `/health` nuevo, y resolución por nombre de servicio en ambos sentidos (`BACKEND_BASE_URL` en el motor, `FLOWABLE_BASE_URL` en el BFF). ( )
+- [ ] **Tests del backend**: hoy el módulo no tiene ninguno (`No tests to run`). Faltan al menos los del login, el alta de curso y la resolución de estrategias. ( )
+- [ ] Usar `@AuthenticationPrincipal` en `TaskController` para filtrar las tareas por usuario, como describe el checklist del [`backend/README.md`](backend/README.md). Hoy las consultas no pasan el usuario a Flowable. ( )
+- [ ] Endpoints de **consulta** para empresas y administrativos (`GET /api/courses`, bandeja de tareas). Solo existe el alta. ( )
 
 ---
 
