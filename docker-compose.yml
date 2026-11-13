@@ -31,6 +31,8 @@ services:
       SPRING_DATASOURCE_USERNAME: flowable
       SPRING_DATASOURCE_PASSWORD: flowable
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      # Dentro de la red de compose el BFF se resuelve por nombre de servicio
+      BACKEND_BASE_URL: http://backend:8081
     depends_on:
       postgres:
         condition: service_healthy
@@ -40,6 +42,36 @@ services:
       timeout: 5s
       retries: 20
       start_period: 40s
+
+  backend:
+    container_name: flowable-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      FLOWABLE_BASE_URL: http://flowable-app:8080
+      FLOWABLE_USERNAME: admin
+      FLOWABLE_PASSWORD: test
+      FLOWABLE_API_KEY: flowable-secret-key
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: flowable
+      DB_USER: flowable
+      DB_PASSWORD: flowable
+    depends_on:
+      postgres:
+        condition: service_healthy
+      flowable-app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8081/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
 
   flowable-ui:
     image: flowable/flowable-ui:latest
