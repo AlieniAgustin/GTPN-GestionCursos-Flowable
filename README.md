@@ -70,11 +70,11 @@ Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripc
 **De dónde sale cada uno:**
 
 - `admin` / `test` lo crea el bootstrap del contenedor `flowable-ui` la primera vez que arranca contra una base vacía.
-- Los cinco usuarios de negocio con contraseña `password` los crea el seed de [`App.java`](flowable/src/main/java/com/flowable/app/App.java), que está anotado `@Profile("dev")`. **El despliegue Docker corre en perfil `prod`, así que el seed no se ejecuta ahí** (ver paso 1.3).
+- Los cinco usuarios de negocio con contraseña `password` los crea el seed de [`IdentitySeeder.java`](flowable/src/main/java/com/flowable/app/config/IdentitySeeder.java), que **corre en todos los perfiles, `prod` incluido**: recién levantado el stack con Docker ya están disponibles. Para saltearlo, `institucion.seed.enabled=false`.
 - Son cinco porque el enunciado (§3.3) define **Administración con 2 personas** (una es el jefe administrativo) y **Docentes con 3** (uno es el jefe del equipo).
 
 > [!IMPORTANT]
-> El seed **crea pero nunca borra**: solo da de alta un usuario si todavía no existe. Si tu base viene de antes del ajuste a cinco usuarios, va a seguir teniendo un `administrativo2` huérfano, y el listener de asignación lo va a considerar como candidato. Para limpiarla, `docker compose down -v` y rehacer el paso 1.3.
+> El seed **crea pero nunca borra**: solo da de alta lo que falta (usuarios, grupos y membresías), así que es idempotente y se puede volver a correr sin riesgo. Pero si tu base viene de antes del ajuste a cinco usuarios, va a seguir teniendo un `administrativo2` huérfano, y el listener de asignación lo va a considerar como candidato. Para limpiarla, `docker compose down -v` y volver a levantar.
 
 ---
 
@@ -114,23 +114,27 @@ Levanta tres servicios: `flowable-postgres`, `flowable-app` (espera a que Postgr
 docker compose ps
 ```
 
-#### 1.3 Sembrar los usuarios de negocio (una sola vez)
+#### 1.3 Verificar que el seed corrió
 
-El seed solo corre en perfil `dev`, y Docker usa `prod`. Recién levantado el stack **solo existe `admin`/`test`**: `docente1` y compañía devuelven `401`, y `/groups` viene vacío.
-
-Como el perfil `dev` apunta al **mismo** PostgreSQL de Docker, basta con arrancar la app local una vez para que escriba los usuarios y grupos en la base compartida:
-
-```bash
-cd flowable && mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8090
-```
-
-Esperá a ver `Started App`, verificá y cortá con `Ctrl+C`:
+El seed de usuarios y grupos corre **en cada arranque de la app, en cualquier perfil**, así que no hay ningún paso manual: en cuanto `flowable-app` queda sano, los cinco usuarios de negocio, los dos grupos y la cuenta técnica `admin`/`test` ya están en la base.
 
 ```bash
 curl -s http://localhost:8080/groups
 ```
 
 Debe devolver `{"groups":["Administracion","Docentes"],"quantityGroups":2}`.
+
+Y un usuario de negocio tiene que poder autenticarse:
+
+```bash
+curl -s -u administrativo1:password http://localhost:8080/me
+```
+
+En los logs del contenedor queda el detalle de lo que creó:
+
+```bash
+docker compose logs flowable-app | grep -i "Seeded\|Identity seed"
+```
 
 #### 1.4 Ver logs
 
@@ -148,7 +152,7 @@ Detener los contenedores conservando los datos:
 docker compose down
 ```
 
-Detener **y borrar el volumen** de PostgreSQL (deja la base vacía: se pierden usuarios, despliegues e instancias; hay que repetir el paso 1.3):
+Detener **y borrar el volumen** de PostgreSQL (deja la base vacía: se pierden despliegues e instancias; los usuarios y grupos los vuelve a crear el seed en el próximo arranque):
 
 ```bash
 docker compose down -v
@@ -170,7 +174,7 @@ cd flowable && mvn clean compile
 cd flowable && mvn test -DforkCount=0
 ```
 
-Resultado esperado: **11 tests, 0 fallos** — `HappyPathTest`, `CompensationTest` (3), `ClassroomUnavailableTest`, `NoResponseTest`, `TaskAssignmentTest`, `CourseLimitExceededTest`, `ProposalRejectionTest`, `ProposalModificationsTest` y `AppTest`.
+Resultado esperado: **12 tests, 0 fallos** — `HappyPathTest`, `CompensationTest` (3), `ClassroomUnavailableTest`, `NoResponseTest`, `TaskAssignmentTest`, `CourseLimitExceededTest`, `ProposalRejectionTest`, `ProposalModificationsTest`, `IdentitySeederTest` y `AppTest`.
 
 > [!WARNING]
 > **Problema de entorno: el apóstrofe en la ruta.**
@@ -190,7 +194,7 @@ Resultado esperado: **11 tests, 0 fallos** — `HappyPathTest`, `CompensationTes
 >
 > `./build.sh` **no** se ve afectado porque usa `-DskipTests`.
 
-Los tests levantan el contexto completo de Spring con perfil `dev`, así que **necesitan el contenedor de PostgreSQL arriba**. Además escriben en la misma base que usa Docker: cada corrida redesplega el BPMN y suma una versión nueva del proceso.
+Casi todos los tests sobreescriben el datasource a H2 en memoria, pero `AppTest` levanta el contexto con la configuración real del perfil `dev`, así que **necesita el contenedor de PostgreSQL arriba** y escribe en la misma base que usa Docker: cada corrida redesplega el BPMN y suma una versión nueva del proceso. Para correr solo los tests aislados: `mvn test -DforkCount=0 -Dtest='!AppTest'`.
 
 ---
 
@@ -215,7 +219,7 @@ Diferencias entre perfiles:
 |                           | `dev`                       | `prod`                                                                                                     |
 | ------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | Base de datos             | PostgreSQL `localhost:5432` | PostgreSQL `postgres:5432` (sobreescribible por `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`) |
-| Seed de usuarios y grupos | **Sí**                      | No                                                                                                         |
+| Seed de usuarios y grupos | **Sí**                      | **Sí** (desactivable con `institucion.seed.enabled=false`)                                                 |
 | Consola H2                | —                           | deshabilitada                                                                                              |
 
 ---
@@ -337,13 +341,13 @@ curl -s -u admin:test "http://localhost:8080/process-api/history/historic-proces
 - **Execution Listener** `UpdateCourseStatusListener`: notifica el estado final del curso al backend.
 - Delegates `ReserveClassroomDelegate` / `ReleaseClassroomDelegate` con el **web service de aulas simulado** (`aulas.disponibles`).
 - Seguridad HTTP Basic contra el IDM de Flowable, con roles derivados de los grupos.
-- 11 tests automatizados que cubren los escenarios 1 a 8 de la defensa.
+- Seed de los cinco usuarios y los dos grupos de §3.3, idempotente y activo en todos los perfiles (`prod` incluido).
+- 12 tests automatizados que cubren los escenarios 1 a 8 de la defensa.
 
 ### Pendiente
 
 | Enunciado                                | Qué falta                                                                                                                                            |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| § 3.3                                    | El seed es `@Profile("dev")`: en `prod` la base queda sin usuarios (workaround en el paso 1.3)                                                       |
 | § 3.2 BD de la institución               | Existen las entidades `Company` y `Course` en el backend, falta cablear el alta de solicitudes y el vínculo con la instancia de proceso              |
 | § 4.1 Sitio web institucional            | No desarrollado: sección pública de solicitud + acceso por credenciales para empresas y administración                                               |
 | § 4.1.2 Acceso de la empresa             | Falta la actividad automática *Habilitar acceso de la empresa* que crea/reutiliza la cuenta                                                          |
@@ -374,7 +378,8 @@ curl -s -u admin:test "http://localhost:8080/process-api/history/historic-proces
 │   ├── Dockerfile                    # Imagen final: solo copia target/app.jar
 │   └── src/main/
 │       ├── java/com/flowable/app/
-│       │   ├── App.java              # Entrypoint + seed de usuarios (@Profile dev)
+│       │   ├── App.java              # Entrypoint
+│       │   ├── config/              # IdentitySeeder: usuarios y grupos (§3.3)
 │       │   ├── delegates/            # Reservar / liberar aula
 │       │   ├── listeners/            # Viabilidad, asignación, estado, cierre
 │       │   └── security/             # HTTP Basic contra el IDM de Flowable
