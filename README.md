@@ -3,156 +3,389 @@
 [![Java 17](https://img.shields.io/badge/Java-17-ED8B00?style=flat-square&logo=openjdk&logoColor=white)](https://openjdk.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.7.18-6DB33F?style=flat-square&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Flowable](https://img.shields.io/badge/Flowable-6.8.0-009688?style=flat-square)](https://www.flowable.com/)
-[![Maven](https://img.shields.io/badge/Apache%20Maven-3.9+-C71A36?style=flat-square&logo=apache-maven&logoColor=white)](https://maven.apache.org/)
-[![H2 Database](https://img.shields.io/badge/H2-In--Memory%20%26%20File-003B57?style=flat-square)](https://www.h2database.com/)
+[![Maven](https://img.shields.io/badge/Apache%20Maven-3.8+-C71A36?style=flat-square&logo=apache-maven&logoColor=white)](https://maven.apache.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 
-Repositorio del proyecto final para la asignatura **Gestión y Tecnologías de Procesos de Negocio (GTPN)**. Contiene el modelado BPMN 2.0 optimizado para ejecución, la documentación de diseño y el proyecto Java estructurado con **Spring Boot 2.7.18** y el motor **Flowable Engine 6.8.0** sobre base de datos H2.
+Proyecto final de **Gestión y Tecnologías de Procesos de Negocio (GTPN)**: implementación en Flowable del proceso de organización de cursos de capacitación de una institución especializada.
+
+Enunciado oficial: [`docs/ProyectoCursos_V3.pdf`](docs/ProyectoCursos_V3.pdf).
 
 ---
 
-## Contenido del Repositorio
+## El problema en dos párrafos
 
-- **Modelos BPMN 2.0:**
-  - `cursosNuestraVersion.bpmn`: Modelo refinado adaptado para el motor de procesos, aplicando las 7 Guías de Modelado (7PMG) y resolviendo aspectos técnicos como listeners de ejecución y eventos de mensaje.
-  - `cursosOriginal.bpmn`: Diagrama conceptual base provisto por la cátedra.
-- **Documentación Técnica:**
-  - `informeDeJustificacionDeCambiosyDecisionesDeModeladoBPMN.md`: Justificación detallada de cada cambio estructural respecto al modelo original.
-  - `ProyectoCursos.pdf`: Enunciado oficial de la cátedra con los requerimientos funcionales y escenarios de evaluación.
-- **Módulo Flowable (`flowable/`):**
-  - Aplicación Spring Boot 2.7.18 con Flowable 6.8.0, soporte REST (`spring-boot-starter-web`), validación de datos (`spring-boot-starter-validation`), Lombok y base de datos H2.
-- **Módulo Backend Proxy (`backend/`):**
-  - Backend-for-Frontend (BFF) en Spring Boot 3 para intermediación con Flowable, gestión delegada de sesiones (`JSESSIONID`), filtros HTTP y tratamiento unificado de errores. Para más detalles, consulta la [Documentación del Backend Proxy](backend/README.md).
+Las empresas solicitan cursos para capacitar a sus empleados. La institución evalúa la **viabilidad** (si ya tiene cinco o más cursos en ejecución, rechaza y finaliza), elabora una propuesta y negocia con la empresa, que puede aceptarla, rechazarla o pedir modificaciones. Si pasan cinco días sin respuesta se envía un recordatorio (máximo dos); si tampoco hay respuesta, se archiva la solicitud.
+
+Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripciones, materiales y recursos). Durante la preparación la empresa puede **cancelar**, lo que compensa los recursos ya gestionados. Si todo avanza, el jefe docente define quién dicta el curso, el docente lo desarrolla, se elabora el informe de resultados y el jefe administrativo lo envía y archiva el expediente, liberando los recursos.
+
+---
+
+## Contenido del repositorio
+
+| Carpeta                  | Qué contiene                                                                                                                                                                                               |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`model/`](model/)       | Modelos BPMN: `cursosNuestraVersion.bpmn` (refinado, 7PMG) y `cursosOriginal.bpmn` (base de cátedra), más el [informe de justificación](model/informeDeJustificacionDeCambiosyDecisionesDeModeladoBPMN.md) |
+| [`flowable/`](flowable/) | Motor de procesos: Spring Boot 2.7.18 + Flowable 6.8.0, BPMN desplegable, DMN de viabilidad, listeners, delegates y API REST                                                                               |
+| [`backend/`](backend/)   | Backend-for-Frontend (Spring Boot 3) con la BD de la institución. Ver su [README](backend/README.md)                                                                                                       |
+| [`docs/`](docs/)         | Enunciado y documentación funcional por sección del proceso                                                                                                                                                |
+| [`adr/`](adr/)           | Decisiones de arquitectura (compensación, cancelación no interruptiva, aulas simuladas)                                                                                                                    |
+
+---
+
+## Mapa de servicios: qué hace cada URL
+
+| URL                                                      | Qué es / para qué sirve                                                                                                                              | Cómo se levanta                                     |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `http://localhost:8080`                                  | **App Flowable**: motor de procesos embebido. Es el corazón del sistema                                                                              | Docker (perfil `prod`) o Maven (perfil `dev`)       |
+| `http://localhost:8080/health`                           | Healthcheck público, sin autenticación. Devuelve `UP`                                                                                                | —                                                   |
+| `http://localhost:8080/groups`                           | Lista los grupos del motor. Público. Sirve para verificar que el seed corrió                                                                         | —                                                   |
+| `http://localhost:8080/me`                               | Devuelve el usuario autenticado, sus grupos y roles. **Requiere HTTP Basic**                                                                         | —                                                   |
+| `http://localhost:8080/process-api/**`                   | **API REST oficial de Flowable**: desplegar procesos, iniciar instancias, consultar y completar tareas. Es la que consumen las apps externas         | —                                                   |
+| `http://localhost:8088/flowable-ui/`                     | **Flowable UI**: Task App (bandeja de tareas), Modeler, Admin App e IDM App (usuarios y grupos). Sirve para operar el proceso a mano durante la demo | Docker                                              |
+| `localhost:5432`                                         | **PostgreSQL**: base compartida por el motor y la UI                                                                                                 | Docker                                              |
+| `http://localhost:8081`                                  | **Backend BFF**: intermediario entre las apps externas y Flowable; contiene la BD de la institución (empresas y cursos)                              | Maven, **manual** (no está en `docker-compose.yml`) |
+| `http://localhost:8081/api/flowable/courses/{processId}` | Endpoint interno que el motor usa para actualizar el estado del curso. Protegido por API key                                                         | —                                                   |
 
 > [!NOTE]
-> Para conocer el detalle de las decisiones de diseño (como la incorporación de compuertas XOR convergentes y el reemplazo de tareas de recepción por eventos intermedios), consulta el [Informe de Justificación de Cambios y Decisiones BPMN](informeDeJustificacionDeCambiosyDecisionesDeModeladoBPMN.md).
+> La app Flowable y Flowable UI comparten la **misma base de datos**. Por eso un usuario creado desde la UI sirve para autenticarse contra la API REST, y viceversa.
 
 ---
 
-## Requisitos Previos
+## Credenciales: dónde va cada contraseña
 
-- **Java Development Kit (JDK) 17** o superior
-- **Apache Maven 3.8+**
-- **Git**
-- **Docker** y **Docker Compose** (solo para el despliegue con contenedores)
+| URL / recurso                                       | Usuario              | Contraseña            | Para qué                                                                                                                                                      |
+| --------------------------------------------------- | -------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `http://localhost:8088/flowable-ui/`                | `admin`              | `test`                | Entrar a Flowable UI (Task, Modeler, Admin, IDM)                                                                                                              |
+| `http://localhost:8080/process-api/**` (HTTP Basic) | `admin`              | `test`                | Administrar el motor por API REST                                                                                                                             |
+| `http://localhost:8080/**` (HTTP Basic)             | `jefeadministrativo` | `password`            | Rol: registrar/elaborar/revisar propuesta, archivar solicitud, enviar informe                                                                                 |
+| idem                                                | `administrativo1`    | `password`            | Rol: lista definitiva, materiales, recursos, compensaciones                                                                                                   |
+| idem                                                | `administrativo2`    | `password`            | idem                                                                                                                                                          |
+| idem                                                | `jefedocente`        | `password`            | Rol: definir docente, elaborar informe de resultados                                                                                                          |
+| idem                                                | `docente1`           | `password`            | Rol: desarrollar curso                                                                                                                                        |
+| idem                                                | `docente2`           | `password`            | idem                                                                                                                                                          |
+| `localhost:5432` (PostgreSQL)                       | `flowable`           | `flowable`            | Base `flowable`. Definido en [`docker-compose.yml`](docker-compose.yml)                                                                                       |
+| Backend → Flowable (cuenta técnica)                 | `admin`              | `test`                | `flowable.username` / `flowable.password` en [`backend/src/main/resources/application.properties`](backend/src/main/resources/application.properties)         |
+| `http://localhost:8081/api/flowable/**`             | header `X-API-KEY`   | `flowable-secret-key` | Autentica al motor contra el backend. Definido en [`flowable/.../application.properties`](flowable/src/main/resources/application.properties) y en el backend |
+| H2 del backend (`jdbc:h2:mem:backend_db`)           | `sa`                 | *(vacía)*             | BD en memoria del BFF                                                                                                                                         |
 
----
+**De dónde sale cada uno:**
 
-## Inicio Rápido
-
-1. **Clonar el repositorio:**
-   ```bash
-   git clone https://github.com/AlieniAgustin/GTPN-GestionCursos-Flowable.git
-   cd GTPN-GestionCursos-Flowable/flowable
-   ```
-
-2. **Compilar el proyecto:**
-   ```bash
-   mvn clean compile
-   ```
-
-3. **Ejecutar las pruebas unitarias:**
-   ```bash
-   mvn test
-   ```
-
-4. **Iniciar la aplicación (modo desarrollo):**
-   ```bash
-   mvn spring-boot:run
-   ```
-   La aplicación iniciará en `http://localhost:8080`.
-   * **Consola H2 (solo en `dev`):** `http://localhost:8080/h2-console`
-     * **JDBC URL:** `jdbc:h2:mem:flowable_dev`
-     * **Usuario:** `sa`
-     * **Contraseña:** *(vacía)*
+- `admin` / `test` lo crea el bootstrap del contenedor `flowable-ui` la primera vez que arranca contra una base vacía.
+- Los seis usuarios de negocio con contraseña `password` los crea el seed de [`App.java`](flowable/src/main/java/com/flowable/app/App.java), que está anotado `@Profile("dev")`. **El despliegue Docker corre en perfil `prod`, así que el seed no se ejecuta ahí** (ver paso 1.3).
 
 ---
 
-## Perfiles de Ejecución y Configuración
+## Comandos, en orden
 
+### Requisitos previos
 
-### 1. Perfiles de Spring Boot (`application-*.properties`)
+JDK 17+, Apache Maven 3.8+, Git, Docker y Docker Compose.
 
-* **`dev` (por defecto):**
-  * Base de datos H2 en memoria (`flowable_dev`).
-  * Consola web de H2 habilitada en `/h2-console` para inspeccionar tablas de Flowable (`ACT_RU_*`, `ACT_HI_*`, etc.).
-* **`prod`:**
-  * Base de datos H2 persistente en archivo (`./data/flowable_prod`) o integrable con PostgreSQL/MySQL.
-  * Consola H2 deshabilitada por seguridad.
-
-
-### 2. Perfiles de Maven (`pom.xml`)
-
-* **Perfil `dev` (activo por defecto):**
-  * Incluye `exec-maven-plugin` para levantar directamente la aplicación:
-    ```bash
-    mvn compile exec:java -Pdev
-    ```
-
----
-
-## Despliegue con Docker
-
-La imagen de la aplicación **no compila** el proyecto: solo copia el fat JAR ya generado por `spring-boot-maven-plugin`. Por eso el orden es siempre compilar primero y después construir/levantar los contenedores.
-
-1. **Compilar el JAR ejecutable:**
-   ```bash
-   cd flowable
-   ./build.sh
-   ```
-   El script ejecuta `mvn clean package -DskipTests` y deja el artefacto en `flowable/target/app.jar`.
-
-2. **Levantar PostgreSQL y la aplicación:**
-   ```bash
-   cd ..
-   docker compose up --build -d
-   ```
-
-3. **Servicios disponibles:**
-
-   | Servicio | URL / Puerto |
-   |---|---|
-   | API de la aplicación | `http://localhost:8080` |
-   | Flowable UI | `http://localhost:8088/flowable-ui` |
-   | PostgreSQL | `localhost:5432` (db/usuario/password: `flowable`) |
-
-4. **Ver logs o detener:**
-   ```bash
-   docker compose logs -f flowable-app
-   docker compose down
-   ```
-
-> [!IMPORTANT]
-> Si ejecutás `docker compose up --build` sin haber corrido `./build.sh`, el build falla porque `flowable/target/app.jar` todavía no existe. El JAR está en `.gitignore`, así que no se versiona.
-
----
-
-## Estructura de Archivos
-
-```text
-├── cursosNuestraVersion.bpmn        # Modelo BPMN 2.0 refinado y preparado para Flowable
-├── cursosOriginal.bpmn              # Modelo BPMN conceptual base de la cátedra
-├── informeDeJustificacionDeCambiosyDecisionesDeModeladoBPMN.md # Justificación técnica y 7PMG
-├── ProyectoCursos.pdf               # Enunciado y requerimientos de la materia
-├── docker-compose.yml               # PostgreSQL + app + Flowable UI
-└── flowable/                        # Módulo del motor de procesos y API REST
-    ├── pom.xml                      # Dependencias Spring Boot, Flowable y perfiles
-    ├── build.sh                     # Compila y deja el jar en target/app.jar
-    ├── Dockerfile                   # Imagen final: solo copia target/app.jar
-    └── src/
-        ├── main/
-        │   ├── java/com/flowable/app/
-        │   │   └── App.java         # Punto de entrada (@SpringBootApplication)
-        │   └── resources/
-        │       ├── application.properties      # Configuración común y perfil activo
-        │       ├── application-dev.properties  # Configuración para desarrollo (H2 mem)
-        │       └── application-prod.properties # Configuración para producción (H2 file)
-        └── test/java/com/flowable/app/
-            └── AppTest.java         # Test de contexto Spring Boot
+```bash
+git clone https://github.com/AlieniAgustin/GTPN-GestionCursos-Flowable.git
 ```
 
 ---
 
-## Equipo de Trabajo
+### 1. Levantar
+
+#### 1.1 Compilar el JAR (obligatorio antes de levantar)
+
+El `Dockerfile` **no compila**: solo copia el fat JAR ya generado. Si salteás este paso, `docker compose up --build` falla porque `flowable/target/app.jar` no existe (está en `.gitignore`, no se versiona).
+
+```bash
+cd flowable && ./build.sh
+```
+
+El script corre `mvn clean package -DskipTests` y deja el artefacto en `flowable/target/app.jar`.
+
+#### 1.2 Levantar los contenedores
+
+```bash
+docker compose up --build -d
+```
+
+Levanta tres servicios: `flowable-postgres`, `flowable-app` (espera a que Postgres esté sano) y `flowable-ui` (espera a que la app esté sana).
+
+```bash
+docker compose ps
+```
+
+#### 1.3 Sembrar los usuarios de negocio (una sola vez)
+
+El seed solo corre en perfil `dev`, y Docker usa `prod`. Recién levantado el stack **solo existe `admin`/`test`**: `docente1` y compañía devuelven `401`, y `/groups` viene vacío.
+
+Como el perfil `dev` apunta al **mismo** PostgreSQL de Docker, basta con arrancar la app local una vez para que escriba los usuarios y grupos en la base compartida:
+
+```bash
+cd flowable && mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8090
+```
+
+Esperá a ver `Started App`, verificá y cortá con `Ctrl+C`:
+
+```bash
+curl -s http://localhost:8080/groups
+```
+
+Debe devolver `{"groups":["Administracion","Docentes"],"quantityGroups":2}`.
+
+#### 1.4 Ver logs
+
+```bash
+docker compose logs -f flowable-app
+```
+
+---
+
+### 2. Bajar
+
+Detener los contenedores conservando los datos:
+
+```bash
+docker compose down
+```
+
+Detener **y borrar el volumen** de PostgreSQL (deja la base vacía: se pierden usuarios, despliegues e instancias; hay que repetir el paso 1.3):
+
+```bash
+docker compose down -v
+```
+
+---
+
+### 3. Compilar
+
+```bash
+cd flowable && mvn clean compile
+```
+
+---
+
+### 4. Testear
+
+```bash
+cd flowable && mvn test -DforkCount=0
+```
+
+Resultado esperado: **11 tests, 0 fallos** — `HappyPathTest`, `CompensationTest` (3), `ClassroomUnavailableTest`, `NoResponseTest`, `TaskAssignmentTest`, `CourseLimitExceededTest`, `ProposalRejectionTest`, `ProposalModificationsTest` y `AppTest`.
+
+> [!WARNING]
+> **Problema de entorno: el apóstrofe en la ruta.**
+> Si la ruta absoluta del proyecto contiene un apóstrofe (por ejemplo `.../Computer's Science/...`), `mvn test` a secas **siempre falla** con:
+>
+> ```
+> The forked VM terminated without properly saying goodbye. VM crash or System.exit called?
+> Process Exit Code: 2
+> ```
+>
+> No es un problema del código ni de los tests. Maven Surefire arma el comando del JVM hijo como `/bin/sh -c cd "...Computer\'s Science..."`, y dentro de comillas dobles el `\'` queda literal, así que el `cd` apunta a una ruta inexistente y el fork muere antes de arrancar.
+>
+> Soluciones, de menor a mayor esfuerzo:
+>
+> 1. `-DforkCount=0` — corre los tests en la JVM de Maven, sin fork. Es lo que recomendamos.
+> 2. Mover el repositorio a una ruta sin apóstrofes ni comillas.
+>
+> `./build.sh` **no** se ve afectado porque usa `-DskipTests`.
+
+Los tests levantan el contexto completo de Spring con perfil `dev`, así que **necesitan el contenedor de PostgreSQL arriba**. Además escriben en la misma base que usa Docker: cada corrida redesplega el BPMN y suma una versión nueva del proceso.
+
+---
+
+### 5. Correr la app local (perfil `dev`)
+
+Requiere el contenedor de PostgreSQL levantado, porque [`application-dev.properties`](flowable/src/main/resources/application-dev.properties) apunta a `jdbc:postgresql://localhost:5432/flowable`.
+
+Si el puerto 8080 está ocupado por el contenedor `flowable-app`, usá otro puerto:
+
+```bash
+cd flowable && mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8090
+```
+
+Si bajaste los contenedores de la app y querés el 8080:
+
+```bash
+cd flowable && mvn spring-boot:run
+```
+
+Diferencias entre perfiles:
+
+|                           | `dev`                       | `prod`                                                                                                     |
+| ------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Base de datos             | PostgreSQL `localhost:5432` | PostgreSQL `postgres:5432` (sobreescribible por `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`) |
+| Seed de usuarios y grupos | **Sí**                      | No                                                                                                         |
+| Consola H2                | —                           | deshabilitada                                                                                              |
+
+---
+
+### 6. Correr el backend BFF
+
+```bash
+cd backend && mvn spring-boot:run
+```
+
+Arranca en `http://localhost:8081` con H2 en memoria. Espera encontrar el motor en `http://localhost:8080`.
+
+Único endpoint operativo hoy (ver [Estado de implementación](#estado-de-implementación-vs-enunciado)):
+
+```bash
+curl -s -X PUT http://localhost:8081/api/flowable/courses/{processId} -H 'X-API-KEY: flowable-secret-key' -H 'Content-Type: application/json' -d '{"status":"FINALIZADO"}'
+```
+
+Valores válidos de `status`: `FINALIZADO`, `CANCELADO`, `RECHAZADO`, `NO_VIABLE`, `SIN_RESPUESTA`.
+
+---
+
+### 7. Probar la API REST
+
+Healthcheck, sin autenticación:
+
+```bash
+curl -s http://localhost:8080/health
+```
+
+Identidad y roles del usuario autenticado:
+
+```bash
+curl -s -u admin:test http://localhost:8080/me
+```
+
+```bash
+curl -s -u docente1:password http://localhost:8080/me
+```
+
+Procesos desplegados:
+
+```bash
+curl -s -u admin:test http://localhost:8080/process-api/repository/process-definitions
+```
+
+**Iniciar una instancia.** El proceso arranca por un evento de mensaje (`Solicitud de curso`), no por `processDefinitionKey`:
+
+```bash
+curl -s -u admin:test -X POST http://localhost:8080/process-api/runtime/process-instances -H 'Content-Type: application/json' -d '{"message":"Solicitud de curso"}'
+```
+
+La respuesta trae las variables que calculan los listeners y el DMN: `cantidadCursosActivos` y `viable`.
+
+Consultar las tareas activas:
+
+```bash
+curl -s -u admin:test http://localhost:8080/process-api/runtime/tasks
+```
+
+Tareas de una instancia concreta:
+
+```bash
+curl -s -u admin:test "http://localhost:8080/process-api/runtime/tasks?processInstanceId={processInstanceId}"
+```
+
+**Bandeja de un usuario**: tareas asignadas a él más las que puede reclamar por su grupo candidato. Es la consulta que usan las apps externas para armar la lista de pendientes.
+
+```bash
+curl -s -u administrativo1:password "http://localhost:8080/process-api/runtime/tasks?candidateOrAssigned=administrativo1"
+```
+
+**Reclamar** una tarea de grupo (las asignadas directamente a un usuario no se reclaman) — responde `200`:
+
+```bash
+curl -s -u administrativo1:password -X POST http://localhost:8080/process-api/runtime/tasks/{taskId} -H 'Content-Type: application/json' -d '{"action":"claim","assignee":"administrativo1"}'
+```
+
+**Completar** una tarea — responde `200`:
+
+```bash
+curl -s -u administrativo1:password -X POST http://localhost:8080/process-api/runtime/tasks/{taskId} -H 'Content-Type: application/json' -d '{"action":"complete"}'
+```
+
+**Simular las comunicaciones de la empresa** enviando mensajes a la instancia. Nombres definidos en el BPMN: `Aceptación`, `Rechazo`, `Solicitud de modificaciones`, `Nómina de participantes`, `Cancelación`, `Corrección de datos`, `Consulta de avance`.
+
+Primero hay que averiguar el `executionId` de la actividad que está esperando ese mensaje:
+
+```bash
+curl -s -u admin:test "http://localhost:8080/process-api/runtime/executions?processInstanceId={processInstanceId}"
+```
+
+Mientras la instancia espera respuesta, aparecen las ejecuciones `aceptacion`, `rechazo`, `modificaciones` y el temporizador `plazo5dias`. Con el id de la que corresponda — responde `204`:
+
+```bash
+curl -s -u admin:test -X PUT http://localhost:8080/process-api/runtime/executions/{executionId} -H 'Content-Type: application/json' -d '{"action":"messageEventReceived","messageName":"Aceptación"}'
+```
+
+Tras la aceptación arranca el subproceso de preparación y aparecen en paralelo las tareas `prepararmateriales` y `evaluarrecursos`, ambas sin asignar y con `administracion` como grupo candidato.
+
+Historial de instancias terminadas (base del análisis de la sección 4.3 del enunciado):
+
+```bash
+curl -s -u admin:test "http://localhost:8080/process-api/history/historic-process-instances?finished=true"
+```
+
+> [!TIP]
+> Para probar el escenario 7 (falta de aulas), bajá `aulas.disponibles` a `1` en [`application.properties`](flowable/src/main/resources/application.properties) y recompilá.
+
+---
+
+## Estado de implementación vs enunciado
+
+### Implementado
+
+- Modelo BPMN ejecutable desplegado (`Process_Curso`), con compensación, cancelación no interruptiva y eventos de mensaje.
+- **Decision task DMN** de viabilidad ([`evaluarViabilidad.dmn`](flowable/src/main/resources/dmn/evaluarViabilidad.dmn)) alimentada desde el motor por `CountActiveCoursesListener`.
+- **Task Listener** `AssignLeastBusyListener`: asigna *Confeccionar lista definitiva* al administrativo con menos tareas pendientes.
+- **Execution Listener** `UpdateCourseStatusListener`: notifica el estado final del curso al backend.
+- Delegates `ReserveClassroomDelegate` / `ReleaseClassroomDelegate` con el **web service de aulas simulado** (`aulas.disponibles`).
+- Seguridad HTTP Basic contra el IDM de Flowable, con roles derivados de los grupos.
+- 11 tests automatizados que cubren los escenarios 1 a 8 de la defensa.
+
+### Pendiente
+
+| Enunciado                                | Qué falta                                                                                                                                            |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| § 3.3 Usuarios y grupos                  | El seed crea **6** usuarios; el enunciado pide **5** (2 de Administración incluido el jefe, 3 de Docentes incluido el jefe). Sobra un administrativo |
+| § 3.3                                    | El seed es `@Profile("dev")`: en `prod` la base queda sin usuarios (workaround en el paso 1.3)                                                       |
+| § 3.2 BD de la institución               | Existen las entidades `Company` y `Course` en el backend, falta cablear el alta de solicitudes y el vínculo con la instancia de proceso              |
+| § 4.1 Sitio web institucional            | No desarrollado: sección pública de solicitud + acceso por credenciales para empresas y administración                                               |
+| § 4.1.2 Acceso de la empresa             | Falta la actividad automática *Habilitar acceso de la empresa* que crea/reutiliza la cuenta                                                          |
+| § 4.1.3                                  | Generación del PDF de la propuesta y de sus nuevas versiones                                                                                         |
+| § 4.2.1 App Java (API Java)              | No desarrollada: app de escritorio para *Preparar materiales* usando la API Java de Flowable                                                         |
+| § 4.2.2 App de comunicaciones (API REST) | No desarrollada: simulación de aceptación, rechazo, modificaciones, nómina y cancelación                                                             |
+| § 4.3 Análisis de ejecuciones            | No implementadas las tres consultas (resultados de solicitudes, duración de ramas paralelas, distribución de tareas)                                 |
+| § 4.4 Minería de procesos                | No implementado el análisis con PM4Py (`exportar_history.py` / `analizar.py`) ni el CSV de la etapa de negociación                                   |
+| Backend BFF                              | Falta el `AuthController` (`/api/auth/login` está en la lista pública pero no existe el endpoint)                                                    |
+| Backend BFF                              | La cadena de seguridad principal exige `authenticated()` sin `httpBasic` ni `formLogin`: `/api/courses` y `/api/tasks` devuelven **403** siempre     |
+| Backend BFF                              | `CourseController.updateStatus` declara un `@PathVariable processId` que no existe en el `@PostMapping`: falla en runtime                            |
+
+---
+
+## Estructura de archivos
+
+```text
+├── docker-compose.yml                # PostgreSQL + app Flowable + Flowable UI
+├── docs/
+│   └── ProyectoCursos_V3.pdf         # Enunciado vigente de la cátedra
+├── model/
+│   ├── cursosNuestraVersion.bpmn     # Modelo refinado (7PMG)
+│   ├── cursosOriginal.bpmn           # Modelo conceptual de cátedra
+│   └── informeDeJustificacionDeCambiosyDecisionesDeModeladoBPMN.md
+├── adr/                              # Decisiones de arquitectura
+├── flowable/                         # Motor de procesos
+│   ├── build.sh                      # mvn clean package -DskipTests → target/app.jar
+│   ├── Dockerfile                    # Imagen final: solo copia target/app.jar
+│   └── src/main/
+│       ├── java/com/flowable/app/
+│       │   ├── App.java              # Entrypoint + seed de usuarios (@Profile dev)
+│       │   ├── delegates/            # Reservar / liberar aula
+│       │   ├── listeners/            # Viabilidad, asignación, estado, cierre
+│       │   └── security/             # HTTP Basic contra el IDM de Flowable
+│       └── resources/
+│           ├── processes/Institución_de_capacitación.bpmn20.xml
+│           ├── dmn/evaluarViabilidad.dmn
+│           └── application*.properties
+└── backend/                          # Backend-for-Frontend + BD de la institución
+```
+
+---
+
+## Equipo de trabajo
 
 - **Materia:** Gestión y Tecnologías de Procesos de Negocio (GTPN)
 - **Profesor:** Dr. Ariel Gonzalez
