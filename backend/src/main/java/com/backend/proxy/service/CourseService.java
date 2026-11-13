@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import com.backend.proxy.client.FlowableClient;
 import com.backend.proxy.dto.CompanyContactDTO;
+import com.backend.proxy.dto.CourseDetailsUpdateDTO;
 import com.backend.proxy.dto.CourseRequestDTO;
 import com.backend.proxy.dto.CourseResponseDTO;
 import com.backend.proxy.dto.FlowableProcessInstanceResponse;
@@ -80,6 +81,27 @@ public class CourseService {
         Course course = courseRepository.findByprocessInstanceId(processId)
             .orElseThrow(() -> new ResourceNotFoundException("Course not found"));
         course.transitionTo(courseStatus);
+        courseRepository.save(course);
+    }
+
+    /**
+     * Vuelca a la BD de la institucion los datos que el proceso produjo (enunciado 3.2).
+     * La llama el motor por la API interna cada vez que una etapa genera informacion
+     * nueva, asi que es idempotente y solo pisa los campos que llegan con valor.
+     */
+    @Transactional
+    public void updateCourseDetails(String processId, CourseDetailsUpdateDTO details) {
+        if (processId == null || processId.isBlank()) {
+            throw new IllegalArgumentException("Process instance ID must not be blank");
+        }
+        if (details == null || details.isEmpty()) {
+            return;
+        }
+        Course course = courseRepository.findByprocessInstanceId(processId)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "No course linked to process instance " + processId));
+
+        course.applyDetails(details.program(), details.budget(), details.agreedDate(), details.report());
         courseRepository.save(course);
     }
 

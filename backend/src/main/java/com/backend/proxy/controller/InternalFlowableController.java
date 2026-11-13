@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.backend.proxy.dto.CompanyAccessResponseDTO;
+import com.backend.proxy.dto.CourseDetailsUpdateDTO;
 import com.backend.proxy.dto.CourseStatusUpdateDTO;
 import com.backend.proxy.service.CompanyAccessService;
 import com.backend.proxy.service.CourseService;
@@ -29,6 +30,20 @@ public class InternalFlowableController {
             @Valid @RequestBody CourseStatusUpdateDTO dto
     ) {
         courseService.updateCourse(processId, dto.status());
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Vuelca a la BD de la institucion los datos que el proceso fue produciendo
+     * (enunciado 3.2): programa y presupuesto de la propuesta, fecha acordada e informe.
+     * La invoca el listener {@code syncCourseDetails} al cerrar cada etapa.
+     */
+    @PutMapping("/courses/{processId}/details")
+    public ResponseEntity<Void> updateDetails(
+            @PathVariable String processId,
+            @RequestBody CourseDetailsUpdateDTO details
+    ) {
+        courseService.updateCourseDetails(processId, details);
         return ResponseEntity.noContent().build();
     }
 

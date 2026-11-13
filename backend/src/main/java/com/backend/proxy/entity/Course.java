@@ -42,9 +42,29 @@ public class Course {
     @Column(nullable = false)
     private String description;
 
+    /**
+     * Programa del curso, redactado al elaborar la propuesta (enunciado 1.1).
+     */
+    @Column(columnDefinition = "text")
+    private String program;
+
+    /**
+     * Presupuesto de la propuesta (enunciado 1.1).
+     */
     private BigDecimal budget;
 
-    private String reportUrl;
+    /**
+     * Fecha de inicio acordada con la empresa al aceptar la propuesta (enunciado 3.5).
+     * Es la que alimenta el temporizador del modelo.
+     */
+    @Column(name = "agreed_date")
+    private LocalDate agreedDate;
+
+    /**
+     * Contenido del informe de resultados, escrito por el jefe del equipo docente.
+     */
+    @Column(columnDefinition = "text")
+    private String report;
 
     private CourseStatus status;
 
@@ -65,6 +85,27 @@ public class Course {
         this.description = description;
         this.budget = new BigDecimal("0.0");
         this.possibleDates = possibleDates;
+    }
+
+    /**
+     * Vuelca los datos que el proceso fue produciendo. Cada campo se actualiza solo si
+     * llegó con valor, porque el proceso los completa en etapas distintas: el programa y
+     * el presupuesto al elaborar la propuesta, la fecha al aceptarla y el informe al
+     * cerrar el curso.
+     */
+    public void applyDetails(String program, BigDecimal budget, LocalDate agreedDate, String report) {
+        if (program != null && !program.isBlank()) {
+            this.program = program;
+        }
+        if (budget != null) {
+            this.budget = budget;
+        }
+        if (agreedDate != null) {
+            this.agreedDate = agreedDate;
+        }
+        if (report != null && !report.isBlank()) {
+            this.report = report;
+        }
     }
 
     public void transitionTo(CourseStatus newStatus) {
