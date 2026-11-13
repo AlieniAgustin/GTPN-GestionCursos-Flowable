@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import com.backend.proxy.client.FlowableClient;
 import com.backend.proxy.dto.CompanyContactDTO;
 import com.backend.proxy.dto.CourseRequestDTO;
+import com.backend.proxy.dto.CourseResponseDTO;
 import com.backend.proxy.dto.FlowableProcessInstanceResponse;
 import com.backend.proxy.dto.FlowableVariable;
 import com.backend.proxy.entity.Company;
@@ -15,6 +16,8 @@ import com.backend.proxy.exception.ResourceNotFoundException;
 import com.backend.proxy.repository.CompanyRepository;
 import com.backend.proxy.repository.CourseRepository;
 import com.backend.proxy.types.CourseStatus;
+
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 
@@ -28,7 +31,14 @@ public class CourseService {
     private final CompanyRepository companyRepository;
     private final FlowableClient flowableClient;
 
-    public Course processCourse(CourseRequestDTO request) {
+    /**
+     * Registra la solicitud e inicia su instancia de proceso (enunciado 4.1.1).
+     *
+     * <p>Devuelve un DTO en vez de la entidad: el mapeo ocurre dentro de la transacción,
+     * así la asociación lazy {@code company} ya está cargada cuando se serializa.
+     */
+    @Transactional
+    public CourseResponseDTO processCourse(CourseRequestDTO request) {
         CompanyContactDTO contact = request.contact();
         Company company = getOrCreate(contact);
         Course course = new Course(company, request.name(), request.description(), request.possibleDates());
@@ -39,7 +49,9 @@ public class CourseService {
                 String.valueOf(course.getId()),
                 List.of(
                         new FlowableVariable("courseId", course.getId()),
-                        new FlowableVariable("courseName", course.getName())
+                        new FlowableVariable("courseName", course.getName()),
+                        new FlowableVariable("companyName", company.getName()),
+                        new FlowableVariable("companyEmail", company.getEmail())
                 )
         );
 
@@ -48,7 +60,14 @@ public class CourseService {
             course = courseRepository.save(course);
         }
 
-        return course;
+        return new CourseResponseDTO(
+                course.getId(),
+                course.getProcessInstanceId(),
+                course.getName(),
+                course.getDescription(),
+                course.getStatus(),
+                company.getName()
+        );
     }
 
     public void updateCourse(String processId, CourseStatus courseStatus) {
