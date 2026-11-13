@@ -6,13 +6,16 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -23,7 +26,10 @@ public class SecurityConfig {
 
     private static final String[] PUBLIC_URLS = {
         "/api/auth/login",
-        "/health"
+        "/health",
+        // Sin esto, cualquier excepción se reenvía a /error, que al estar protegido
+        // devuelve 403 y tapa el ApiErrorResponse del GlobalExceptionHandler.
+        "/error"
     };
 
     @Bean
@@ -52,6 +58,11 @@ public class SecurityConfig {
             .build();
     }
 
+    /**
+     * Sesión estándar de Spring Security: {@code POST /api/auth/login} valida contra el
+     * IDM de Flowable y guarda el SecurityContext en la HttpSession, así que el resto de
+     * las llamadas solo necesitan la cookie JSESSIONID.
+     */
     @Bean
     @Order(2)
     public SecurityFilterChain applicationSecurity(
@@ -63,9 +74,16 @@ public class SecurityConfig {
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
             )
+            .securityContext(context -> context
+                .securityContextRepository(new HttpSessionSecurityContextRepository())
+            )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(PUBLIC_URLS).permitAll()
                 .anyRequest().authenticated()
+            )
+            // Para una API, "no estás autenticado" es 401, no 403
+            .exceptionHandling(handling -> handling
+                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
             )
             .build();
     }
