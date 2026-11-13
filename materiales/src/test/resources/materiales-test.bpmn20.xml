@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://flowable.org/test">
+
+  <!--
+    Proceso mínimo para los tests: una sola tarea, con el mismo id y el mismo grupo
+    candidato que "Preparar materiales" en el proceso real
+    (flowable/src/main/resources/processes/Institución_de_capacitación.bpmn20.xml).
+    Así los tests no dependen del modelo completo ni de su rama paralela.
+  -->
+  <process id="TestMateriales" name="Preparar materiales (test)" isExecutable="true">
+    <startEvent id="inicio"></startEvent>
+    <sequenceFlow id="flow_inicio" sourceRef="inicio" targetRef="prepararmateriales"></sequenceFlow>
+    <userTask id="prepararmateriales" name="Preparar materiales"
+              flowable:candidateGroups="administracion"></userTask>
+    <sequenceFlow id="flow_fin" sourceRef="prepararmateriales" targetRef="fin"></sequenceFlow>
+    <endEvent id="fin"></endEvent>
+  </process>
+</definitions>
