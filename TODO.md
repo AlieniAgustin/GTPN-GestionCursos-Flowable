@@ -18,7 +18,7 @@ Checklist del equipo, derivada del enunciado [`docs/ProyectoCursos_V3.pdf`](docs
 | 4. Sitio web institucional | No empezado |
 | 5. App Java (API Java) | Completo |
 | 6. App de comunicaciones (API REST) | Completo |
-| 7. Análisis de ejecuciones | No empezado |
+| 7. Análisis de ejecuciones | Completo |
 | 8. Minería de procesos | No empezado |
 | 9. Entrega y demo | Escenarios 1–8 cubiertos por tests; el 11 ya se puede mostrar con las dos apps; 9 y 10 dependen del sitio web |
 
@@ -142,11 +142,19 @@ Todas se envían con `PUT /runtime/executions/{executionId}` y `action: messageE
 
 ## 7. Análisis de las ejecuciones del proceso (§4.3)
 
-Sobre la información histórica de Flowable. Puede integrarse a la app del bloque 5 o **mostrarse por consola**.
+Sobre la información histórica de Flowable. El enunciado permite integrarlo a la app del bloque 5 o mostrarlo por consola: están **las dos**. Vive en [`materiales/src/main/java/com/materiales/app/analysis/`](materiales/src/main/java/com/materiales/app/analysis/), con [`ExecutionAnalysisService`](materiales/src/main/java/com/materiales/app/analysis/ExecutionAnalysisService.java) haciendo las consultas por la API Java (`HistoryService`), un formateador de tablas compartido, el botón *Análisis de ejecuciones* en la ventana de la app y [`AnalysisApp`](materiales/src/main/java/com/materiales/app/analysis/AnalysisApp.java) para la terminal:
 
-- [ ] **Resultados de las solicitudes**: tabla con cantidad y porcentaje de instancias terminadas en cada resultado (curso finalizado, cancelación, rechazo, no viable, cierre por falta de respuesta). Porcentajes sobre el total de instancias **terminadas**. ( )
-- [ ] **Análisis de la preparación paralela**: duración promedio de las ramas de inscripciones, materiales y recursos, medida desde su activación hasta su finalización. La rama de recursos termina cuando se completaron todas las acciones seleccionadas. **Excluir las preparaciones interrumpidas por cancelación.** ( )
-- [ ] **Distribución de tareas**: tabla con la cantidad de tareas de usuario completadas por cada administrativo y docente. **Excluir las pendientes y las interrumpidas o canceladas.** ( )
+```bash
+java -cp materiales/target/app.jar com.materiales.app.analysis.AnalysisApp
+```
+
+- [x] **Resultados de las solicitudes**. Sale de la variable `resultadoCurso` de cada instancia terminada (`finished()` + `includeProcessVariables()`), la que dejan los caminos de cierre de §3.4. Porcentajes sobre el total de terminadas, con las cinco filas siempre presentes aunque estén en cero. Si apareciera una instancia terminada sin resultado se muestra en una fila aparte, pero `ClosingPathsTest` garantiza que no pase. ( )
+- [x] **Análisis de la preparación paralela**. La activación es el fin del gateway `preparacionenparalelo`, la misma para las tres ramas; el cierre de cada una es la última finalización de `confeccionarlistadefinitiva`, `prepararmateriales` y —para recursos— la más tardía entre `reservaraula`, `solicitaraulavirtual` y `contratarequipamiento`, que es el "cuando se hayan completado todas las acciones seleccionadas" del enunciado: las no seleccionadas no están en el historial. Se toma la **última** finalización porque `reservaraula` se repite si hubo que gestionar la falta de aulas. Solo se miden las preparaciones que llegaron a `finprepararcurso`; una cancelación interrumpe el subproceso antes, así que queda excluida sola, y el informe aclara cuántas excluyó por cancelación, cuántas están en curso y cuántas instancias nunca entraron en preparación. ( )
+- [x] **Distribución de tareas**. `finished()` + `taskWithoutDeleteReason()` agrupado por responsable: eso deja afuera las pendientes y las que el motor borra al interrumpir la preparación. Los cinco integrantes aparecen siempre, aunque tengan cero, y si apareciera un responsable fuera de los dos grupos se lista al final. ( )
+
+**10 tests** ([`materiales/src/test/java/com/materiales/app/analysis/`](materiales/src/test/java/com/materiales/app/analysis/)), 26 en total en el módulo. Los de las consultas corren contra un esqueleto BPMN de test que copia del modelo real los ids de las actividades, el subproceso de preparación con sus tres ramas y el subproceso de evento de cancelación, y **mueven el reloj del motor a mano**, así las duraciones salen exactas (5, 10 y 20 minutos) y no dependen de lo que tarde la máquina. Montan tres instancias: una preparación normal, una cancelada y una solicitud que nunca entró en preparación.
+
+> Probado también contra la base real del stack: el informe corre y lee el historial. **Ojo con dos cosas que se ven ahí:** aparece `administrativo2`, el usuario huérfano de la base vieja (hay que recrearla con `docker compose down -v`), y con solo `seed-demo.sh` no hay ninguna instancia terminada, así que las dos primeras tablas salen vacías. Para llenarlas hay que cerrar instancias con la app del bloque 6.
 
 ---
 

@@ -441,13 +441,15 @@ También se puede por variables de entorno (`DB_URL`, `DB_USERNAME`, `DB_PASSWOR
 
 Para tener tareas que mostrar, dejá alguna solicitud aceptada y en preparación: `./scripts/seed-demo.sh` ya genera varias.
 
-Dos cosas que la app **no** hace a propósito: no crea ni migra tablas (`databaseSchemaUpdate = false`, el dueño del esquema es la app del motor, y si las versiones no coinciden falla al arrancar) y no activa el async executor, así que no compite por los jobs ni por los temporizadores del motor.
+La ventana tiene además el botón **Análisis de ejecuciones**, que muestra las tres consultas de §4.3 (ver más abajo).
+
+Tres cosas que la app **no** hace a propósito: no crea ni migra tablas (`databaseSchemaUpdate = false`, el dueño del esquema es la app del motor, y si las versiones no coinciden falla al arrancar), no activa el async executor, así que no compite por los jobs ni por los temporizadores, y deshabilita el event registry, que no usa y que al arrancar dispararía un chequeo de Liquibase.
 
 ```bash
 cd materiales && mvn test
 ```
 
-Resultado esperado: **16 tests, 0 fallos**. Levantan un motor embebido sobre H2, así que no necesitan PostgreSQL ni pantalla.
+Resultado esperado: **26 tests, 0 fallos**. Levantan un motor embebido sobre H2, así que no necesitan PostgreSQL ni pantalla.
 
 ---
 
@@ -485,6 +487,57 @@ Resultado esperado: **16 tests, 0 fallos**. Usan el servidor HTTP del JDK como s
 
 > [!TIP]
 > Esta app es la forma práctica de generar muchas instancias terminadas con recorridos variados, que es lo que necesitan el análisis de §4.3 y la minería de §4.4 para dar algo interesante.
+
+---
+
+## Análisis de las ejecuciones (§4.3)
+
+Las tres consultas sobre el historial del motor, por la API Java. Están en la app de materiales —el enunciado permite incorporarlas ahí— con dos formas de verlas: el botón **Análisis de ejecuciones** de la ventana, y por consola, que es la que conviene para la captura de resultados:
+
+```bash
+java -cp materiales/target/app.jar com.materiales.app.analysis.AnalysisApp
+```
+
+Acepta las mismas opciones de conexión que la app (`-Ddb.url=...`, `DB_URL`, etc.). Salida:
+
+```text
+1) Resultados de las solicitudes (§4.3.1)
+   Instancias terminadas: 12
+
+   Resultado                            Cantidad     Porcentaje
+   ---------------------------------- ---------- --------------
+   Curso finalizado                            5          41.7%
+   Cancelación                                 2          16.7%
+   Rechazo de la propuesta                     3          25.0%
+   Solicitud no viable                         1           8.3%
+   Cierre por falta de respuesta               1           8.3%
+   ---------------------------------- ---------- --------------
+   Total                                      12         100.0%
+
+2) Preparación en paralelo (§4.3.2)
+   Preparaciones completadas normalmente: 5
+   Excluidas: 2 por cancelación, 1 en curso
+   Instancias que nunca entraron en preparación: 5
+
+   Rama                                 Muestras       Promedio
+   ---------------------------------- ---------- --------------
+   Inscripciones                               5     1 h 12 min
+   Materiales                                  5    35 min 10 s
+   Recursos                                    5      2 h 4 min
+
+3) Distribución de tareas de usuario (§4.3.3)
+   Tareas completadas: 37
+   ...
+```
+
+Cómo se mide cada cosa:
+
+- **Resultados**: la variable `resultadoCurso` de cada instancia terminada, la que dejan los caminos de cierre de §3.4. Los porcentajes van sobre el total de terminadas. Las cinco filas aparecen siempre, aunque estén en cero.
+- **Ramas de la preparación**: la activación es el momento en que el gateway paralelo abre las tres ramas, así que es la misma para las tres; cada rama termina con su última actividad, y la de recursos con la última de las acciones **seleccionadas**. Se miden solo las preparaciones que llegaron al fin del subproceso: una cancelación lo interrumpe antes, así que queda excluida, y el informe dice cuántas excluyó y por qué.
+- **Distribución de tareas**: tareas de usuario terminadas y sin motivo de borrado, agrupadas por responsable. Eso deja afuera las pendientes y las que el motor borró al interrumpir la preparación. Los cinco integrantes aparecen siempre, aunque tengan cero.
+
+> [!TIP]
+> Recién levantado el stack el informe sale casi vacío: `seed-demo.sh` deja las instancias en estados intermedios y ninguna termina. Para que las tres tablas tengan contenido hay que cerrar instancias, y la forma rápida es la app de comunicaciones (paso 10): aceptar, rechazar y cancelar varias solicitudes.
 
 ---
 
@@ -530,7 +583,8 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 - **Plazos parametrizables** (§3.5): `proceso.plazo-respuesta` y `proceso.fecha-curso-offset`, sin fechas fijas en el modelo.
 - **App de preparación de materiales** (§4.2.1): de escritorio, por la API Java de Flowable, con login contra el IDM, bandeja de tareas asignadas y reclamables, reclamo y completado.
 - **App de comunicaciones de la empresa** (§4.2.2): de escritorio, por la API REST, con las cinco comunicaciones y solo las habilitadas en el estado actual de cada instancia.
-- 20 tests automatizados del motor (escenarios 1 a 8, los cinco caminos de cierre de §3.4 y los plazos de §3.5), 16 de la app de materiales y 16 de la app de comunicaciones.
+- **Análisis de las ejecuciones** (§4.3): las tres consultas sobre el historial, por consola y desde la app de materiales.
+- 20 tests automatizados del motor (escenarios 1 a 8, los cinco caminos de cierre de §3.4 y los plazos de §3.5), 26 de la app de materiales y 16 de la app de comunicaciones.
 
 ### Pendiente
 
@@ -539,7 +593,6 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 | § 4.1 Sitio web institucional            | No desarrollado: sección pública de solicitud + acceso por credenciales para empresas y administración                                               |
 | § 4.1.2 Acceso de la empresa             | La cuenta, el login y el listado de cursos propios ya funcionan por API; falta la pantalla                                                           |
 | § 4.1.3                                  | Generación del PDF de la propuesta y de sus nuevas versiones                                                                                         |
-| § 4.3 Análisis de ejecuciones            | No implementadas las tres consultas (resultados de solicitudes, duración de ramas paralelas, distribución de tareas)                                 |
 | § 4.4 Minería de procesos                | No implementado el análisis con PM4Py (`exportar_history.py` / `analizar.py`) ni el CSV de la etapa de negociación                                   |
 
 ---
@@ -582,6 +635,7 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 │   ├── build.sh                      # mvn clean package -DskipTests → target/app.jar
 │   └── src/main/java/com/materiales/app/
 │       ├── MaterialsApp.java         # Entrypoint: motor embebido + login + ventana
+│       ├── analysis/                 # Las tres consultas de §4.3 + informe por consola
 │       ├── engine/                   # Conexión a la BD del motor y armado del ProcessEngine
 │       ├── service/                  # Login contra el IDM, bandeja, reclamo y completado
 │       └── ui/                       # Swing: login, tabla de tareas y acciones
