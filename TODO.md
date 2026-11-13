@@ -13,7 +13,7 @@ Checklist del equipo, derivada del enunciado [`docs/ProyectoCursos_V3.pdf`](docs
 | Bloque | Estado |
 |---|---|
 | 1. Motor y modelo BPMN | Completo |
-| 2. BD de la institución | Persistente y vinculada al proceso — falta completar campos y datos de prueba |
+| 2. BD de la institución | Completo |
 | 3. Backend BFF | Operativo — faltan tests y endpoints de consulta |
 | 4. Sitio web institucional | No empezado |
 | 5. App Java (API Java) | No empezado |
@@ -39,13 +39,13 @@ Completo: el BPMN ejecutable, el DMN de viabilidad, los listeners de §3.4, los 
 
 ## 2. Base de datos de la institución (§3.2)
 
-Las entidades `Company` y `Course` viven en [`backend/src/main/java/com/backend/proxy/entity/`](backend/src/main/java/com/backend/proxy/entity/).
+Completo. Las entidades `Company` y `Course` viven en [`backend/src/main/java/com/backend/proxy/entity/`](backend/src/main/java/com/backend/proxy/entity/) y el criterio de qué se persiste está en [`adr/datos-proceso-vs-bd.md`](adr/datos-proceso-vs-bd.md).
 
 - [x] **Vincular cada curso con su instancia de proceso**. `POST /api/courses` da de alta empresa y curso, inicia la instancia y guarda el `processInstanceId` en la fila del curso. El sentido inverso ya andaba: el motor avisa el estado final por `PUT /api/flowable/courses/{processId}`. ( )
 - [x] **Reemplazar H2 en memoria por algo persistente.** El BFF pasó a PostgreSQL, compartiendo el servidor del stack: el motor usa las tablas `ACT_*` y la institución `companies` / `courses`. Esto además era un **bug bloqueante**: `Course.possibleDates` se mapea con `columnDefinition = "jsonb"`, que H2 no conoce, así que el `create table courses` fallaba en silencio al arrancar y cualquier alta moría con `Table "COURSES" not found`. ( )
-- [ ] Guardar el resto de la **información del curso**: programa, presupuesto, fechas acordadas e informe de resultados. Hoy se persisten nombre, descripción, fechas posibles y empresa. ( )
-- [ ] Decidir y documentar qué queda como **variable del proceso** y qué va a la BD. El enunciado permite mantener la lista de participantes y los recursos asignados como variables. ( )
-- [ ] Scripts de **creación y datos de prueba**. ( )
+- [x] **Guardar el resto de la información del curso**: programa, presupuesto, fecha acordada e informe de resultados. `Course` sumó las columnas `program`, `agreed_date` y `report` (y ahora sí se escribe `budget`, que estaba declarada pero nunca se llenaba). Los datos viajan por un endpoint interno nuevo, `PUT /api/flowable/courses/{processId}/details`, que actualiza **solo** los campos que llegan con valor. Del lado del motor los empuja [`SyncCourseDetailsListener`](flowable/src/main/java/com/flowable/app/listeners/SyncCourseDetailsListener.java), enganchado en los cuatro flujos donde el proceso produce datos: al enviar la propuesta y al reenviarla revisada (programa y presupuesto), al aceptarla (fecha, después de que `resolveCourseDate` la normaliza) y al elaborar el informe. Va por el motor y no por el BFF a propósito, para que la base quede sincronizada aunque la tarea se complete desde Flowable UI. `CourseDetailsSyncTest` cubre los cuatro casos; 24 tests pasando. ( )
+- [x] **Decidir y documentar qué queda como variable del proceso y qué va a la BD.** Escrito en [`adr/datos-proceso-vs-bd.md`](adr/datos-proceso-vs-bd.md). El criterio es la vida útil del dato: si le sirve a la institución después de que la instancia terminó, va a la BD; si solo existe para que el proceso decida mientras corre, queda como variable. El ADR lista las dos tablas completas (las 10 columnas que persisten y las ~30 variables que no), explica el mecanismo de sincronización y deja asentado por qué `listaDefinitiva` y los recursos quedan como variables —el enunciado lo permite— y por qué `informe` es el único dato duplicado a propósito. ( )
+- [x] **Datos de prueba**: [`scripts/seed-demo.sh`](scripts/seed-demo.sh) da de alta empresas y solicitudes por la API del BFF, igual que lo haría el sitio web, y las reparte en cuatro estados distintos (aceptada y en preparación, rechazada, con modificaciones pendientes, recién ingresada) para tener recorridos variados para §4.3 y §4.4. Se corre con `./scripts/seed-demo.sh [cantidad]`. **Los scripts de creación del esquema no hacen falta**: el enunciado V3 tachó ese requisito y, además, las tablas las genera Hibernate al arrancar el BFF (`ddl-auto=update`). ( )
 
 ---
 

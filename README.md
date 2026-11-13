@@ -28,7 +28,7 @@ Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripc
 | [`flowable/`](flowable/) | Motor de procesos: Spring Boot 2.7.18 + Flowable 6.8.0, BPMN desplegable, DMN de viabilidad, listeners, delegates y API REST                                                                               |
 | [`backend/`](backend/)   | Backend-for-Frontend (Spring Boot 3) con la BD de la institución. Ver su [README](backend/README.md)                                                                                                       |
 | [`docs/`](docs/)         | Enunciado y documentación funcional por sección del proceso                                                                                                                                                |
-| [`adr/`](adr/)           | Decisiones de arquitectura (compensación, cancelación no interruptiva, aulas simuladas)                                                                                                                    |
+| [`adr/`](adr/)           | Decisiones de arquitectura (compensación, cancelación no interruptiva, aulas simuladas, [qué va a la BD y qué queda como variable](adr/datos-proceso-vs-bd.md))                                            |
 
 ---
 
@@ -44,7 +44,7 @@ Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripc
 | `http://localhost:8088/flowable-ui/`                     | **Flowable UI**: Task App (bandeja de tareas), Modeler, Admin App e IDM App (usuarios y grupos). Sirve para operar el proceso a mano durante la demo | Docker                                              |
 | `localhost:5432`                                         | **PostgreSQL**: base compartida por el motor y la UI                                                                                                 | Docker                                              |
 | `http://localhost:8081`                                  | **Backend BFF**: intermediario entre las apps externas y Flowable; contiene la BD de la institución (empresas y cursos)                              | Docker                                              |
-| `http://localhost:8081/api/flowable/courses/{processId}` | Endpoint interno que el motor usa para actualizar el estado del curso. Protegido por API key                                                         | —                                                   |
+| `http://localhost:8081/api/flowable/**`                  | API interna que usa el motor para volcar a la BD de la institución el estado del curso, sus datos (programa, presupuesto, fecha, informe) y el acceso de la empresa. Protegida por API key | —                           |
 
 > [!NOTE]
 > La app Flowable y Flowable UI comparten la **misma base de datos**. Por eso un usuario creado desde la UI sirve para autenticarse contra la API REST, y viceversa.
@@ -266,13 +266,23 @@ curl -s -b cookies.txt -X POST http://localhost:8081/api/tasks/{taskId}/define-t
 
 Las otras tres acciones son `/deliver-course`, `/prepare-report` y `/send-report`.
 
-**Endpoint interno** que usa el motor para avisar el estado final del curso. No lleva sesión sino API key:
+**API interna** que usa el motor para volcar datos a la BD de la institución. No lleva sesión sino API key.
+
+Estado final del curso, al terminar la instancia:
 
 ```bash
 curl -s -X PUT http://localhost:8081/api/flowable/courses/{processId} -H 'X-API-KEY: flowable-secret-key' -H 'Content-Type: application/json' -d '{"status":"FINALIZADO"}'
 ```
 
 Valores válidos de `status`: `FINALIZADO`, `CANCELADO`, `RECHAZADO`, `NO_VIABLE`, `SIN_RESPUESTA`.
+
+Datos del curso (§3.2). Todos los campos son opcionales y **solo se pisan los que llegan con valor**, porque el proceso los produce en etapas distintas:
+
+```bash
+curl -s -X PUT http://localhost:8081/api/flowable/courses/{processId}/details -H 'X-API-KEY: flowable-secret-key' -H 'Content-Type: application/json' -d '{"program":"4 modulos, 16 horas","budget":180000.00,"agreedDate":"2027-03-01","report":"11 de 12 participantes aprobaron"}'
+```
+
+Qué dato vive en la BD y cuál queda como variable del proceso está documentado en [`adr/datos-proceso-vs-bd.md`](adr/datos-proceso-vs-bd.md).
 
 ---
 
@@ -365,6 +375,22 @@ curl -s -u admin:test "http://localhost:8080/process-api/history/historic-proces
 
 ---
 
+### 8. Cargar datos de prueba
+
+Da de alta empresas y solicitudes por la API del BFF —igual que lo haría el sitio web— y las deja repartidas en cuatro estados: aceptada y en preparación, rechazada, con modificaciones pendientes y recién ingresada. Sirve para tener algo que mostrar en la demo y recorridos variados para el análisis de §4.3 y la minería de §4.4.
+
+```bash
+./scripts/seed-demo.sh 8
+```
+
+El **esquema no lo crea el script**: las tablas las genera Hibernate al arrancar el BFF (`spring.jpa.hibernate.ddl-auto=update`). Para ver cómo quedó la base:
+
+```bash
+docker exec flowable-postgres psql -U flowable -d flowable -c 'select id, name, budget, agreed_date, status from courses order by id;'
+```
+
+---
+
 ## Acortar los plazos para la demo (§3.5)
 
 El enunciado pide cinco días de espera antes de cada recordatorio y una fecha de inicio de curso acordada en ejecución. Ninguno de los dos está fijo en el BPMN: el modelo usa `${plazoRespuesta}` y `${fechaCurso}`, y los valores por defecto salen de dos properties.
@@ -411,7 +437,6 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 
 | Enunciado                                | Qué falta                                                                                                                                            |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| § 3.2 BD de la institución               | Existen las entidades `Company` y `Course` en el backend, falta cablear el alta de solicitudes y el vínculo con la instancia de proceso              |
 | § 4.1 Sitio web institucional            | No desarrollado: sección pública de solicitud + acceso por credenciales para empresas y administración                                               |
 | § 4.1.2 Acceso de la empresa             | La cuenta ya se crea/reutiliza; falta la pantalla de login y el listado de cursos propios de la empresa                                              |
 | § 4.1.3                                  | Generación del PDF de la propuesta y de sus nuevas versiones                                                                                         |
@@ -426,7 +451,9 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 ## Estructura de archivos
 
 ```text
-├── docker-compose.yml                # PostgreSQL + app Flowable + Flowable UI
+├── docker-compose.yml                # PostgreSQL + app Flowable + backend BFF + Flowable UI
+├── scripts/
+│   └── seed-demo.sh                  # Datos de prueba: empresas y solicitudes variadas
 ├── docs/
 │   └── ProyectoCursos_V3.pdf         # Enunciado vigente de la cátedra
 ├── model/
@@ -449,6 +476,13 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 │           ├── dmn/evaluarViabilidad.dmn
 │           └── application*.properties
 └── backend/                          # Backend-for-Frontend + BD de la institución
+    ├── build.sh                      # mvn clean package -DskipTests → target/app.jar
+    ├── Dockerfile                    # Imagen final: solo copia target/app.jar
+    └── src/main/java/com/backend/proxy/
+        ├── controller/               # Auth, cursos, tareas y la API interna del motor
+        ├── entity/                   # Company y Course (§3.2)
+        ├── service/                  # Alta de cursos, acceso de empresas, tareas
+        └── strategy/task/            # Payload y actionUrl por tipo de tarea
 ```
 
 ---
