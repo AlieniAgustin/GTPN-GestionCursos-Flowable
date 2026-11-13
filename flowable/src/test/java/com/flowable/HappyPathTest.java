@@ -12,7 +12,10 @@ import org.flowable.job.api.Job;
 import org.flowable.task.api.Task;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.annotation.DirtiesContext;
@@ -20,7 +23,10 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.client.RestTemplate;
 
 import com.flowable.app.App;
+import com.flowable.app.dto.CourseStatusUpdateDTO;
 
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -119,6 +125,17 @@ class HappyPathTest {
 
         assertEquals("FINALIZADO", historicValue(processInstanceId, "resultadoCurso"));
         assertEquals(true, historicValue(processInstanceId, "aulaLiberada"), "Classroom should have been released");
+
+        // Enunciado 3.4: el execution listener de fin registra el estado en la BD de la institución
+        @SuppressWarnings("rawtypes")
+        ArgumentCaptor<HttpEntity> statusUpdate = ArgumentCaptor.forClass(HttpEntity.class);
+        verify(backendRestTemplate).exchange(
+                eq("/api/flowable/courses/{processId}"),
+                eq(HttpMethod.PUT),
+                statusUpdate.capture(),
+                eq(Void.class),
+                eq(processInstanceId));
+        assertEquals("FINALIZADO", ((CourseStatusUpdateDTO) statusUpdate.getValue().getBody()).status());
     }
 
     private Object historicValue(String processInstanceId, String name) {

@@ -1,5 +1,6 @@
 package com.flowable;
 
+import org.flowable.engine.HistoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.junit.jupiter.api.DisplayName;
@@ -13,6 +14,7 @@ import org.springframework.web.client.RestTemplate;
 
 import com.flowable.app.App;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -30,6 +32,9 @@ class CourseLimitExceededTest {
 
     @Autowired
     private RuntimeService runtimeService;
+
+    @Autowired
+    private HistoryService historyService;
 
     @Autowired
     private CourseProcessFixture fixture;
@@ -52,5 +57,12 @@ class CourseLimitExceededTest {
                 .processInstanceId(processInstance.getId())
                 .singleResult();
         assertNull(activeInstance, "Process instance should have ended");
+
+        // Enunciado 3.4: el camino de cierre tiene que dejar seteado el resultado
+        assertEquals("NO_VIABLE", historyService.createHistoricVariableInstanceQuery()
+                .processInstanceId(processInstance.getId())
+                .variableName("resultadoCurso")
+                .singleResult()
+                .getValue());
     }
 }

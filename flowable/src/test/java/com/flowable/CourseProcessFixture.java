@@ -77,13 +77,25 @@ public class CourseProcessFixture {
      * Triggers the proposal acceptance intermediate message event.
      */
     public Execution triggerAcceptance(String processInstanceId) {
+        return triggerAcceptance(processInstanceId, Collections.emptyMap());
+    }
+
+    /**
+     * Triggers the proposal acceptance intermediate message event carrying the data the
+     * company sends with it, such as the agreed course date ('fechaCurso').
+     */
+    public Execution triggerAcceptance(String processInstanceId, Map<String, Object> variables) {
         Execution execution = runtimeService.createExecutionQuery()
                 .processInstanceId(processInstanceId)
                 .messageEventSubscriptionName(MESSAGE_ACCEPTANCE)
                 .singleResult();
 
         if (execution != null) {
-            runtimeService.messageEventReceived(MESSAGE_ACCEPTANCE, execution.getId());
+            if (variables != null && !variables.isEmpty()) {
+                runtimeService.messageEventReceived(MESSAGE_ACCEPTANCE, execution.getId(), variables);
+            } else {
+                runtimeService.messageEventReceived(MESSAGE_ACCEPTANCE, execution.getId());
+            }
         }
         return execution;
     }
