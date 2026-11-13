@@ -17,10 +17,10 @@ Checklist del equipo, derivada del enunciado [`docs/ProyectoCursos_V3.pdf`](docs
 | 3. Backend BFF | Completo |
 | 4. Sitio web institucional | No empezado |
 | 5. App Java (API Java) | Completo |
-| 6. App de comunicaciones (API REST) | No empezado |
+| 6. App de comunicaciones (API REST) | Completo |
 | 7. Análisis de ejecuciones | No empezado |
 | 8. Minería de procesos | No empezado |
-| 9. Entrega y demo | Escenarios 1–8 cubiertos por tests; 9–11 dependen de las apps |
+| 9. Entrega y demo | Escenarios 1–8 cubiertos por tests; el 11 ya se puede mostrar con las dos apps; 9 y 10 dependen del sitio web |
 
 ---
 
@@ -118,15 +118,23 @@ Vive en [`materiales/`](materiales/), módulo Maven aparte. Sin Spring: arma un 
 
 ## 6. App auxiliar: simulación de comunicaciones por API REST (§4.2.2)
 
-Permite seleccionar una solicitud y simular las comunicaciones de la empresa. **Puede ser por línea de comandos**, no requiere interfaz gráfica.
+Permite seleccionar una solicitud y simular las comunicaciones de la empresa.
 
-- [ ] Seleccionar una solicitud / instancia sobre la que actuar. ( )
-- [ ] **Aceptación** de la propuesta, incluyendo la fecha acordada. ( )
-- [ ] **Rechazo** de la propuesta. ( )
-- [ ] **Solicitud de modificaciones**, incluyendo las observaciones. ( )
-- [ ] **Envío de la nómina** de participantes. ( )
-- [ ] **Cancelación** durante la preparación. ( )
-- [ ] Mostrar **solo las comunicaciones habilitadas** en el estado actual de la instancia. ( )
+> **Ojo con la interfaz.** El enunciado permite hacer esto por línea de comandos **solo a los grupos de hasta 3 personas**, y somos 5. Así que se hizo **con interfaz gráfica**, igual que la app de materiales.
+
+Vive en [`comunicaciones/`](comunicaciones/), módulo Maven aparte. Sin Spring y sin la API Java: usa el `HttpClient` del JDK contra `/process-api` y Jackson para los JSON — es la única dependencia de runtime. La empresa no es usuario del motor (§3.3 solo pide usuarios para el personal), así que la app usa la cuenta técnica `admin`/`test`, configurable por `-Dflowable.base-url=...`, por `FLOWABLE_BASE_URL`/`FLOWABLE_USERNAME`/`FLOWABLE_PASSWORD` o editando `comunicaciones.properties`. Se levanta con `cd comunicaciones && ./build.sh` y `java -jar comunicaciones/target/app.jar`; el paso 10 del [README](README.md) lo explica.
+
+- [x] **Seleccionar una solicitud / instancia** sobre la que actuar. La tabla lista las instancias en curso (`GET /runtime/process-instances?processDefinitionKey=Process_Curso&includeProcessVariables=true`, ordenadas por fecha) con curso, empresa y el id del curso en la BD. Una instancia iniciada a mano desde Flowable UI, sin esas variables, se muestra igual por su id. ( )
+- [x] **Aceptación** de la propuesta, incluyendo la fecha acordada en `fechaCurso`. Se valida el formato antes de llamar al motor (`AAAA-MM-DD` o `AAAA-MM-DDTHH:MM`), así un error se ve en el momento y no como una instancia trabada en el timer. ( )
+- [x] **Rechazo** de la propuesta. Viaja sin variables. ( )
+- [x] **Solicitud de modificaciones**, con las observaciones en `observaciones`. ( )
+- [x] **Envío de la nómina** de participantes en `participantes`: se escriben uno por línea o separados por comas y se normalizan antes de enviar. ( )
+- [x] **Cancelación** durante la preparación. ( )
+- [x] Mostrar **solo las comunicaciones habilitadas** en el estado actual. No se deduce con reglas propias: por cada mensaje se le pregunta al motor qué ejecución está suscripta (`GET /runtime/executions?processInstanceId=...&messageEventSubscriptionName=...`), que es la única fuente de verdad y además da el `executionId` al que hay que mandarlo. Esperando respuesta salen aceptar/rechazar/modificaciones; en preparación, nómina y cancelación; durante el dictado, ninguna. ( )
+
+Todas se envían con `PUT /runtime/executions/{executionId}` y `action: messageEventReceived`.
+
+**16 tests** ([`comunicaciones/src/test/`](comunicaciones/src/test/java/com/comunicaciones/app/)) que usan el servidor HTTP del JDK como stub de la API REST, así que corren sin el motor levantado: `cd comunicaciones && mvn test`. Cubren el cliente (HTTP Basic, escapado de los nombres con acento, 204 sin cuerpo, 401, 500, motor caído) y el servicio (parseo de solicitudes, comunicaciones habilitadas en cada estado, cuerpo exacto de cada mensaje y las dos validaciones locales). Los nombres de parámetro de la API REST se verificaron contra `flowable-rest-6.8.0.jar`, no de memoria. La UI Swing no tiene tests automáticos: se prueba a mano.
 
 > Los nombres de mensaje y los `curl` de referencia están en la sección "Probar la API REST" del [README](README.md).
 
@@ -171,7 +179,7 @@ pip install pm4py pandas requests
 - [ ] Reglas de negocio. *(listo — DMN de viabilidad)*
 - [ ] Instrucciones para configurar usuarios y grupos y ejecutar la solución. *(listo — [README.md](README.md))*
 - [ ] **Informe breve** explicando variables, listeners y decisiones de implementación. Hay material en [`model/`](model/) y [`adr/`](adr/) para reusar. ( )
-- [ ] **Código de las tres aplicaciones externas** más las instrucciones para configurarlas y ejecutarlas. ( )
+- [ ] **Código de las tres aplicaciones externas** más las instrucciones para configurarlas y ejecutarlas. Dos de tres listas: [`materiales/`](materiales/) y [`comunicaciones/`](comunicaciones/), con sus pasos 9 y 10 en el [README](README.md). Falta el sitio web del bloque 4. ( )
 
 **Escenarios de la defensa**
 
@@ -187,7 +195,7 @@ Los 8 primeros ya tienen test automatizado en [`flowable/src/test/java/com/flowa
 - [x] 8. Asignación, reclamo y finalización de tareas según los responsables. — `TaskAssignmentTest`
 - [ ] 9. **Registro de una solicitud desde el sitio web e inicio de su instancia.** → bloque 4 ( )
 - [ ] 10. **Habilitación del acceso de la empresa y consulta exclusiva de sus cursos.** → bloques 1 y 4 ( )
-- [ ] 11. **Preparación de materiales por API Java y simulación de comunicaciones por API REST.** → bloques 5 y 6 ( )
+- [x] 11. **Preparación de materiales por API Java y simulación de comunicaciones por API REST.** Las dos apps están listas (bloques 5 y 6), con 32 tests entre ambas. **Falta probarlo en vivo**: las interfaces Swing no se ejecutaron contra el stack levantado, solo sus capas de servicio. Es parte del ensayo de la demo. ( )
 
 - [ ] **Ensayo completo de la demo** con el stack levantado desde cero, siguiendo el README paso a paso. ( )
 

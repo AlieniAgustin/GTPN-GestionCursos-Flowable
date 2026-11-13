@@ -28,6 +28,7 @@ Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripc
 | [`flowable/`](flowable/) | Motor de procesos: Spring Boot 2.7.18 + Flowable 6.8.0, BPMN desplegable, DMN de viabilidad, listeners, delegates y API REST                                                                               |
 | [`backend/`](backend/)   | Backend-for-Frontend (Spring Boot 3) con la BD de la institución. Ver su [README](backend/README.md)                                                                                                       |
 | [`materiales/`](materiales/) | App de escritorio (Swing) para *Preparar materiales* por la **API Java** de Flowable (§4.2.1)                                                                                                          |
+| [`comunicaciones/`](comunicaciones/) | App de escritorio (Swing) que simula las comunicaciones de la empresa por la **API REST** de Flowable (§4.2.2)                                                                                 |
 | [`docs/`](docs/)         | Enunciado y documentación funcional por sección del proceso                                                                                                                                                |
 | [`adr/`](adr/)           | Decisiones de arquitectura (compensación, cancelación no interruptiva, aulas simuladas, [qué va a la BD y qué queda como variable](adr/datos-proceso-vs-bd.md))                                            |
 
@@ -450,6 +451,43 @@ Resultado esperado: **16 tests, 0 fallos**. Levantan un motor embebido sobre H2,
 
 ---
 
+### 10. Correr la app de comunicaciones (§4.2.2)
+
+App de escritorio que hace de empresa: elegís una solicitud y le mandás aceptación, rechazo, pedido de modificaciones, la nómina de participantes o la cancelación. Todo por la **API REST** del motor (`/process-api`), sin pasar por el BFF ni por la API Java.
+
+```bash
+cd comunicaciones && ./build.sh
+```
+
+```bash
+java -jar comunicaciones/target/app.jar
+```
+
+Necesita el motor levantado y entorno gráfico. Si está en otra máquina o con otra cuenta:
+
+```bash
+java -Dflowable.base-url=http://otra-maquina:8080/process-api -Dflowable.username=admin -Dflowable.password=test -jar comunicaciones/target/app.jar
+```
+
+También por variables de entorno (`FLOWABLE_BASE_URL`, `FLOWABLE_USERNAME`, `FLOWABLE_PASSWORD`) o editando [`comunicaciones.properties`](comunicaciones/src/main/resources/comunicaciones.properties).
+
+**Cómo usarla:** la tabla de arriba lista las instancias en curso con su curso, empresa y el id del curso en la BD. Al seleccionar una, abajo aparecen **solo las comunicaciones habilitadas en ese estado**: esperando respuesta a la propuesta salen aceptar, rechazar y pedir modificaciones; en preparación, la nómina y la cancelación; mientras corre el curso, ninguna. Eso no lo deduce la app con reglas propias: le pregunta al motor qué ejecuciones están suscriptas a cada mensaje, así que siempre coincide con el estado real.
+
+Las que llevan datos los piden antes de enviar: la fecha acordada en la aceptación (`fechaCurso`), las observaciones en el pedido de modificaciones (`observaciones`) y los participantes en la nómina (`participantes`, uno por línea o separados por comas). La fecha se valida antes de llamar al motor.
+
+Para tener solicitudes que mostrar: `./scripts/seed-demo.sh`.
+
+```bash
+cd comunicaciones && mvn test
+```
+
+Resultado esperado: **16 tests, 0 fallos**. Usan el servidor HTTP del JDK como stub de la API REST, así que no necesitan el motor levantado.
+
+> [!TIP]
+> Esta app es la forma práctica de generar muchas instancias terminadas con recorridos variados, que es lo que necesitan el análisis de §4.3 y la minería de §4.4 para dar algo interesante.
+
+---
+
 ## Acortar los plazos para la demo (§3.5)
 
 El enunciado pide cinco días de espera antes de cada recordatorio y una fecha de inicio de curso acordada en ejecución. Ninguno de los dos está fijo en el BPMN: el modelo usa `${plazoRespuesta}` y `${fechaCurso}`, y los valores por defecto salen de dos properties.
@@ -491,7 +529,8 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 - Actividad automática **Habilitar acceso de la empresa** (`EnableCompanyAccessDelegate`): le pide al BFF la cuenta de la empresa, que se crea la primera vez y se reutiliza en las contrataciones siguientes (§4.1.2).
 - **Plazos parametrizables** (§3.5): `proceso.plazo-respuesta` y `proceso.fecha-curso-offset`, sin fechas fijas en el modelo.
 - **App de preparación de materiales** (§4.2.1): de escritorio, por la API Java de Flowable, con login contra el IDM, bandeja de tareas asignadas y reclamables, reclamo y completado.
-- 20 tests automatizados del motor (escenarios 1 a 8, los cinco caminos de cierre de §3.4 y los plazos de §3.5) y 16 de la app de materiales.
+- **App de comunicaciones de la empresa** (§4.2.2): de escritorio, por la API REST, con las cinco comunicaciones y solo las habilitadas en el estado actual de cada instancia.
+- 20 tests automatizados del motor (escenarios 1 a 8, los cinco caminos de cierre de §3.4 y los plazos de §3.5), 16 de la app de materiales y 16 de la app de comunicaciones.
 
 ### Pendiente
 
@@ -500,7 +539,6 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 | § 4.1 Sitio web institucional            | No desarrollado: sección pública de solicitud + acceso por credenciales para empresas y administración                                               |
 | § 4.1.2 Acceso de la empresa             | La cuenta, el login y el listado de cursos propios ya funcionan por API; falta la pantalla                                                           |
 | § 4.1.3                                  | Generación del PDF de la propuesta y de sus nuevas versiones                                                                                         |
-| § 4.2.2 App de comunicaciones (API REST) | No desarrollada: simulación de aceptación, rechazo, modificaciones, nómina y cancelación                                                             |
 | § 4.3 Análisis de ejecuciones            | No implementadas las tres consultas (resultados de solicitudes, duración de ramas paralelas, distribución de tareas)                                 |
 | § 4.4 Minería de procesos                | No implementado el análisis con PM4Py (`exportar_history.py` / `analizar.py`) ni el CSV de la etapa de negociación                                   |
 
@@ -533,6 +571,13 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 │           ├── processes/Institución_de_capacitación.bpmn20.xml
 │           ├── dmn/evaluarViabilidad.dmn
 │           └── application*.properties
+├── comunicaciones/                   # App de escritorio de comunicaciones de la empresa (§4.2.2)
+│   ├── build.sh                      # mvn clean package -DskipTests → target/app.jar
+│   └── src/main/java/com/comunicaciones/app/
+│       ├── CommunicationsApp.java    # Entrypoint: config + ventana
+│       ├── client/                   # Cliente REST (HttpClient del JDK) y su configuración
+│       ├── service/                  # Solicitudes, comunicaciones habilitadas y envío
+│       └── ui/                       # Swing: tabla de solicitudes y botones por estado
 ├── materiales/                       # App de escritorio de materiales (§4.2.1)
 │   ├── build.sh                      # mvn clean package -DskipTests → target/app.jar
 │   └── src/main/java/com/materiales/app/
