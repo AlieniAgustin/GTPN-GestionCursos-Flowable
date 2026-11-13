@@ -254,9 +254,7 @@ execution.setVariable('aulaVirtualLiberada', true)]]></script>
         <modeler:initiator-can-complete xmlns:modeler="http://flowable.org/modeler"><![CDATA[false]]></modeler:initiator-can-complete>
       </extensionElements>
     </userTask>
-    <scriptTask id="habilitaraccesodelaempresa" name="Habilitar acceso de la empresa" scriptFormat="groovy" flowable:autoStoreVariables="false">
-      <script><![CDATA[println "Acceso habilitado para la empresa"]]></script>
-    </scriptTask>
+    <serviceTask id="habilitaraccesodelaempresa" name="Habilitar acceso de la empresa" flowable:delegateExpression="${enableCompanyAccess}"></serviceTask>
     <intermediateCatchEvent id="aceptacion" name="Aceptación">
       <messageEventDefinition messageRef="Msg_acepta"></messageEventDefinition>
     </intermediateCatchEvent>
@@ -264,10 +262,10 @@ execution.setVariable('aulaVirtualLiberada', true)]]></script>
       <messageEventDefinition messageRef="Msg_rechaza"></messageEventDefinition>
     </intermediateCatchEvent>
     <scriptTask id="enviarpropuesta" name="Enviar propuesta" scriptFormat="groovy" flowable:autoStoreVariables="false">
-      <script><![CDATA[if (!execution.hasVariable('plazoRespuesta')) {
-  execution.setVariable('plazoRespuesta', 'P5D')
-}
-execution.setVariable('recordatorios', 0)
+      <extensionElements>
+        <flowable:executionListener event="start" delegateExpression="${applyResponseDeadline}"></flowable:executionListener>
+      </extensionElements>
+      <script><![CDATA[execution.setVariable('recordatorios', 0)
 println "Propuesta enviada a la empresa"]]></script>
     </scriptTask>
     <eventBasedGateway id="esperarrespuesta" name="Esperar respuesta"></eventBasedGateway>
@@ -340,7 +338,11 @@ if (n <= 2) {
     <sequenceFlow id="flow_evaluarviabilidad_a_esviable" sourceRef="evaluarviabilidad" targetRef="esviable"></sequenceFlow>
     <sequenceFlow id="flow_recordatorio_salida" sourceRef="enviarrecordatorio" targetRef="seenviaron2recordatorios"></sequenceFlow>
     <sequenceFlow id="flow_enviarconfirmacion_a_definirdocente" sourceRef="enviarconfirmacion" targetRef="definirdocentequedesarrollaelcurso"></sequenceFlow>
-    <sequenceFlow id="flow_aceptacion_a_habilitaracceso" sourceRef="aceptacion" targetRef="habilitaraccesodelaempresa"></sequenceFlow>
+    <sequenceFlow id="flow_aceptacion_a_habilitaracceso" sourceRef="aceptacion" targetRef="habilitaraccesodelaempresa">
+      <extensionElements>
+        <flowable:executionListener event="take" delegateExpression="${resolveCourseDate}"></flowable:executionListener>
+      </extensionElements>
+    </sequenceFlow>
     <sequenceFlow id="flow_propuesta_a_enviarpropuesta" sourceRef="registraryelaborarpropuesta" targetRef="enviarpropuesta"></sequenceFlow>
     <sequenceFlow id="flow_modificaciones_a_revisarpropuesta" sourceRef="modificaciones" targetRef="revisarpropuesta"></sequenceFlow>
     <sequenceFlow id="flow_esperarrespuesta_a_modificaciones" sourceRef="esperarrespuesta" targetRef="modificaciones"></sequenceFlow>

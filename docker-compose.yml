@@ -33,6 +33,9 @@ services:
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
       # Dentro de la red de compose el BFF se resuelve por nombre de servicio
       BACKEND_BASE_URL: http://backend:8081
+      # §3.5 Plazos. Descomentar para la demo en vivo (duraciones ISO-8601)
+      # PROCESO_PLAZO_RESPUESTA: PT1M
+      # PROCESO_FECHA_CURSO_OFFSET: PT2M
     depends_on:
       postgres:
         condition: service_healthy
