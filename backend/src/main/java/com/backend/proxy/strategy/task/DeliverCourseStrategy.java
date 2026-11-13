@@ -23,19 +23,17 @@ public class DeliverCourseStrategy implements TaskStrategy {
 
     @Override
     public TaskDetailResponse<DeliverCourseDataDTO> buildDetail(FlowableTaskDTO task, Map<String, Object> processVariables) {
-        /*
-         * IMPLEMENTATION STEPS:
-         * 1. Retrieve delivery context from 'processVariables':
-         *    - 'courseName': Name of the course.
-         *    - 'docenteSeleccionado': Dynamically assigned teacher ID.
-         *    - 'fechaCurso': Scheduled starting date.
-         * 2. Construct DeliverCourseDataDTO with retrieved context.
-         * 3. Return TaskDetailResponse with:
-         *    - taskId = task.id()
-         *    - taskName = task.name()
-         *    - actionUrl = "/api/tasks/" + task.id() + "/deliver-course"
-         *    - data = DeliverCourseDataDTO
-         */
-        return null;
+        DeliverCourseDataDTO data = new DeliverCourseDataDTO(
+                variableAsString(processVariables, "courseName"),
+                variableAsString(processVariables, "docenteSeleccionado"),
+                variableAsString(processVariables, "fechaCurso")
+        );
+
+        return new TaskDetailResponse<>(
+                task.id(),
+                task.name(),
+                actionUrl(task, "deliver-course"),
+                data
+        );
     }
 }

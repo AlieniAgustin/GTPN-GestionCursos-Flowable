@@ -23,19 +23,18 @@ public class SendReportStrategy implements TaskStrategy {
 
     @Override
     public TaskDetailResponse<SendReportDataDTO> buildDetail(FlowableTaskDTO task, Map<String, Object> processVariables) {
-        /*
-         * IMPLEMENTATION STEPS:
-         * 1. Extract context from 'processVariables':
-         *    - 'courseName': Name of the course.
-         *    - 'companyName' & 'companyEmail': Client company contact info.
-         *    - 'informe': Content written in 'elaborarinformederesultados'.
-         * 2. Construct SendReportDataDTO for administrative review before dispatch.
-         * 3. Return TaskDetailResponse with:
-         *    - taskId = task.id()
-         *    - taskName = task.name()
-         *    - actionUrl = "/api/tasks/" + task.id() + "/send-report"
-         *    - data = SendReportDataDTO
-         */
-        return null;
+        SendReportDataDTO data = new SendReportDataDTO(
+                variableAsString(processVariables, "courseName"),
+                variableAsString(processVariables, "companyName"),
+                variableAsString(processVariables, "companyEmail"),
+                variableAsString(processVariables, "informe")
+        );
+
+        return new TaskDetailResponse<>(
+                task.id(),
+                task.name(),
+                actionUrl(task, "send-report"),
+                data
+        );
     }
 }

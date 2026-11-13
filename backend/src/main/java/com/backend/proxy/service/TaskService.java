@@ -1,11 +1,17 @@
 package com.backend.proxy.service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
+import com.backend.proxy.client.FlowableClient;
+import com.backend.proxy.dto.FlowableVariable;
+import com.backend.proxy.dto.task.FlowableTaskDTO;
 import com.backend.proxy.dto.task.TaskDetailResponse;
+import com.backend.proxy.exception.ResourceNotFoundException;
 import com.backend.proxy.strategy.task.TaskStrategy;
 
 /**
@@ -15,10 +21,15 @@ import com.backend.proxy.strategy.task.TaskStrategy;
 @Service
 public class TaskService {
 
-    private final List<TaskStrategy> strategies;
+    private static final String TASKS_URI = "/process-api/runtime/tasks/";
+    private static final String PROCESS_INSTANCES_URI = "/process-api/runtime/process-instances/";
 
-    public TaskService(List<TaskStrategy> strategies) {
+    private final List<TaskStrategy> strategies;
+    private final FlowableClient flowableClient;
+
+    public TaskService(List<TaskStrategy> strategies, FlowableClient flowableClient) {
         this.strategies = strategies;
+        this.flowableClient = flowableClient;
     }
 
     /**
@@ -28,24 +39,15 @@ public class TaskService {
      * @return Aggregated response with dynamic actionUrl and strongly-typed DTO
      */
     public TaskDetailResponse<?> getTaskDetail(String taskId) {
-        /*
-         * IMPLEMENTATION STEPS:
-         * 1. Query task metadata from Flowable REST API:
-         *    GET /process-api/runtime/tasks/{taskId}
-         *    Map to FlowableTaskDTO (id, name, taskDefinitionKey, assignee, processInstanceId).
-         *
-         * 2. Query process instance variables:
-         *    GET /process-api/runtime/process-instances/{processInstanceId}/variables
-         *    Transform to Map<String, Object> (e.g., courseName, docenteSeleccionado, fechaCurso, informe).
-         *
-         * 3. Resolve strategy:
-         *    Find first strategy in 'strategies' where strategy.supports(task.taskDefinitionKey()) == true.
-         *    Throw ResourceNotFoundException if no strategy matches.
-         *
-         * 4. Build and return detail:
-         *    Invoke strategy.buildDetail(task, processVariables) to assemble the domain DTO and actionUrl.
-         */
-        return null;
+        FlowableTaskDTO task = findTask(taskId);
+
+        TaskStrategy strategy = strategies.stream()
+                .filter(candidate -> candidate.supports(task.taskDefinitionKey()))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No strategy available for task type: " + task.taskDefinitionKey()));
+
+        return strategy.buildDetail(task, findProcessVariables(task.processInstanceId()));
     }
 
     /**
@@ -55,21 +57,49 @@ public class TaskService {
      * @param variables Process variables to persist upon advancing the execution token
      */
     public void complete(String taskId, Map<String, Object> variables) {
-        /*
-         * IMPLEMENTATION STEPS:
-         * 1. Validate task existence and assignee state in Flowable.
-         *
-         * 2. Map 'variables' to the Flowable REST completion payload:
-         *    {
-         *      "action": "complete",
-         *      "variables": [ { "name": "...", "value": "..." } ]
-         *    }
-         *
-         * 3. Send completion request to Flowable:
-         *    POST /process-api/runtime/tasks/{taskId}
-         *    via FlowableClient using technical service account credentials.
-         *
-         * 4. Handle exceptions (404 Not Found, 409 Conflict) and log audit events.
-         */
+        // Falla con 404 antes de intentar completar, para no devolver un error del motor
+        findTask(taskId);
+
+        List<FlowableVariable> payloadVariables = new ArrayList<>();
+        variables.forEach((name, value) -> payloadVariables.add(new FlowableVariable(name, value)));
+
+        Map<String, Object> payload = Map.of(
+                "action", "complete",
+                "variables", payloadVariables
+        );
+
+        flowableClient.post(TASKS_URI + taskId, payload)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    private FlowableTaskDTO findTask(String taskId) {
+        FlowableTaskDTO task = flowableClient.get(TASKS_URI + taskId)
+                .retrieve()
+                .body(FlowableTaskDTO.class);
+
+        if (task == null) {
+            throw new ResourceNotFoundException("Task not found: " + taskId);
+        }
+        return task;
+    }
+
+    /**
+     * Flowable returns variables as a list of {@code {name, type, value, scope}} objects;
+     * the strategies only care about name and value.
+     */
+    private Map<String, Object> findProcessVariables(String processInstanceId) {
+        List<FlowableVariable> variables = flowableClient
+                .get(PROCESS_INSTANCES_URI + processInstanceId + "/variables")
+                .retrieve()
+                .body(new org.springframework.core.ParameterizedTypeReference<List<FlowableVariable>>() {});
+
+        Map<String, Object> result = new HashMap<>();
+        if (variables != null) {
+            variables.stream()
+                    .filter(variable -> variable.name() != null)
+                    .forEach(variable -> result.put(variable.name(), variable.value()));
+        }
+        return result;
     }
 }

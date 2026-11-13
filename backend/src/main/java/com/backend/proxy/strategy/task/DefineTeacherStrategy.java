@@ -30,17 +30,16 @@ public class DefineTeacherStrategy implements TaskStrategy {
 
     @Override
     public TaskDetailResponse<DefineTeacherDataDTO> buildDetail(FlowableTaskDTO task, Map<String, Object> processVariables) {
-        /*
-         * IMPLEMENTATION STEPS:
-         * 1. Query available teachers via teacherRepository.findAvailableTeachers().
-         * 2. Retrieve course name from 'processVariables' (key 'courseName').
-         * 3. Construct DefineTeacherDataDTO with course context and teacher candidates.
-         * 4. Return TaskDetailResponse with:
-         *    - taskId = task.id()
-         *    - taskName = task.name()
-         *    - actionUrl = "/api/tasks/" + task.id() + "/define-teacher"
-         *    - data = DefineTeacherDataDTO
-         */
-        return null;
+        DefineTeacherDataDTO data = new DefineTeacherDataDTO(
+                variableAsString(processVariables, "courseName"),
+                teacherRepository.findAvailableTeachers()
+        );
+
+        return new TaskDetailResponse<>(
+                task.id(),
+                task.name(),
+                actionUrl(task, "define-teacher"),
+                data
+        );
     }
 }

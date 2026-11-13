@@ -1,5 +1,6 @@
 package com.backend.proxy.strategy.task;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.stereotype.Component;
@@ -23,19 +24,32 @@ public class PrepareReportStrategy implements TaskStrategy {
 
     @Override
     public TaskDetailResponse<PrepareReportDataDTO> buildDetail(FlowableTaskDTO task, Map<String, Object> processVariables) {
-        /*
-         * IMPLEMENTATION STEPS:
-         * 1. Extract course execution data from 'processVariables':
-         *    - 'courseName': Name of the completed course.
-         *    - 'docenteSeleccionado': Teacher responsible for course delivery.
-         * 2. Gather covered syllabus topics and outcomes.
-         * 3. Construct PrepareReportDataDTO for the teaching lead to write the final summary.
-         * 4. Return TaskDetailResponse with:
-         *    - taskId = task.id()
-         *    - taskName = task.name()
-         *    - actionUrl = "/api/tasks/" + task.id() + "/prepare-report"
-         *    - data = PrepareReportDataDTO
-         */
-        return null;
+        PrepareReportDataDTO data = new PrepareReportDataDTO(
+                variableAsString(processVariables, "courseName"),
+                variableAsString(processVariables, "docenteSeleccionado"),
+                coveredTopics(processVariables)
+        );
+
+        return new TaskDetailResponse<>(
+                task.id(),
+                task.name(),
+                actionUrl(task, "prepare-report"),
+                data
+        );
+    }
+
+    /**
+     * El temario se guarda como variable del proceso cuando se elabora la propuesta.
+     * Si todavía no está, el jefe docente escribe el informe sin esa ayuda.
+     */
+    private List<String> coveredTopics(Map<String, Object> processVariables) {
+        Object topics = processVariables.get("temario");
+        if (topics instanceof List<?> list) {
+            return list.stream().map(String::valueOf).toList();
+        }
+        if (topics != null) {
+            return List.of(topics.toString());
+        }
+        return List.of();
     }
 }
