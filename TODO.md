@@ -16,7 +16,7 @@ Checklist del equipo, derivada del enunciado [`docs/ProyectoCursos_V3.pdf`](docs
 | 2. BD de la institución | Completo |
 | 3. Backend BFF | Completo |
 | 4. Sitio web institucional | No empezado |
-| 5. App Java (API Java) | No empezado |
+| 5. App Java (API Java) | Completo |
 | 6. App de comunicaciones (API REST) | No empezado |
 | 7. Análisis de ejecuciones | No empezado |
 | 8. Minería de procesos | No empezado |
@@ -106,9 +106,13 @@ No empezado. Interactúa con Flowable vía API REST.
 
 App de escritorio con interfaz gráfica, local a la intranet, con alcance a la BD del motor. **Debe usar la API Java de Flowable**, no la REST.
 
-- [ ] Identificarse y **consultar las tareas *Preparar materiales*** asignadas o reclamables. ( )
-- [ ] **Reclamar** una tarea disponible para su grupo. ( )
-- [ ] **Completar** la tarea. ( )
+Vive en [`materiales/`](materiales/), módulo Maven aparte. Sin Spring: arma un `ProcessEngine` embebido contra la misma base del motor ([`EngineFactory`](materiales/src/main/java/com/materiales/app/engine/EngineFactory.java)) y trabaja con `IdentityService` y `TaskService`. Dos recaudos para no pisar al motor: `databaseSchemaUpdate = false` (no crea ni migra tablas; si la versión del esquema no coincide, falla al arrancar) y async executor apagado (no compite por los jobs ni los temporizadores). La conexión se cambia sin recompilar por `-Ddb.url=...`, por `DB_URL`/`DB_USERNAME`/`DB_PASSWORD` o editando `materiales.properties`. Se levanta con `cd materiales && ./build.sh` y `java -jar materiales/target/app.jar`; el paso 9 del [README](README.md) lo explica.
+
+- [x] **Identificarse y consultar las tareas *Preparar materiales*** asignadas o reclamables. Login con usuario y contraseña de Flowable ([`StaffAuthenticator`](materiales/src/main/java/com/materiales/app/service/StaffAuthenticator.java)), que además exige pertenecer a Administración porque la tarea es de ese grupo (§2). La bandeja son dos consultas, `taskAssignee` y `taskCandidateGroupIn` con los grupos que resolvió el login, en vez de `taskCandidateOrAssigned`: así los grupos candidatos son explícitos y no dependen de la resolución implícita del motor. La tabla muestra curso y empresa, que salen de las variables de la instancia (`courseName`, `companyName`, las que escribe el BFF al dar de alta la solicitud). ( )
+- [x] **Reclamar** una tarea disponible para su grupo. Si otro integrante la reclamó primero, el motor rechaza el reclamo y la app lo muestra. ( )
+- [x] **Completar** la tarea, con un detalle opcional de los materiales que queda en la variable `detalleMateriales` (más `materialesPreparados = true`). La app valida lo que el motor no: una tarea sin reclamar no se puede completar, y una asignada solo la completa su responsable (§2). ( )
+
+**16 tests** ([`materiales/src/test/`](materiales/src/test/java/com/materiales/app/)) sobre un motor embebido en H2, así que corren sin PostgreSQL y sin pantalla: `cd materiales && mvn test`. Cubren login (ok, contraseña mala, usuario inexistente, docente rechazado), bandeja (visible para todo el grupo, y solo para quien la reclamó después del reclamo), reclamo pisado por otro, completado con y sin detalle, y los tres rechazos de validación. La UI Swing no tiene tests automáticos: se prueba a mano.
 
 ---
 

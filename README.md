@@ -27,6 +27,7 @@ Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripc
 | [`model/`](model/)       | Modelos BPMN: `cursosNuestraVersion.bpmn` (refinado, 7PMG) y `cursosOriginal.bpmn` (base de cátedra), más el [informe de justificación](model/informeDeJustificacionDeCambiosyDecisionesDeModeladoBPMN.md) |
 | [`flowable/`](flowable/) | Motor de procesos: Spring Boot 2.7.18 + Flowable 6.8.0, BPMN desplegable, DMN de viabilidad, listeners, delegates y API REST                                                                               |
 | [`backend/`](backend/)   | Backend-for-Frontend (Spring Boot 3) con la BD de la institución. Ver su [README](backend/README.md)                                                                                                       |
+| [`materiales/`](materiales/) | App de escritorio (Swing) para *Preparar materiales* por la **API Java** de Flowable (§4.2.1)                                                                                                          |
 | [`docs/`](docs/)         | Enunciado y documentación funcional por sección del proceso                                                                                                                                                |
 | [`adr/`](adr/)           | Decisiones de arquitectura (compensación, cancelación no interruptiva, aulas simuladas, [qué va a la BD y qué queda como variable](adr/datos-proceso-vs-bd.md))                                            |
 
@@ -415,6 +416,40 @@ docker exec flowable-postgres psql -U flowable -d flowable -c 'select id, name, 
 
 ---
 
+### 9. Correr la app de materiales (§4.2.1)
+
+App de escritorio, local a la intranet, que usa la **API Java** de Flowable: arma un `ProcessEngine` embebido contra la **misma base** del motor y trabaja con `IdentityService` y `TaskService`. No pasa por la API REST ni por el BFF.
+
+```bash
+cd materiales && ./build.sh
+```
+
+```bash
+java -jar materiales/target/app.jar
+```
+
+Necesita el PostgreSQL del stack levantado y entorno gráfico. Si la base está en otra máquina de la intranet, o con otras credenciales:
+
+```bash
+java -Ddb.url=jdbc:postgresql://otra-maquina:5432/flowable -Ddb.username=flowable -Ddb.password=flowable -jar materiales/target/app.jar
+```
+
+También se puede por variables de entorno (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`) o editando [`materiales.properties`](materiales/src/main/resources/materiales.properties).
+
+**Cómo usarla:** entrá con un usuario del grupo Administración (`administrativo1` / `password`, por ejemplo). La ventana lista las tareas *Preparar materiales* asignadas y las reclamables por el grupo, con el curso y la empresa de cada instancia. **Reclamar** toma una disponible; **Completar** la cierra pidiendo un detalle opcional de los materiales, que queda en la variable `detalleMateriales`.
+
+Para tener tareas que mostrar, dejá alguna solicitud aceptada y en preparación: `./scripts/seed-demo.sh` ya genera varias.
+
+Dos cosas que la app **no** hace a propósito: no crea ni migra tablas (`databaseSchemaUpdate = false`, el dueño del esquema es la app del motor, y si las versiones no coinciden falla al arrancar) y no activa el async executor, así que no compite por los jobs ni por los temporizadores del motor.
+
+```bash
+cd materiales && mvn test
+```
+
+Resultado esperado: **16 tests, 0 fallos**. Levantan un motor embebido sobre H2, así que no necesitan PostgreSQL ni pantalla.
+
+---
+
 ## Acortar los plazos para la demo (§3.5)
 
 El enunciado pide cinco días de espera antes de cada recordatorio y una fecha de inicio de curso acordada en ejecución. Ninguno de los dos está fijo en el BPMN: el modelo usa `${plazoRespuesta}` y `${fechaCurso}`, y los valores por defecto salen de dos properties.
@@ -455,7 +490,8 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 - Seed de los cinco usuarios y los dos grupos de §3.3, idempotente y activo en todos los perfiles (`prod` incluido).
 - Actividad automática **Habilitar acceso de la empresa** (`EnableCompanyAccessDelegate`): le pide al BFF la cuenta de la empresa, que se crea la primera vez y se reutiliza en las contrataciones siguientes (§4.1.2).
 - **Plazos parametrizables** (§3.5): `proceso.plazo-respuesta` y `proceso.fecha-curso-offset`, sin fechas fijas en el modelo.
-- 20 tests automatizados: los escenarios 1 a 8 de la defensa, los cinco caminos de cierre de §3.4 y los plazos de §3.5.
+- **App de preparación de materiales** (§4.2.1): de escritorio, por la API Java de Flowable, con login contra el IDM, bandeja de tareas asignadas y reclamables, reclamo y completado.
+- 20 tests automatizados del motor (escenarios 1 a 8, los cinco caminos de cierre de §3.4 y los plazos de §3.5) y 16 de la app de materiales.
 
 ### Pendiente
 
@@ -464,7 +500,6 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 | § 4.1 Sitio web institucional            | No desarrollado: sección pública de solicitud + acceso por credenciales para empresas y administración                                               |
 | § 4.1.2 Acceso de la empresa             | La cuenta, el login y el listado de cursos propios ya funcionan por API; falta la pantalla                                                           |
 | § 4.1.3                                  | Generación del PDF de la propuesta y de sus nuevas versiones                                                                                         |
-| § 4.2.1 App Java (API Java)              | No desarrollada: app de escritorio para *Preparar materiales* usando la API Java de Flowable                                                         |
 | § 4.2.2 App de comunicaciones (API REST) | No desarrollada: simulación de aceptación, rechazo, modificaciones, nómina y cancelación                                                             |
 | § 4.3 Análisis de ejecuciones            | No implementadas las tres consultas (resultados de solicitudes, duración de ramas paralelas, distribución de tareas)                                 |
 | § 4.4 Minería de procesos                | No implementado el análisis con PM4Py (`exportar_history.py` / `analizar.py`) ni el CSV de la etapa de negociación                                   |
@@ -498,6 +533,13 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 │           ├── processes/Institución_de_capacitación.bpmn20.xml
 │           ├── dmn/evaluarViabilidad.dmn
 │           └── application*.properties
+├── materiales/                       # App de escritorio de materiales (§4.2.1)
+│   ├── build.sh                      # mvn clean package -DskipTests → target/app.jar
+│   └── src/main/java/com/materiales/app/
+│       ├── MaterialsApp.java         # Entrypoint: motor embebido + login + ventana
+│       ├── engine/                   # Conexión a la BD del motor y armado del ProcessEngine
+│       ├── service/                  # Login contra el IDM, bandeja, reclamo y completado
+│       └── ui/                       # Swing: login, tabla de tareas y acciones
 └── backend/                          # Backend-for-Frontend + BD de la institución
     ├── build.sh                      # mvn clean package -DskipTests → target/app.jar
     ├── Dockerfile                    # Imagen final: solo copia target/app.jar
