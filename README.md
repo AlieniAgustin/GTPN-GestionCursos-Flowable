@@ -59,7 +59,6 @@ Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripc
 | `http://localhost:8080/process-api/**` (HTTP Basic) | `admin`              | `test`                | Administrar el motor por API REST                                                                                                                             |
 | `http://localhost:8080/**` (HTTP Basic)             | `jefeadministrativo` | `password`            | Rol: registrar/elaborar/revisar propuesta, archivar solicitud, enviar informe                                                                                 |
 | idem                                                | `administrativo1`    | `password`            | Rol: lista definitiva, materiales, recursos, compensaciones                                                                                                   |
-| idem                                                | `administrativo2`    | `password`            | idem                                                                                                                                                          |
 | idem                                                | `jefedocente`        | `password`            | Rol: definir docente, elaborar informe de resultados                                                                                                          |
 | idem                                                | `docente1`           | `password`            | Rol: desarrollar curso                                                                                                                                        |
 | idem                                                | `docente2`           | `password`            | idem                                                                                                                                                          |
@@ -71,7 +70,11 @@ Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripc
 **De dónde sale cada uno:**
 
 - `admin` / `test` lo crea el bootstrap del contenedor `flowable-ui` la primera vez que arranca contra una base vacía.
-- Los seis usuarios de negocio con contraseña `password` los crea el seed de [`App.java`](flowable/src/main/java/com/flowable/app/App.java), que está anotado `@Profile("dev")`. **El despliegue Docker corre en perfil `prod`, así que el seed no se ejecuta ahí** (ver paso 1.3).
+- Los cinco usuarios de negocio con contraseña `password` los crea el seed de [`App.java`](flowable/src/main/java/com/flowable/app/App.java), que está anotado `@Profile("dev")`. **El despliegue Docker corre en perfil `prod`, así que el seed no se ejecuta ahí** (ver paso 1.3).
+- Son cinco porque el enunciado (§3.3) define **Administración con 2 personas** (una es el jefe administrativo) y **Docentes con 3** (uno es el jefe del equipo).
+
+> [!IMPORTANT]
+> El seed **crea pero nunca borra**: solo da de alta un usuario si todavía no existe. Si tu base viene de antes del ajuste a cinco usuarios, va a seguir teniendo un `administrativo2` huérfano, y el listener de asignación lo va a considerar como candidato. Para limpiarla, `docker compose down -v` y rehacer el paso 1.3.
 
 ---
 
@@ -340,7 +343,6 @@ curl -s -u admin:test "http://localhost:8080/process-api/history/historic-proces
 
 | Enunciado                                | Qué falta                                                                                                                                            |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| § 3.3 Usuarios y grupos                  | El seed crea **6** usuarios; el enunciado pide **5** (2 de Administración incluido el jefe, 3 de Docentes incluido el jefe). Sobra un administrativo |
 | § 3.3                                    | El seed es `@Profile("dev")`: en `prod` la base queda sin usuarios (workaround en el paso 1.3)                                                       |
 | § 3.2 BD de la institución               | Existen las entidades `Company` y `Course` en el backend, falta cablear el alta de solicitudes y el vínculo con la instancia de proceso              |
 | § 4.1 Sitio web institucional            | No desarrollado: sección pública de solicitud + acceso por credenciales para empresas y administración                                               |

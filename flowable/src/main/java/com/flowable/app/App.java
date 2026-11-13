@@ -37,8 +37,10 @@ public class App {
                 repository.saveGroup(docentesGroup);
             }
 
+            // Enunciado 3.3: Administracion son 2 personas (una es el jefe administrativo)
+            // y Docentes son 3 (uno es el jefe del equipo). Cinco usuarios en total.
             List<String> docentes = List.of("docente1", "docente2", "jefedocente");
-            List<String> administrativos = List.of("jefeadministrativo", "administrativo1", "administrativo2");
+            List<String> administrativos = List.of("jefeadministrativo", "administrativo1");
 
             if (repository.createUserQuery().userId("admin").count() == 0) {
                 User adminUser = repository.newUser("admin");

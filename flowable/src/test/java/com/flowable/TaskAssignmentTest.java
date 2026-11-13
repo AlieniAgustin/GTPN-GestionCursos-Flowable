@@ -69,12 +69,12 @@ class TaskAssignmentTest {
         assertEquals(1, taskService.createTaskQuery().taskId(evaluate.getId())
                 .taskCandidateGroup("administracion").count(), "Group 'administracion' should be candidate");
         assertEquals(1, taskService.createTaskQuery().taskId(evaluate.getId())
-                .taskCandidateUser("administrativo2").count(), "A member of the group should see the task");
+                .taskCandidateUser("administrativo1").count(), "A member of the group should see the task");
 
         // Un administrativo la reclama; otro ya no puede
         taskService.claim(evaluate.getId(), "administrativo1");
         assertEquals("administrativo1", findTask(processInstanceId, "evaluarrecursos").getAssignee());
-        assertThrows(FlowableException.class, () -> taskService.claim(evaluate.getId(), "administrativo2"),
+        assertThrows(FlowableException.class, () -> taskService.claim(evaluate.getId(), "jefeadministrativo"),
                 "An already claimed task cannot be claimed by someone else");
 
         Map<String, Object> resources = new HashMap<>();
@@ -83,7 +83,8 @@ class TaskAssignmentTest {
         resources.put("requiereEquipamiento", false);
         taskService.complete(evaluate.getId(), resources);
 
-        // administrativo1 reclama 'Preparar materiales' y la deja pendiente: queda con más tareas
+        // administrativo1 reclama 'Preparar materiales' y la deja pendiente: queda con 1 tarea
+        // asignada, mientras que jefeadministrativo queda con 0
         Task materials = findTask(processInstanceId, "prepararmateriales");
         assertNotNull(materials, "Task 'prepararmateriales' should have been created");
         taskService.claim(materials.getId(), "administrativo1");
@@ -92,7 +93,7 @@ class TaskAssignmentTest {
         fixture.triggerParticipantList(processInstanceId);
         Task finalList = findTask(processInstanceId, "confeccionarlistadefinitiva");
         assertNotNull(finalList, "Task 'confeccionarlistadefinitiva' should have been created");
-        assertEquals("administrativo2", finalList.getAssignee(),
+        assertEquals("jefeadministrativo", finalList.getAssignee(),
                 "Final list should go to the administrative with fewer assigned tasks");
     }
 
