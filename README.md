@@ -236,20 +236,42 @@ cd backend && mvn spring-boot:run
 
 Solo hace falta si lo querés correr fuera de Docker: `docker compose up` ya lo levanta. Arranca en `http://localhost:8081` y espera PostgreSQL en `localhost:5432` y el motor en `http://localhost:8080`.
 
-**Autenticación.** Las rutas de negocio necesitan sesión. Se abre con el usuario y contraseña de Flowable y se mantiene con la cookie `JSESSIONID`; sin ella, la API responde `401`.
+**Autenticación.** Las rutas de negocio necesitan sesión, que se mantiene con la cookie `JSESSIONID`; sin ella, la API responde `401`.
+
+El mismo endpoint acepta los dos tipos de usuario (§4.1): el personal de la institución, que se valida contra el IDM de Flowable, y las empresas, con la cuenta que les crea *Habilitar acceso de la empresa*. La respuesta trae el `role`, que es lo que decide qué cursos ve cada uno.
 
 ```bash
 curl -s -c cookies.txt -X POST http://localhost:8081/api/auth/login -H 'Content-Type: application/json' -d '{"username":"jefeadministrativo","password":"password"}'
 ```
 
+Devuelve `{"username":"jefeadministrativo","role":"INSTITUCION","authenticated":true}`. Para comprobar si la sesión sigue viva:
+
 ```bash
 curl -s -b cookies.txt http://localhost:8081/api/auth/me
 ```
+
+El usuario y la contraseña de una empresa salen de las variables `empresaUsuario` y `empresaPasswordTemporal` de su instancia, o del log del motor: el enunciado permite simular esa comunicación.
 
 **Registrar una solicitud e iniciar su instancia** (§4.1.1). Devuelve `201` con el curso y el `processInstanceId` ya vinculado:
 
 ```bash
 curl -s -b cookies.txt -X POST http://localhost:8081/api/courses -H 'Content-Type: application/json' -d '{"contact":{"name":"ACME SA","email":"contacto@acme.com","phone":"+543581234567"},"name":"Curso de Flowable","description":"Capacitacion en BPMN","participantCount":12,"possibleDates":["2027-03-01"]}'
+```
+
+**Consultar los cursos.** Una empresa ve solo los suyos; el personal de la institución, todos (§4.1.2). Pedir el curso de otra empresa devuelve `404`, no `403`, para no revelar que existe.
+
+```bash
+curl -s -b cookies.txt http://localhost:8081/api/courses
+```
+
+```bash
+curl -s -b cookies.txt http://localhost:8081/api/courses/52
+```
+
+**Consultar la bandeja de tareas** del usuario autenticado: las que tiene asignadas más las que puede reclamar por su grupo candidato (§4.1.3).
+
+```bash
+curl -s -b cookies.txt http://localhost:8081/api/tasks
 ```
 
 **Consultar el detalle de una tarea.** Devuelve el payload tipado y el `actionUrl` al que hay que postear para completarla. Si la tarea no tiene estrategia asociada, responde `404` con el motivo:
@@ -265,6 +287,8 @@ curl -s -b cookies.txt -X POST http://localhost:8081/api/tasks/{taskId}/define-t
 ```
 
 Las otras tres acciones son `/deliver-course`, `/prepare-report` y `/send-report`.
+
+El detalle y el completado solo funcionan sobre tareas que estén en la bandeja del usuario: una tarea de otro rol responde `404` con el motivo.
 
 **API interna** que usa el motor para volcar datos a la BD de la institución. No lleva sesión sino API key.
 
@@ -438,13 +462,12 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 | Enunciado                                | Qué falta                                                                                                                                            |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | § 4.1 Sitio web institucional            | No desarrollado: sección pública de solicitud + acceso por credenciales para empresas y administración                                               |
-| § 4.1.2 Acceso de la empresa             | La cuenta ya se crea/reutiliza; falta la pantalla de login y el listado de cursos propios de la empresa                                              |
+| § 4.1.2 Acceso de la empresa             | La cuenta, el login y el listado de cursos propios ya funcionan por API; falta la pantalla                                                           |
 | § 4.1.3                                  | Generación del PDF de la propuesta y de sus nuevas versiones                                                                                         |
 | § 4.2.1 App Java (API Java)              | No desarrollada: app de escritorio para *Preparar materiales* usando la API Java de Flowable                                                         |
 | § 4.2.2 App de comunicaciones (API REST) | No desarrollada: simulación de aceptación, rechazo, modificaciones, nómina y cancelación                                                             |
 | § 4.3 Análisis de ejecuciones            | No implementadas las tres consultas (resultados de solicitudes, duración de ramas paralelas, distribución de tareas)                                 |
 | § 4.4 Minería de procesos                | No implementado el análisis con PM4Py (`exportar_history.py` / `analizar.py`) ni el CSV de la etapa de negociación                                   |
-| Backend BFF                              | Faltan tests (el módulo no tiene ninguno) y los endpoints de consulta para empresas y administrativos                                                |
 
 ---
 

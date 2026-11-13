@@ -14,7 +14,7 @@ Checklist del equipo, derivada del enunciado [`docs/ProyectoCursos_V3.pdf`](docs
 |---|---|
 | 1. Motor y modelo BPMN | Completo |
 | 2. BD de la institución | Completo |
-| 3. Backend BFF | Operativo — faltan tests y endpoints de consulta |
+| 3. Backend BFF | Completo |
 | 4. Sitio web institucional | No empezado |
 | 5. App Java (API Java) | No empezado |
 | 6. App de comunicaciones (API REST) | No empezado |
@@ -51,7 +51,7 @@ Completo. Las entidades `Company` y `Course` viven en [`backend/src/main/java/co
 
 ## 3. Backend BFF
 
-El BFF ya autentica y opera contra el motor. Detalle en [`backend/README.md`](backend/README.md).
+Completo. El BFF autentica a los dos tipos de usuario, opera contra el motor y respeta la visibilidad de cada rol. Detalle en [`backend/README.md`](backend/README.md).
 
 - [x] **Crear el `AuthController`** con `POST /api/auth/login`, `POST /api/auth/logout` y `GET /api/auth/me`. Valida contra el `/me` de Flowable con el `FlowableAuthService` que ya existía y deja el SecurityContext en la `HttpSession`. ( )
 - [x] **Cablear un mecanismo de autenticación.** La cadena principal usa `HttpSessionSecurityContextRepository`, así que después del login alcanza con la cookie `JSESSIONID`. Sin sesión la API devuelve **401** (antes 403), que es lo correcto para una API. ( )
@@ -59,9 +59,10 @@ El BFF ya autentica y opera contra el motor. Detalle en [`backend/README.md`](ba
 - [x] **Implementar `TaskService` y las cuatro `TaskStrategy`.** `GET /api/tasks/{id}/detail` lee la tarea y las variables de la instancia en Flowable, resuelve la estrategia por `taskDefinitionKey` y devuelve el payload tipado con su `actionUrl`. Si ninguna estrategia aplica, 404 con el motivo. `complete()` arma el payload de Flowable y lo postea. También se completó `TeacherRepositoryStub` con los tres docentes de §2. ( )
 - [x] **`/error` alcanzable sin autenticación**, así los errores salen con el formato del `GlobalExceptionHandler` en vez de convertirse en un 403 opaco. ( )
 - [x] **Backend agregado a [`docker-compose.yml`](docker-compose.yml)** con su `Dockerfile` y `build.sh`, healthcheck sobre un `/health` nuevo, y resolución por nombre de servicio en ambos sentidos (`BACKEND_BASE_URL` en el motor, `FLOWABLE_BASE_URL` en el BFF). ( )
-- [ ] **Tests del backend**: hoy el módulo no tiene ninguno (`No tests to run`). Faltan al menos los del login, el alta de curso y la resolución de estrategias. ( )
-- [ ] Usar `@AuthenticationPrincipal` en `TaskController` para filtrar las tareas por usuario, como describe el checklist del [`backend/README.md`](backend/README.md). Hoy las consultas no pasan el usuario a Flowable. ( )
-- [ ] Endpoints de **consulta** para empresas y administrativos (`GET /api/courses`, bandeja de tareas). Solo existe el alta. ( )
+- [x] **Tests del backend**: de 0 a **27**. `AuthenticationServiceTest` (los dos orígenes de credenciales, contraseña incorrecta, empresa sin acceso todavía, cierre de sesión), `CourseServiceTest` (alta con vínculo a la instancia, reutilización de empresa, actualización parcial de detalles, visibilidad por rol, estado terminal), `TaskServiceTest` (resolución de estrategia, tarea sin estrategia, tarea ajena, bandeja) y `CourseControllerTest` (`@WebMvcTest`: códigos, `Location`, validación de email y de fecha pasada). ( )
+- [x] **Filtrar las tareas por usuario.** `TaskController` recibe el usuario con `@AuthenticationPrincipal` y lo pasa al servicio. La bandeja consulta `candidateOrAssigned={usuario}`, y tanto el detalle como el completado verifican que la tarea esté en esa bandeja: si no, **404** con el motivo. Verificado contra el stack: `docente1` no ve ni puede completar una tarea del grupo `administracion`. ( )
+- [x] **Endpoints de consulta.** `GET /api/tasks` devuelve la bandeja del usuario (asignadas + reclamables por grupo). `GET /api/courses` y `GET /api/courses/{id}` aplican la visibilidad del enunciado 4.1.2: una empresa ve **solo los suyos**, el personal de la institución ve todos; el curso de otra empresa da **404 y no 403**, para no revelar que existe. ( )
+- [x] **Login de empresas** (necesario para lo anterior). El mismo `POST /api/auth/login` acepta los dos tipos de usuario: primero prueba contra el IDM de Flowable (personal, §3.3) y si no valida prueba contra las cuentas de `companies` con BCrypt (empresas, §4.1.2). La respuesta incluye el `role` (`INSTITUCION` / `EMPRESA`), que es lo que decide qué cursos ve cada uno. La pantalla de login sigue siendo del bloque 4. ( )
 
 ---
 
