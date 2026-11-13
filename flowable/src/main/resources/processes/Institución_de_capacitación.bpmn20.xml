@@ -325,7 +325,11 @@ if (n <= 2) {
     </scriptTask>
     <exclusiveGateway id="sid-0353D0DE-6002-4D8B-B663-AD3A56189D35" name="¿Cancelado?" default="sid-43EC5F69-A531-4275-A2B4-6692DFC4FDAE"></exclusiveGateway>
     <sequenceFlow id="flow_fechaprogramada_a_desarrollarcurso" sourceRef="fechaprogramada" targetRef="desarrollarcurso"></sequenceFlow>
-    <sequenceFlow id="flow_informe_a_enviarinforme" sourceRef="elaborarinformederesultados" targetRef="enviarinformeaempresayarchivarexpediente"></sequenceFlow>
+    <sequenceFlow id="flow_informe_a_enviarinforme" sourceRef="elaborarinformederesultados" targetRef="enviarinformeaempresayarchivarexpediente">
+      <extensionElements>
+        <flowable:executionListener event="take" delegateExpression="${syncCourseDetails}"></flowable:executionListener>
+      </extensionElements>
+    </sequenceFlow>
     <sequenceFlow id="flow_definirdocente_a_fechaprogramada" sourceRef="definirdocentequedesarrollaelcurso" targetRef="fechaprogramada"></sequenceFlow>
     <sequenceFlow id="flow_desarrollarcurso_a_informe" sourceRef="desarrollarcurso" targetRef="elaborarinformederesultados"></sequenceFlow>
     <sequenceFlow id="flow_enviarpropuesta_a_esperarrespuesta" sourceRef="enviarpropuesta" targetRef="esperarrespuesta"></sequenceFlow>
@@ -341,9 +345,14 @@ if (n <= 2) {
     <sequenceFlow id="flow_aceptacion_a_habilitaracceso" sourceRef="aceptacion" targetRef="habilitaraccesodelaempresa">
       <extensionElements>
         <flowable:executionListener event="take" delegateExpression="${resolveCourseDate}"></flowable:executionListener>
+        <flowable:executionListener event="take" delegateExpression="${syncCourseDetails}"></flowable:executionListener>
       </extensionElements>
     </sequenceFlow>
-    <sequenceFlow id="flow_propuesta_a_enviarpropuesta" sourceRef="registraryelaborarpropuesta" targetRef="enviarpropuesta"></sequenceFlow>
+    <sequenceFlow id="flow_propuesta_a_enviarpropuesta" sourceRef="registraryelaborarpropuesta" targetRef="enviarpropuesta">
+      <extensionElements>
+        <flowable:executionListener event="take" delegateExpression="${syncCourseDetails}"></flowable:executionListener>
+      </extensionElements>
+    </sequenceFlow>
     <sequenceFlow id="flow_modificaciones_a_revisarpropuesta" sourceRef="modificaciones" targetRef="revisarpropuesta"></sequenceFlow>
     <sequenceFlow id="flow_esperarrespuesta_a_modificaciones" sourceRef="esperarrespuesta" targetRef="modificaciones"></sequenceFlow>
     <sequenceFlow id="flow_esviable_no" name="no" sourceRef="esviable" targetRef="notificardecision">
@@ -355,7 +364,11 @@ if (n <= 2) {
     <sequenceFlow id="flow_recordatorios_no" name="no " sourceRef="seenviaron2recordatorios" targetRef="esperarrespuesta">
       <conditionExpression xsi:type="tFormalExpression"><![CDATA[${recordatorios <= 2}]]></conditionExpression>
     </sequenceFlow>
-    <sequenceFlow id="flow_revisarpropuesta_a_enviarpropuesta" sourceRef="revisarpropuesta" targetRef="enviarpropuesta"></sequenceFlow>
+    <sequenceFlow id="flow_revisarpropuesta_a_enviarpropuesta" sourceRef="revisarpropuesta" targetRef="enviarpropuesta">
+      <extensionElements>
+        <flowable:executionListener event="take" delegateExpression="${syncCourseDetails}"></flowable:executionListener>
+      </extensionElements>
+    </sequenceFlow>
     <sequenceFlow id="flow_notificardecision_a_solicitudfinalizada" sourceRef="notificardecision" targetRef="solicitudfinalizada">
       <extensionElements>
         <flowable:executionListener event="take" expression="${execution.setVariable('resultadoCurso','NO_VIABLE')}"></flowable:executionListener>
