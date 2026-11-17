@@ -28,6 +28,9 @@
                 <button type="submit" class="principal chico">Completar</button>
             </form>
 
+            <a th:if="${t.tieneFormularioEnSitio()}" class="boton principal chico"
+               th:href="@{/tareas/{id}/{form}(id=${t.id()},form=${t.formulario()})}">Completar</a>
+
             <span class="nota" th:if="${t.necesitaFormulario()}">
                 Se completa desde Flowable UI
             </span>
