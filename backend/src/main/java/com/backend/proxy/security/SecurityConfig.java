@@ -34,6 +34,21 @@ public class SecurityConfig {
         "/error"
     };
 
+    /**
+     * Sección pública del sitio (enunciado 4.1.1): portada, alta de solicitudes,
+     * login y estáticos.
+     */
+    private static final String[] PUBLIC_PAGES = {
+        "/",
+        "/solicitudes",
+        "/solicitudes/enviada",
+        "/login",
+        "/health",
+        "/error",
+        "/css/**",
+        "/js/**"
+    };
+
     @Bean
     public FilterRegistrationBean<ApiKeyFilter> apiKeyFilterRegistration(ApiKeyFilter filter) {
         FilterRegistrationBean<ApiKeyFilter> registration = new FilterRegistrationBean<>(filter);
@@ -71,6 +86,7 @@ public class SecurityConfig {
             HttpSecurity http
     ) throws Exception {
         return http
+            .securityMatcher("/api/**")
             .cors(Customizer.withDefaults())
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session
@@ -86,6 +102,47 @@ public class SecurityConfig {
             // Para una API, "no estás autenticado" es 401, no 403
             .exceptionHandling(handling -> handling
                 .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+            )
+            .build();
+    }
+
+    /**
+     * Sitio web institucional (enunciado 4.1). A diferencia de la API, acá un usuario
+     * sin sesión no recibe un 401 sino que va a parar al formulario de login.
+     *
+     * <p>La sección pública —portada y alta de solicitudes— queda abierta: según el
+     * enunciado (4.1.1) cualquier empresa puede pedir una capacitación sin tener cuenta.
+     */
+    @Bean
+    @Order(3)
+    public SecurityFilterChain websiteSecurity(
+            HttpSecurity http,
+            SiteAuthenticationProvider siteAuthenticationProvider
+    ) throws Exception {
+        return http
+            .csrf(AbstractHttpConfigurer::disable)
+            .authenticationProvider(siteAuthenticationProvider)
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+            )
+            .securityContext(context -> context
+                .securityContextRepository(new HttpSessionSecurityContextRepository())
+            )
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(PUBLIC_PAGES).permitAll()
+                .anyRequest().authenticated()
+            )
+            .formLogin(login -> login
+                .loginPage("/login")
+                .loginProcessingUrl("/login")
+                .defaultSuccessUrl("/panel", true)
+                .failureUrl("/login?error")
+                .permitAll()
+            )
+            .logout(logout -> logout
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("/?sesion=cerrada")
+                .permitAll()
             )
             .build();
     }

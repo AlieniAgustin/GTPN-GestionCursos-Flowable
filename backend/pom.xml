@@ -48,6 +48,17 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
+        <!-- Sitio web institucional (enunciado 4.1): paginas server-side -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.thymeleaf.extras</groupId>
+            <artifactId>thymeleaf-extras-springsecurity6</artifactId>
+        </dependency>
+
         <!-- Validación (Jakarta Validation / Hibernate Validator) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

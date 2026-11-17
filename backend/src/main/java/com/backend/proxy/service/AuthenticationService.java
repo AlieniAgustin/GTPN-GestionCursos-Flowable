@@ -37,18 +37,29 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
 
     public Optional<LoginResponseDTO> login(String username, String password, HttpServletRequest request) {
+        return resolveRole(username, password)
+                .map(role -> {
+                    startSession(username, role, request);
+                    return new LoginResponseDTO(username, role.substring("ROLE_".length()), true);
+                });
+    }
+
+    /**
+     * Valida las credenciales y devuelve el rol que le corresponde al usuario, o vacío si
+     * no autentica. Es el único lugar donde se decide quién puede entrar: lo usan tanto la
+     * API ({@link #login}) como el formulario del sitio.
+     */
+    public Optional<String> resolveRole(String username, String password) {
         if (username == null || username.isBlank() || password == null || password.isBlank()) {
             return Optional.empty();
         }
 
         if (flowableAuthService.authenticates(username, password)) {
-            startSession(username, Roles.ROLE_INSTITUCION, request);
-            return Optional.of(new LoginResponseDTO(username, Roles.INSTITUCION, true));
+            return Optional.of(Roles.ROLE_INSTITUCION);
         }
 
         if (authenticatesAsCompany(username, password)) {
-            startSession(username, Roles.ROLE_EMPRESA, request);
-            return Optional.of(new LoginResponseDTO(username, Roles.EMPRESA, true));
+            return Optional.of(Roles.ROLE_EMPRESA);
         }
 
         return Optional.empty();
