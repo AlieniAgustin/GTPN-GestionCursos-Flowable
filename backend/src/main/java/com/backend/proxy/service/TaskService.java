@@ -15,6 +15,8 @@ import com.backend.proxy.dto.task.FlowableTaskDTO;
 import com.backend.proxy.dto.task.FlowableTaskListDTO;
 import com.backend.proxy.dto.task.TaskDetailResponse;
 import com.backend.proxy.exception.ResourceNotFoundException;
+import com.backend.proxy.exception.TaskAlreadyClaimedException;
+import com.backend.proxy.exception.TaskNotClaimedException;
 import com.backend.proxy.strategy.task.TaskStrategy;
 
 /**
@@ -81,19 +83,69 @@ public class TaskService {
         }
     }
 
+    /**
+     * Una tarea sin responsable no se completa: primero hay que reclamarla (enunciado 2).
+     * Y una que ya tiene responsable solo la completa esa persona.
+     */
+    private void assertClaimedBy(FlowableTaskDTO task, String username) {
+        if (task.assignee() == null || task.assignee().isBlank()) {
+            throw new TaskNotClaimedException(
+                    "Primero tenés que reclamar la tarea '" + task.name() + "'");
+        }
+        if (!task.assignee().equals(username)) {
+            throw new TaskAlreadyClaimedException(
+                    "La tarea la tiene " + task.assignee() + ", no la podés completar");
+        }
+    }
+
     private String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     /**
-     * Completes a task in Flowable engine injecting the necessary process variables.
+     * Tipo de tarea, para saber qué hace falta para completarla. Valida la visibilidad,
+     * así que no sirve para espiar tareas ajenas.
+     */
+    public String findTaskDefinitionKey(String taskId, String username) {
+        FlowableTaskDTO task = findTask(taskId);
+        assertVisibleFor(task, username);
+        return task.taskDefinitionKey();
+    }
+
+    /**
+     * Reclama una tarea de grupo (enunciado 2: "uno de sus miembros deberá reclamar la
+     * tarea antes de completarla").
      *
-     * @param taskId Flowable task identifier
-     * @param variables Process variables to persist upon advancing the execution token
+     * <p>Solo se pueden reclamar las que están en la bandeja del usuario y todavía no
+     * tienen responsable: si otro la reclamó primero, el motor responde 409 y acá se
+     * traduce a un mensaje entendible.
+     */
+    public void claim(String taskId, String username) {
+        FlowableTaskDTO task = findTask(taskId);
+        assertVisibleFor(task, username);
+
+        if (task.assignee() != null && !task.assignee().isBlank()) {
+            throw new TaskAlreadyClaimedException(
+                    "La tarea ya la tiene " + task.assignee());
+        }
+
+        flowableClient.post(TASKS_URI + taskId, Map.of("action", "claim", "assignee", username))
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    /**
+     * Completa la tarea en el motor con las variables que deja esa etapa.
+     *
+     * @param taskId identificador de la tarea en Flowable
+     * @param variables variables del proceso a persistir al avanzar el token
+     * @param username quien la completa: tiene que ser su responsable
      */
     public void complete(String taskId, Map<String, Object> variables, String username) {
         // Falla con 404 antes de intentar completar, para no devolver un error del motor
-        assertVisibleFor(findTask(taskId), username);
+        FlowableTaskDTO task = findTask(taskId);
+        assertVisibleFor(task, username);
+        assertClaimedBy(task, username);
 
         List<FlowableVariable> payloadVariables = new ArrayList<>();
         variables.forEach((name, value) -> payloadVariables.add(new FlowableVariable(name, value)));
