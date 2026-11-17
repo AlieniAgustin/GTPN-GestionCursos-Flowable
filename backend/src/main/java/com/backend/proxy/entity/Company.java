@@ -30,11 +30,6 @@ public class Company {
     @Column(nullable = false)
     private String phone;
 
-    /**
-     * Credenciales de acceso de la empresa al sitio (enunciado 4.1.2). Las crea la
-     * actividad automatica "Habilitar acceso de la empresa" la primera vez que la
-     * empresa contrata un curso; en contrataciones posteriores se reutilizan.
-     */
     @Column(name = "access_username", unique = true)
     private String accessUsername;
 

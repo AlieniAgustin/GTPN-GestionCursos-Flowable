@@ -89,7 +89,6 @@ public class CommunicationsWindow extends JFrame {
         reloadRequests();
     }
 
-    /** Vuelve a pedirle al motor las instancias en curso. */
     public final void reloadRequests() {
         List<CourseRequest> requests = call(communicationsService::findRequests, "No se pudieron listar las solicitudes");
         if (requests == null) {

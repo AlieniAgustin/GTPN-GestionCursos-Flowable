@@ -38,7 +38,6 @@ public enum Communication {
             "Cancelar el curso",
             null, null, InputKind.NONE);
 
-    /** Qué dato hay que pedirle al usuario antes de enviar la comunicación. */
     public enum InputKind {
         /** Nada: la comunicación se envía sola. */
         NONE,
@@ -69,7 +68,6 @@ public enum Communication {
         return messageName;
     }
 
-    /** Texto del botón. */
     public String label() {
         return label;
     }

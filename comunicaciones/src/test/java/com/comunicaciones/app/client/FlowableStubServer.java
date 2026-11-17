@@ -20,7 +20,6 @@ import com.sun.net.httpserver.HttpServer;
  */
 public final class FlowableStubServer implements AutoCloseable {
 
-    /** Petición tal como llegó al stub. */
     public record RecordedRequest(
             String method,
             String path,
@@ -30,7 +29,6 @@ public final class FlowableStubServer implements AutoCloseable {
     ) {
     }
 
-    /** Respuesta que devuelve el stub. */
     public record StubResponse(int status, String body) {
 
         public static StubResponse json(String body) {

@@ -16,7 +16,6 @@ import org.flowable.task.api.Task;
  */
 public class MaterialsTaskService {
 
-    /** Id de la tarea en el BPMN. */
     public static final String TASK_KEY = "prepararmateriales";
 
     /** Variables que deja la app al completar, para que quede registro de lo preparado. */

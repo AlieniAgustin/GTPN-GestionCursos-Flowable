@@ -33,11 +33,7 @@ public class InternalFlowableController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Vuelca a la BD de la institucion los datos que el proceso fue produciendo
-     * (enunciado 3.2): programa y presupuesto de la propuesta, fecha acordada e informe.
-     * La invoca el listener {@code syncCourseDetails} al cerrar cada etapa.
-     */
+   
     @PutMapping("/courses/{processId}/details")
     public ResponseEntity<Void> updateDetails(
             @PathVariable String processId,
@@ -47,10 +43,7 @@ public class InternalFlowableController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Habilita el acceso de la empresa duena del curso (enunciado 4.1.2).
-     * La invoca la actividad automatica "Habilitar acceso de la empresa" del proceso.
-     */
+
     @PostMapping("/courses/{processId}/company-access")
     public ResponseEntity<CompanyAccessResponseDTO> enableCompanyAccess(@PathVariable String processId) {
         return ResponseEntity.ok(companyAccessService.enableAccess(processId));

@@ -50,7 +50,6 @@ public class CompanyAccessService {
                         "No course linked to process instance " + processInstanceId));
         Company company = course.getCompany();
 
-        // Ya contrató antes: se reutiliza la cuenta y el curso nuevo queda vinculado a ella
         if (company.hasAccess()) {
             log.info("[INFO] Reutilizando cuenta existente para '{}': usuario='{}'",
                     company.getName(), company.getAccessUsername());

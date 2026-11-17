@@ -212,9 +212,6 @@ class CommunicationsServiceTest {
         assertTrue(server.requests().isEmpty());
     }
 
-    /**
-     * Makes the stub answer as an engine whose instance is subscribed to exactly these messages.
-     */
     private void stubSubscriptions(Set<String> subscribedMessages) {
         server.on("GET", "/runtime/executions", request -> {
             String message = request.query().get("messageEventSubscriptionName");

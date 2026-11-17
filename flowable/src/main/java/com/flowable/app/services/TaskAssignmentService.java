@@ -22,7 +22,6 @@ public class TaskAssignmentService {
         this.taskService = taskService;
     }
 
-    /** Asigna la tarea y devuelve el usuario elegido. */
     public String assignToLeastBusy(String taskId, String candidateGroup) {
         List<User> members = identityService.createUserQuery()
                 .memberOfGroup(candidateGroup)

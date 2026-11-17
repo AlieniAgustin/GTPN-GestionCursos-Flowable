@@ -13,9 +13,6 @@ import org.flowable.job.api.Job;
 import org.flowable.task.api.Task;
 import org.springframework.stereotype.Component;
 
-/**
- * Test fixture driver to navigate key milestones in the Course Management BPMN process.
- */
 @Component
 public class CourseProcessFixture {
 
@@ -40,23 +37,14 @@ public class CourseProcessFixture {
         this.managementService = managementService;
     }
 
-    /**
-     * Starts a new process instance triggered by the course request message.
-     */
     public ProcessInstance startProcessInstance() {
         return startProcessInstance(Collections.emptyMap());
     }
 
-    /**
-     * Starts a new process instance triggered by the course request message with given variables.
-     */
     public ProcessInstance startProcessInstance(Map<String, Object> variables) {
         return runtimeService.startProcessInstanceByMessage(MESSAGE_COURSE_REQUEST, variables);
     }
 
-    /**
-     * Finds and completes the proposal registration task for the given process instance.
-     */
     public Task completeProposal(String processInstanceId, Map<String, Object> variables) {
         Task task = taskService.createTaskQuery()
                 .processInstanceId(processInstanceId)
@@ -73,9 +61,6 @@ public class CourseProcessFixture {
         return task;
     }
 
-    /**
-     * Triggers the proposal acceptance intermediate message event.
-     */
     public Execution triggerAcceptance(String processInstanceId) {
         return triggerAcceptance(processInstanceId, Collections.emptyMap());
     }
@@ -100,9 +85,6 @@ public class CourseProcessFixture {
         return execution;
     }
 
-    /**
-     * Triggers the proposal rejection intermediate message event.
-     */
     public Execution triggerRejection(String processInstanceId) {
         Execution execution = runtimeService.createExecutionQuery()
                 .processInstanceId(processInstanceId)
@@ -115,9 +97,6 @@ public class CourseProcessFixture {
         return execution;
     }
 
-    /**
-     * Triggers the proposal modifications intermediate message event.
-     */
     public Execution triggerModifications(String processInstanceId) {
         Execution execution = runtimeService.createExecutionQuery()
                 .processInstanceId(processInstanceId)
@@ -158,10 +137,6 @@ public class CourseProcessFixture {
         return instance;
     }
 
-    /**
-     * Composite milestone: starts a request, completes proposal and triggers acceptance,
-     * advancing the instance until it reaches preparation status.
-     */
     public ProcessInstance startCourseInPreparation() {
         Map<String, Object> defaultProposalVars = new HashMap<>();
         defaultProposalVars.put("propuesta", "Propuesta Inicial");

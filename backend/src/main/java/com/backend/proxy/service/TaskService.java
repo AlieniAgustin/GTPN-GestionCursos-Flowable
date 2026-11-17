@@ -19,10 +19,6 @@ import com.backend.proxy.exception.TaskAlreadyClaimedException;
 import com.backend.proxy.exception.TaskNotClaimedException;
 import com.backend.proxy.strategy.task.TaskStrategy;
 
-/**
- * Orchestration service for human tasks (User Tasks).
- * Coordinates polymorphic HATEOAS strategy resolution and Flowable task completion.
- */
 @Service
 public class TaskService {
 
@@ -37,12 +33,6 @@ public class TaskService {
         this.flowableClient = flowableClient;
     }
 
-    /**
-     * Retrieves task contextual details and HATEOAS metadata using the matched strategy.
-     *
-     * @param taskId Flowable runtime task identifier
-     * @return Aggregated response with dynamic actionUrl and strongly-typed DTO
-     */
     public TaskDetailResponse<?> getTaskDetail(String taskId, String username) {
         FlowableTaskDTO task = findTask(taskId);
         assertVisibleFor(task, username);

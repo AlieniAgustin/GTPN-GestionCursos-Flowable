@@ -30,9 +30,7 @@ public class Health {
 
         List<Group> groups = identityService.createGroupQuery().list();
         List<String> groupsNames = new LinkedList<>();
-        // get groups
         groups.forEach(group -> groupsNames.add(group.getName()));
-        // extract names and quantity for groups
         response.put("groups", groupsNames);
         response.put("quantityGroups", groupsNames.size());
 

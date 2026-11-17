@@ -10,7 +10,6 @@ import org.springframework.web.client.RestClient;
 @Configuration
 public class RestClientConfig {
 
-    // Technical client for communicating with Flowable engine
     @Bean
     public RestClient flowableRestClient(
             @Value("${flowable.base-url:http://localhost:8080}") String flowableBaseUrl,

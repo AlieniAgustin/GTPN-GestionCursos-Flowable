@@ -61,7 +61,6 @@ class ProposalRejectionTest {
         assertNotNull(processInstance, "Process instance should have reached the response gateway");
         String processInstanceId = processInstance.getId();
 
-        // Execution waiting on rejection; trigger rejection message
         Execution rejectionExecution = fixture.triggerRejection(processInstanceId);
         assertNotNull(rejectionExecution, "Process should have been waiting for 'Rechazo' message event");
 
@@ -76,16 +75,13 @@ class ProposalRejectionTest {
         Object courseResult = runtimeService.getVariable(processInstanceId, "resultadoCurso");
         assertEquals("RECHAZADO", courseResult, "Course result variable should be RECHAZADO");
 
-        // Complete manual task to archive the request
         taskService.complete(archiveTask.getId());
 
-        // Verify the process instance has ended
         ProcessInstance activeInstance = runtimeService.createProcessInstanceQuery()
                 .processInstanceId(processInstanceId)
                 .singleResult();
         assertNull(activeInstance, "Process instance should have ended");
 
-        // Verify historic variable records RECHAZADO
         Object historicResult = historyService.createHistoricVariableInstanceQuery()
                 .processInstanceId(processInstanceId)
                 .variableName("resultadoCurso")

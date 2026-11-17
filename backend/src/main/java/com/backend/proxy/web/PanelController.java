@@ -21,7 +21,6 @@ public class PanelController {
             return "redirect:/mis-cursos";
         }
 
-        // El personal de la institución arranca por su bandeja de tareas
         return "redirect:/tareas";
     }
 }

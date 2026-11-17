@@ -82,7 +82,6 @@ public class SolicitudForm {
         return dates;
     }
 
-    /** Una fecha del formulario que no se pudo interpretar. */
     public static class DateFormatException extends RuntimeException {
 
         private static final long serialVersionUID = 1L;

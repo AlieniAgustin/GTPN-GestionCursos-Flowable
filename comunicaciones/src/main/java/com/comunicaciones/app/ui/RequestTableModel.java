@@ -7,9 +7,6 @@ import javax.swing.table.AbstractTableModel;
 
 import com.comunicaciones.app.service.CourseRequest;
 
-/**
- * Tabla de solicitudes: una fila por instancia en curso.
- */
 public class RequestTableModel extends AbstractTableModel {
 
     private static final long serialVersionUID = 1L;

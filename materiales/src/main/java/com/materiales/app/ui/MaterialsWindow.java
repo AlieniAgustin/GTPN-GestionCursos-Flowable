@@ -98,7 +98,6 @@ public class MaterialsWindow extends JFrame {
         reload();
     }
 
-    /** Vuelve a consultar la bandeja en el motor. */
     public final void reload() {
         try {
             List<MaterialTask> tasks = materialsTaskService.findInbox(user);
@@ -147,7 +146,6 @@ public class MaterialsWindow extends JFrame {
         reload();
     }
 
-    /** Muestra las tres consultas del enunciado 4.3 sobre el historial del motor. */
     private void showAnalysis() {
         String report;
         try {

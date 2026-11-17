@@ -8,9 +8,6 @@ import javax.swing.table.AbstractTableModel;
 
 import com.materiales.app.service.MaterialTask;
 
-/**
- * Tabla de la bandeja: una fila por tarea <i>Preparar materiales</i>.
- */
 public class MaterialTaskTableModel extends AbstractTableModel {
 
     private static final long serialVersionUID = 1L;

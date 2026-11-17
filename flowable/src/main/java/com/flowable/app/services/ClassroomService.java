@@ -25,7 +25,6 @@ public class ClassroomService {
         System.out.println("Web service de aulas simulado con " + availableClassrooms + " aulas");
     }
 
-    // Reserva la primera aula libre para la instancia. Vacío si están todas ocupadas.
     public synchronized Optional<String> reserve(String processInstanceId) {
         for (Map.Entry<String, String> entry : classrooms.entrySet()) {
             if (entry.getValue() == null) {
@@ -36,7 +35,6 @@ public class ClassroomService {
         return Optional.empty();
     }
 
-    // Libera el aula para que la pueda usar otro curso
     public synchronized void release(String classroom) {
         if (classroom != null && classrooms.containsKey(classroom)) {
             classrooms.put(classroom, null);
