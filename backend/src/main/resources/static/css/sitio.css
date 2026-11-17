@@ -377,7 +377,27 @@ code.referencia {
     color: var(--tinta-suave);
 }
 
-button.chico {
+a.boton {
+    display: inline-block;
+    text-decoration: none;
+    background: var(--acento);
+    color: #fff;
+    border-radius: 5px;
+    font-weight: 600;
+}
+
+a.boton:hover { background: #00564a; }
+
+.opcion {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.7rem;
+    cursor: pointer;
+}
+
+button.chico,
+a.chico {
     padding: 0.4rem 0.9rem;
     font-size: 0.9rem;
 }
