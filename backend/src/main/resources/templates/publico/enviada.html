@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('Solicitud enviada', ~{::section})}">
+<body>
+<section>
+    <h1>Solicitud registrada</h1>
+    <p class="bajada">
+        Ya quedó iniciado el trámite. La institución va a evaluar la viabilidad del curso
+        y, si corresponde, te va a enviar una propuesta.
+    </p>
+
+    <div class="tarjeta">
+        <dl class="datos">
+            <dt>Empresa</dt>
+            <dd th:text="${curso.companyName()}">ACME SA</dd>
+
+            <dt>Capacitación</dt>
+            <dd th:text="${curso.name()}">Introducción a BPMN</dd>
+
+            <dt>Fechas propuestas</dt>
+            <dd th:text="${#strings.listJoin(curso.possibleDates(), ', ')}">2027-03-01</dd>
+
+            <dt>Nº de solicitud</dt>
+            <dd><code class="referencia" th:text="${curso.id()}">12</code></dd>
+        </dl>
+
+        <p class="acciones">
+            <a th:href="@{/}">Enviar otra solicitud</a>
+        </p>
+    </div>
+</section>
+</body>
+</html>

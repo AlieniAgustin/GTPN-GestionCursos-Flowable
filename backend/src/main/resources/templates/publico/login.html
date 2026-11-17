@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('Ingresar', ~{::section})}">
+<body>
+<section>
+    <h1>Ingresar</h1>
+    <p class="bajada">
+        El personal de la institución entra con su usuario de Flowable. Las empresas, con la
+        cuenta que reciben cuando se acepta su propuesta.
+    </p>
+
+    <div class="aviso malo" th:if="${param.error}">Usuario o contraseña incorrectos.</div>
+
+    <form class="tarjeta" th:action="@{/login}" method="post">
+        <div class="campo">
+            <label for="username">Usuario</label>
+            <input type="text" id="username" name="username" autocomplete="username" autofocus>
+        </div>
+
+        <div class="campo">
+            <label for="password">Contraseña</label>
+            <input type="password" id="password" name="password" autocomplete="current-password">
+        </div>
+
+        <button type="submit" class="principal">Ingresar</button>
+    </form>
+</section>
+</body>
+</html>

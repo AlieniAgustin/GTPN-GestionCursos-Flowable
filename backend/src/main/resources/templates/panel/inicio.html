@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('Mi panel', ~{::section})}">
+<body>
+<section>
+    <h1>Hola, <span th:text="${usuario}">usuario</span></h1>
+
+    <p class="bajada" th:if="${esEmpresa}">
+        Desde acá vas a poder seguir el estado de los cursos que contrataste.
+    </p>
+    <p class="bajada" th:unless="${esEmpresa}">
+        Desde acá vas a poder ver tus tareas pendientes y las disponibles para tu grupo.
+    </p>
+
+    <div class="tarjeta">
+        <p>Las pantallas de esta sección todavía están en construcción.</p>
+    </div>
+</section>
+</body>
+</html>

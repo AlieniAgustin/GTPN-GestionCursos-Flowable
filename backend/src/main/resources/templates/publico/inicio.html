@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('Solicitar una capacitación', ~{::section})}">
+<body>
+<section>
+    <h1>Solicitar una capacitación</h1>
+    <p class="bajada">
+        Completá el formulario y la institución evaluará la viabilidad del curso.
+        Si es viable, vas a recibir una propuesta con el programa, el presupuesto y las fechas.
+    </p>
+
+    <div class="aviso malo" th:if="${errorGeneral}" th:text="${errorGeneral}">Error</div>
+    <div class="aviso bueno" th:if="${param.sesion}">Cerraste la sesión.</div>
+
+    <form class="tarjeta" th:action="@{/solicitudes}" th:object="${solicitud}" method="post">
+
+        <fieldset>
+            <legend>Empresa solicitante</legend>
+
+            <div class="campo">
+                <label for="companyName">Razón social</label>
+                <input type="text" id="companyName" th:field="*{companyName}">
+                <span class="error-campo" th:if="${#fields.hasErrors('companyName')}"
+                      th:errors="*{companyName}">Error</span>
+            </div>
+
+            <div class="dupla">
+                <div class="campo">
+                    <label for="companyEmail">Email de contacto</label>
+                    <input type="email" id="companyEmail" th:field="*{companyEmail}">
+                    <span class="error-campo" th:if="${#fields.hasErrors('companyEmail')}"
+                          th:errors="*{companyEmail}">Error</span>
+                </div>
+
+                <div class="campo">
+                    <label for="companyPhone">Teléfono</label>
+                    <input type="text" id="companyPhone" th:field="*{companyPhone}"
+                           placeholder="+543581234567">
+                    <span class="error-campo" th:if="${#fields.hasErrors('companyPhone')}"
+                          th:errors="*{companyPhone}">Error</span>
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Capacitación solicitada</legend>
+
+            <div class="campo">
+                <label for="name">Temática</label>
+                <input type="text" id="name" th:field="*{name}"
+                       placeholder="Introducción a BPMN">
+                <span class="error-campo" th:if="${#fields.hasErrors('name')}"
+                      th:errors="*{name}">Error</span>
+            </div>
+
+            <div class="campo">
+                <label for="description">Descripción</label>
+                <textarea id="description" th:field="*{description}"
+                          placeholder="Qué necesitan aprender y con qué nivel de profundidad"></textarea>
+                <span class="error-campo" th:if="${#fields.hasErrors('description')}"
+                      th:errors="*{description}">Error</span>
+            </div>
+
+            <div class="campo">
+                <label for="participantCount">Cantidad estimada de participantes</label>
+                <input type="number" id="participantCount" th:field="*{participantCount}" min="1">
+                <span class="error-campo" th:if="${#fields.hasErrors('participantCount')}"
+                      th:errors="*{participantCount}">Error</span>
+            </div>
+
+            <div class="campo">
+                <label for="preferredDates">Fechas preferidas</label>
+                <input type="text" id="preferredDates" th:field="*{preferredDates}"
+                       placeholder="2027-03-01, 2027-03-15">
+                <span class="ayuda">
+                    Una o varias fechas en formato AAAA-MM-DD, separadas por coma. Tienen que ser futuras.
+                </span>
+                <span class="error-campo" th:if="${#fields.hasErrors('preferredDates')}"
+                      th:errors="*{preferredDates}">Error</span>
+            </div>
+        </fieldset>
+
+        <button type="submit" class="principal">Enviar solicitud</button>
+    </form>
+</section>
+</body>
+</html>

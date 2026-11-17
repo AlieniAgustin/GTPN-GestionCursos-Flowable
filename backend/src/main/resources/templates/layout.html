@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:fragment="page(titulo, contenido)">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="|${titulo} — Instituto de Capacitación|">Instituto de Capacitación</title>
+    <link rel="stylesheet" th:href="@{/css/sitio.css}">
+</head>
+<body>
+    <header class="barra">
+        <a class="marca" th:href="@{/}">Instituto de Capacitación</a>
+        <nav>
+            <a th:href="@{/}">Inicio</a>
+            <a sec:authorize="isAuthenticated()" th:href="@{/panel}">Mi panel</a>
+            <a sec:authorize="!isAuthenticated()" th:href="@{/login}">Ingresar</a>
+            <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" class="en-linea">
+                <span class="usuario" sec:authentication="name">usuario</span>
+                <button type="submit" class="enlace">Salir</button>
+            </form>
+        </nav>
+    </header>
+
+    <main>
+        <div th:replace="${contenido}">Contenido de la página</div>
+    </main>
+
+    <footer>
+        <p>Gestión y Tecnologías de Procesos de Negocio — UNRC</p>
+    </footer>
+</body>
+</html>
