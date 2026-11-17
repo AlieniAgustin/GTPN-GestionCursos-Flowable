@@ -29,8 +29,8 @@ public final class TaskCatalog {
     );
 
     /**
-     * Tareas con pantalla propia. Todavía no implementadas: la bandeja las muestra pero
-     * las deriva a Flowable UI mientras tanto.
+     * Tareas con pantalla propia. Las que todavía no tienen su pantalla en el sitio
+     * (ver {@link #FORMULARIOS_EN_SITIO}) la bandeja las deriva a Flowable UI.
      */
     private static final Set<String> CON_FORMULARIO = Set.of(
             "registraryelaborarpropuesta",
@@ -41,12 +41,29 @@ public final class TaskCatalog {
             "enviarinformeaempresayarchivarexpediente"
     );
 
+    /**
+     * Tareas con formulario que ya tienen su pantalla en el sitio, con el tramo de la URL
+     * ({@code /tareas/{id}/<tramo>}) donde se completan.
+     */
+    private static final Map<String, String> FORMULARIOS_EN_SITIO = Map.of(
+            "evaluarrecursos", "evaluar-recursos",
+            "definirdocentequedesarrollaelcurso", "definir-docente"
+    );
+
     public static boolean seCompletaDirecto(String taskDefinitionKey) {
         return DIRECTAS.containsKey(taskDefinitionKey);
     }
 
     public static boolean necesitaFormulario(String taskDefinitionKey) {
         return CON_FORMULARIO.contains(taskDefinitionKey);
+    }
+
+    /**
+     * Tramo de la URL de la pantalla del sitio que completa la tarea, o {@code null} si
+     * la tarea todavía no tiene pantalla propia.
+     */
+    public static String formularioEnSitio(String taskDefinitionKey) {
+        return FORMULARIOS_EN_SITIO.get(taskDefinitionKey);
     }
 
     /**
