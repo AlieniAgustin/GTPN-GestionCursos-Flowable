@@ -53,7 +53,7 @@ Todo lo demás. Son datos de control de la ejecución: se consultan desde el his
 | Desarrollo | `docenteSeleccionado`, `cursoDesarrollado` |
 | Cierre | `informe`, `informeEnviado`, `expedienteArchivado`, `resultadoCurso` |
 | Cancelación | `cancelado`, `cursoActivo` |
-| Acceso de la empresa | `empresaAccesoHabilitado`, `empresaUsuario`, `empresaPasswordTemporal`, `empresaAccesoCreado`, `empresaId` |
+| Acceso de la empresa | `empresaAccesoHabilitado`, `empresaUsuario`, `empresaAccesoCreado`, `empresaId` (la contraseña temporal solo se emite en logs de simulación) |
 | Eco del alta | `courseId`, `courseName`, `companyName`, `companyEmail` |
 
 `listaDefinitiva` y los recursos quedan como variables **por decisión explícita del enunciado**, que lo permite. `informe` es el único dato que vive en los dos lados a propósito: como variable mientras el proceso lo necesita para la tarea de envío, y como columna porque la institución lo conserva.

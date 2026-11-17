@@ -2,15 +2,9 @@ package com.flowable.app.listeners;
 
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.ExecutionListener;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
 
-import com.flowable.app.dto.CourseStatusUpdateDTO;
+import com.flowable.app.client.BackendClient;
 
 @Component("updateCourseStatus")
 public class UpdateCourseStatusListener implements ExecutionListener {
@@ -20,10 +14,10 @@ public class UpdateCourseStatusListener implements ExecutionListener {
     // Variable que cada camino de cierre marca antes de terminar el proceso
     public static final String RESULT_VARIABLE = "resultadoCurso";
 
-    private final RestTemplate backendRestTemplate;
+    private final BackendClient backendClient;
 
-    public UpdateCourseStatusListener(@Qualifier("backendRestTemplate") RestTemplate backendRestTemplate) {
-        this.backendRestTemplate = backendRestTemplate;
+    public UpdateCourseStatusListener(BackendClient backendClient) {
+        this.backendClient = backendClient;
     }
 
     @Override
@@ -48,21 +42,9 @@ public class UpdateCourseStatusListener implements ExecutionListener {
         System.out.println("[INFO] Instancia: " + processInstanceId
                 + " | Resultado del curso: " + result);
 
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            backendRestTemplate.exchange(
-                    "/api/flowable/courses/{processId}",
-                    HttpMethod.PUT,
-                    new HttpEntity<>(new CourseStatusUpdateDTO(result.toString().trim()), headers),
-                    Void.class,
-                    processInstanceId);
-
+        if (backendClient.updateCourseStatus(processInstanceId, result.toString().trim())) {
             System.out.println("[INFO] Instancia: " + processInstanceId
                     + " | Estado del curso actualizado con éxito en Backend");
-        } catch (Exception e) {
-            System.err.println("[ERROR] Instancia: " + processInstanceId
-                    + " | Error al actualizar el estado del curso en Backend: " + e.getMessage());
         }
     }
 }

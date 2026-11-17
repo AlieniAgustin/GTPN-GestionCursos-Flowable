@@ -7,14 +7,9 @@ import java.time.format.DateTimeParseException;
 
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.ExecutionListener;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
 
+import com.flowable.app.client.BackendClient;
 import com.flowable.app.dto.CourseDetailsUpdateDTO;
 
 /**
@@ -32,6 +27,7 @@ import com.flowable.app.dto.CourseDetailsUpdateDTO;
  *
  * <p>Si el BFF no responde, la instancia sigue su curso y queda el aviso en el log: la
  * base de la institución es un registro paralelo, no una condición para avanzar.
+ * El HTTP lo resuelve {@link BackendClient}.
  */
 @Component("syncCourseDetails")
 public class SyncCourseDetailsListener implements ExecutionListener {
@@ -43,12 +39,10 @@ public class SyncCourseDetailsListener implements ExecutionListener {
     public static final String VAR_COURSE_DATE = "fechaCurso";
     public static final String VAR_REPORT = "informe";
 
-    private static final String DETAILS_PATH = "/api/flowable/courses/{processId}/details";
+    private final BackendClient backendClient;
 
-    private final RestTemplate backendRestTemplate;
-
-    public SyncCourseDetailsListener(@Qualifier("backendRestTemplate") RestTemplate backendRestTemplate) {
-        this.backendRestTemplate = backendRestTemplate;
+    public SyncCourseDetailsListener(BackendClient backendClient) {
+        this.backendClient = backendClient;
     }
 
     @Override
@@ -70,20 +64,9 @@ public class SyncCourseDetailsListener implements ExecutionListener {
             return;
         }
 
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            backendRestTemplate.exchange(
-                    DETAILS_PATH,
-                    HttpMethod.PUT,
-                    new HttpEntity<>(details, headers),
-                    Void.class,
-                    processInstanceId);
+        if (backendClient.syncCourseDetails(processInstanceId, details)) {
             System.out.println("[INFO] Instancia: " + processInstanceId
                     + " | Datos del curso sincronizados con la BD de la institución");
-        } catch (Exception e) {
-            System.err.println("[ERROR] Instancia: " + processInstanceId
-                    + " | No se pudieron sincronizar los datos del curso: " + e.getMessage());
         }
     }
 

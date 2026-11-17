@@ -254,7 +254,7 @@ Devuelve `{"username":"jefeadministrativo","role":"INSTITUCION","authenticated":
 curl -s -b cookies.txt http://localhost:8081/api/auth/me
 ```
 
-El usuario y la contraseña de una empresa salen de las variables `empresaUsuario` y `empresaPasswordTemporal` de su instancia, o del log del motor: el enunciado permite simular esa comunicación.
+El usuario y la contraseña de una empresa salen de los logs del motor/Docker al habilitarse el acceso (la contraseña temporal no se persiste en variables del proceso por seguridad): el enunciado permite simular esa comunicación.
 
 **Registrar una solicitud e iniciar su instancia** (§4.1.1). Devuelve `201` con el curso y el `processInstanceId` ya vinculado:
 
