@@ -388,6 +388,19 @@ a.boton {
 
 a.boton:hover { background: #00564a; }
 
+.aviso.bueno a {
+    color: inherit;
+    font-weight: 600;
+    margin-left: 0.4rem;
+}
+
+.formulario-tarea { margin-top: 1rem; }
+
+.observaciones {
+    margin: 0.3rem 0 0;
+    white-space: pre-line;
+}
+
 .opcion {
     display: flex;
     align-items: center;
