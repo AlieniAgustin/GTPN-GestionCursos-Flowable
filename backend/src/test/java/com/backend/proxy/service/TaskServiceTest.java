@@ -16,6 +16,8 @@ import com.backend.proxy.dto.task.FlowableTaskDTO;
 import com.backend.proxy.dto.task.FlowableTaskListDTO;
 import com.backend.proxy.dto.task.TaskDetailResponse;
 import com.backend.proxy.exception.ResourceNotFoundException;
+import com.backend.proxy.exception.TaskAlreadyClaimedException;
+import com.backend.proxy.exception.TaskNotClaimedException;
 import com.backend.proxy.repository.TeacherRepositoryStub;
 import com.backend.proxy.strategy.task.DefineTeacherStrategy;
 import com.backend.proxy.strategy.task.DeliverCourseStrategy;
@@ -105,14 +107,59 @@ class TaskServiceTest {
     }
 
     @Test
-    @DisplayName("4.1.3 Completar: la tarea propia se completa con sus variables")
+    @DisplayName("4.1.3 Completar: la tarea ya reclamada se completa con sus variables")
     void testCompleteOwnTask() {
-        stubTask(task("desarrollarcurso"));
+        stubTask(task("desarrollarcurso", "docente1"));
         stubInboxContaining(TASK_ID);
 
         taskService.complete(TASK_ID, Map.of("cursoDesarrollado", true), "docente1");
 
         verify(flowableClient).post(contains("/runtime/tasks/" + TASK_ID), any());
+    }
+
+    @Test
+    @DisplayName("2 Completar: una tarea de grupo sin reclamar no se completa")
+    void testCompleteRequiresClaimFirst() {
+        stubTask(task("prepararmateriales"));
+        stubInboxContaining(TASK_ID);
+
+        assertThrows(TaskNotClaimedException.class,
+                () -> taskService.complete(TASK_ID, Map.of(), "administrativo1"));
+
+        verify(flowableClient, never()).post(contains("/runtime/tasks/" + TASK_ID), any());
+    }
+
+    @Test
+    @DisplayName("2 Completar: una tarea reclamada por otro no la completa un tercero")
+    void testCompleteRejectsAnotherOwner() {
+        stubTask(task("prepararmateriales", "administrativo1"));
+        stubInboxContaining(TASK_ID);
+
+        assertThrows(TaskAlreadyClaimedException.class,
+                () -> taskService.complete(TASK_ID, Map.of(), "jefeadministrativo"));
+    }
+
+    @Test
+    @DisplayName("2 Reclamar: una tarea de grupo sin responsable se reclama")
+    void testClaimFreeTask() {
+        stubTask(task("prepararmateriales"));
+        stubInboxContaining(TASK_ID);
+
+        taskService.claim(TASK_ID, "administrativo1");
+
+        verify(flowableClient).post(contains("/runtime/tasks/" + TASK_ID), any());
+    }
+
+    @Test
+    @DisplayName("2 Reclamar: si otro se la quedó primero, no se pisa")
+    void testClaimAlreadyTakenTask() {
+        stubTask(task("prepararmateriales", "administrativo1"));
+        stubInboxContaining(TASK_ID);
+
+        assertThrows(TaskAlreadyClaimedException.class,
+                () -> taskService.claim(TASK_ID, "jefeadministrativo"));
+
+        verify(flowableClient, never()).post(contains("/runtime/tasks/" + TASK_ID), any());
     }
 
     @Test
@@ -126,7 +173,11 @@ class TaskServiceTest {
     }
 
     private FlowableTaskDTO task(String definitionKey) {
-        return new FlowableTaskDTO(TASK_ID, "Una tarea", definitionKey, null, "proc-1", "exec-1");
+        return task(definitionKey, null);
+    }
+
+    private FlowableTaskDTO task(String definitionKey, String assignee) {
+        return new FlowableTaskDTO(TASK_ID, "Una tarea", definitionKey, assignee, "proc-1", "exec-1");
     }
 
     private void stubTask(FlowableTaskDTO task) {
