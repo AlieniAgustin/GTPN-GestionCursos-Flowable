@@ -343,3 +343,47 @@ code.referencia {
     font-size: 0.8rem;
     color: var(--tinta-suave);
 }
+
+/* Bandeja de tareas */
+.lista-tareas {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.7rem;
+}
+
+.tarea {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1rem 1.2rem;
+}
+
+.tarea form { margin: 0; }
+
+.tarea-datos {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.tarea-nombre { font-weight: 600; }
+
+.tarea-curso {
+    font-size: 0.85rem;
+    color: var(--tinta-suave);
+}
+
+button.chico {
+    padding: 0.4rem 0.9rem;
+    font-size: 0.9rem;
+}
+
+.nota {
+    font-size: 0.82rem;
+    color: var(--tinta-suave);
+    font-style: italic;
+}

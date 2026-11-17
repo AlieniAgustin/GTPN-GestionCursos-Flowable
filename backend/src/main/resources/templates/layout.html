@@ -14,7 +14,7 @@
         <nav>
             <a th:href="@{/}">Inicio</a>
             <a sec:authorize="isAuthenticated()" th:href="@{/mis-cursos}">Mis cursos</a>
-            <a sec:authorize="hasRole('INSTITUCION')" th:href="@{/panel}">Mi panel</a>
+            <a sec:authorize="hasRole('INSTITUCION')" th:href="@{/tareas}">Mis tareas</a>
             <a sec:authorize="!isAuthenticated()" th:href="@{/login}">Ingresar</a>
             <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" class="en-linea">
                 <span class="usuario" sec:authentication="name">usuario</span>

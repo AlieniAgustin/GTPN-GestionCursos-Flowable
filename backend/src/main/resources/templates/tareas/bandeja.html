@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('Mis tareas', ~{::section})}">
+<body>
+<section>
+    <h1>Mis tareas</h1>
+    <p class="bajada">
+        Acá están las tareas que tenés asignadas y las que podés reclamar porque son de tu grupo.
+    </p>
+
+    <div class="aviso bueno" th:if="${mensaje}" th:text="${mensaje}">Listo</div>
+    <div class="aviso malo" th:if="${error}" th:text="${error}">Error</div>
+
+    <h2>Asignadas a mí</h2>
+    <div class="tarjeta" th:if="${#lists.isEmpty(mias)}">
+        <p>No tenés tareas pendientes.</p>
+    </div>
+
+    <ul class="lista-tareas" th:unless="${#lists.isEmpty(mias)}">
+        <li class="tarjeta tarea" th:each="t : ${mias}">
+            <div class="tarea-datos">
+                <span class="tarea-nombre" th:text="${t.nombre()}">Registrar y Elaborar propuesta</span>
+                <span class="tarea-curso" th:if="${t.curso() != null}" th:text="${t.curso()}">Curso</span>
+            </div>
+
+            <form th:if="${t.sePuedeCompletar()}"
+                  th:action="@{/tareas/{id}/completar(id=${t.id()})}" method="post">
+                <button type="submit" class="principal chico">Completar</button>
+            </form>
+
+            <span class="nota" th:if="${t.necesitaFormulario()}">
+                Se completa desde Flowable UI
+            </span>
+        </li>
+    </ul>
+
+    <h2>Disponibles para mi grupo</h2>
+    <div class="tarjeta" th:if="${#lists.isEmpty(delGrupo)}">
+        <p>No hay tareas para reclamar.</p>
+    </div>
+
+    <ul class="lista-tareas" th:unless="${#lists.isEmpty(delGrupo)}">
+        <li class="tarjeta tarea" th:each="t : ${delGrupo}">
+            <div class="tarea-datos">
+                <span class="tarea-nombre" th:text="${t.nombre()}">Preparar materiales</span>
+                <span class="tarea-curso" th:if="${t.curso() != null}" th:text="${t.curso()}">Curso</span>
+            </div>
+
+            <form th:action="@{/tareas/{id}/reclamar(id=${t.id()})}" method="post">
+                <button type="submit" class="principal chico">Reclamar</button>
+            </form>
+        </li>
+    </ul>
+</section>
+</body>
+</html>
