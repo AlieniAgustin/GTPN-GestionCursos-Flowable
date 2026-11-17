@@ -15,7 +15,7 @@ Checklist del equipo, derivada del enunciado [`docs/ProyectoCursos_V3.pdf`](docs
 | 1. Motor y modelo BPMN | Completo |
 | 2. BD de la institución | Completo |
 | 3. Backend BFF | Completo |
-| 4. Sitio web institucional | En curso — sección pública y login listos |
+| 4. Sitio web institucional | En curso — público, login y acceso de empresas listos |
 | 5. App Java (API Java) | Completo |
 | 6. App de comunicaciones (API REST) | Completo |
 | 7. Análisis de ejecuciones | Completo |
@@ -80,9 +80,9 @@ La cadena de seguridad quedó partida en tres ([`SecurityConfig`](backend/src/ma
 **Acceso de empresas**
 
 - [x] **Login** unificado en `/login` para los dos tipos de usuario, con [`SiteAuthenticationProvider`](backend/src/main/java/com/backend/proxy/security/SiteAuthenticationProvider.java) delegando en el mismo `AuthenticationService.resolveRole` que usa la API, para no duplicar la decisión de quién entra. Verificado en el navegador. ( )
-- [ ] **Consultar sus cursos** — solo los propios. ( )
-- [ ] **Ver el estado** de un curso: en preparación, confirmado y pendiente de inicio, en desarrollo, en elaboración del informe, finalizado o cancelado. ( )
-- [ ] Durante la preparación, **listar las actividades pendientes o en ejecución**, contemplando que varias corren en paralelo. ( )
+- [x] **Consultar sus cursos** en `/mis-cursos`, solo los propios. La visibilidad la resuelve `CourseService`, así que no hay lógica duplicada: pedir el curso de otra empresa da **404 y no 403**, para no revelar que existe. El personal de la institución entra a la misma pantalla y ve todos. Verificado en el navegador: `acme-sa` ve sus 3 cursos y recibe 404 en el 53, que es de Molinos del Sur. ( )
+- [x] **Ver el estado** de cada curso. Esto **no estaba en la base**: `courses.status` solo guarda cómo terminó el trámite y recién cuando cerró. El estado en vivo lo deduce [`CourseProgressService`](backend/src/main/java/com/backend/proxy/service/CourseProgressService.java) a partir de las actividades que el motor tiene abiertas, y se expone como [`CourseStage`](backend/src/main/java/com/backend/proxy/types/CourseStage.java) con los seis estados del enunciado más los previos a la aceptación (*En evaluación*, *Propuesta enviada*) y los otros cierres. Se evalúa de la etapa más avanzada a la más temprana, así una instancia con varias actividades abiertas no reporta una etapa vieja. ( )
+- [x] **Listar las actividades pendientes o en ejecución**, con las ramas paralelas. Salen de `historic-activity-instances?finished=false`, filtrando el subproceso contenedor y las compuertas, que están activos pero no son algo que la empresa esté esperando. Verificado en el navegador: el curso en preparación muestra *Evaluar Recursos*, *Preparar materiales* y *Recibir nómina* a la vez. El motor se consulta **una sola vez por página** y se agrupa en memoria, para no disparar una llamada por curso. Si el motor no responde, el sitio sigue mostrando lo que hay en la base. ( )
 
 **Funciones para Administración** (ingresan con su usuario y contraseña de Flowable, §3.3)
 
