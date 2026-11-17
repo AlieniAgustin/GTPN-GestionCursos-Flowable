@@ -15,6 +15,20 @@ public final class Roles {
     public static final String ROLE_INSTITUCION = "ROLE_" + INSTITUCION;
     public static final String ROLE_EMPRESA = "ROLE_" + EMPRESA;
 
+    /**
+     * Si el usuario autenticado es una empresa. Decide, entre otras cosas, si ve solo sus
+     * cursos o todos (enunciado 4.1.2).
+     */
+    public static boolean isCompany(org.springframework.security.core.Authentication authentication) {
+        return hasRole(authentication, ROLE_EMPRESA);
+    }
+
+    public static boolean hasRole(
+            org.springframework.security.core.Authentication authentication, String role) {
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> role.equals(authority.getAuthority()));
+    }
+
     private Roles() {
     }
 }

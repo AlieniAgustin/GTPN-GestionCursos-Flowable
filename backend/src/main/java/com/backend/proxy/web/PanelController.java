@@ -20,13 +20,12 @@ public class PanelController {
 
     @GetMapping("/panel")
     public String panel(Authentication authentication, Model model) {
-        model.addAttribute("usuario", authentication.getName());
-        model.addAttribute("esEmpresa", tieneRol(authentication, Roles.ROLE_EMPRESA));
-        return "panel/inicio";
-    }
+        // La empresa no tiene más pantallas que sus cursos: se va derecho ahí
+        if (Roles.isCompany(authentication)) {
+            return "redirect:/mis-cursos";
+        }
 
-    private boolean tieneRol(Authentication authentication, String rol) {
-        return authentication.getAuthorities().stream()
-                .anyMatch(authority -> rol.equals(authority.getAuthority()));
+        model.addAttribute("usuario", authentication.getName());
+        return "panel/inicio";
     }
 }

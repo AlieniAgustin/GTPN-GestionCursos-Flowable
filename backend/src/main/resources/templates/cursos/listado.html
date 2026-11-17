@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('Mis cursos', ~{::section})}">
+<body>
+<section>
+    <h1 th:text="${esEmpresa} ? 'Mis cursos' : 'Cursos de la institución'">Mis cursos</h1>
+    <p class="bajada" th:if="${esEmpresa}">
+        Acá podés seguir el estado de cada capacitación que solicitaste.
+    </p>
+    <p class="bajada" th:unless="${esEmpresa}">
+        Todas las solicitudes registradas, con el punto del proceso en el que están.
+    </p>
+
+    <div class="tarjeta" th:if="${#lists.isEmpty(cursos)}">
+        <p>Todavía no hay cursos para mostrar.</p>
+        <p class="acciones"><a th:href="@{/}">Solicitar una capacitación</a></p>
+    </div>
+
+    <ul class="lista-cursos" th:unless="${#lists.isEmpty(cursos)}">
+        <li class="tarjeta curso" th:each="vista : ${cursos}">
+            <div class="curso-cabecera">
+                <h2 class="curso-titulo">
+                    <a th:href="@{/mis-cursos/{id}(id=${vista.curso().id()})}"
+                       th:text="${vista.curso().name()}">Introducción a BPMN</a>
+                </h2>
+                <span class="chip"
+                      th:classappend="${vista.estado().closed} ? 'chip-cerrado' : 'chip-activo'"
+                      th:text="${vista.estado().label}">En preparación</span>
+            </div>
+
+            <p class="curso-meta">
+                <span th:unless="${esEmpresa}" th:text="${vista.curso().companyName()}">ACME SA</span>
+                <span th:if="${vista.curso().agreedDate() != null}"
+                      th:text="|Inicio: ${vista.curso().agreedDate()}|">Inicio: 2027-03-01</span>
+            </p>
+
+            <p class="curso-estado" th:text="${vista.estado().description}">Descripción del estado</p>
+
+            <p class="curso-actividades" th:if="${vista.tieneActividades()}">
+                <span class="etiqueta">En curso ahora:</span>
+                <span th:each="actividad, iter : ${vista.actividades()}">
+                    <span th:text="${actividad.activityName()}">Preparar materiales</span><span
+                          th:if="${!iter.last}">, </span>
+                </span>
+            </p>
+        </li>
+    </ul>
+</section>
+</body>
+</html>

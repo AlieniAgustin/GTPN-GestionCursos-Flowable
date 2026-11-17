@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page(${vista.curso().name()}, ~{::section})}">
+<body>
+<section>
+    <p class="volver"><a th:href="@{/mis-cursos}">← Volver a mis cursos</a></p>
+
+    <div class="curso-cabecera">
+        <h1 th:text="${vista.curso().name()}">Introducción a BPMN</h1>
+        <span class="chip"
+              th:classappend="${vista.estado().closed} ? 'chip-cerrado' : 'chip-activo'"
+              th:text="${vista.estado().label}">En preparación</span>
+    </div>
+    <p class="bajada" th:text="${vista.estado().description}">Descripción del estado</p>
+
+    <div class="tarjeta">
+        <dl class="datos">
+            <dt>Empresa</dt>
+            <dd th:text="${vista.curso().companyName()}">ACME SA</dd>
+
+            <dt>Descripción</dt>
+            <dd th:text="${vista.curso().description()}">Modelado de procesos</dd>
+
+            <dt>Fechas propuestas</dt>
+            <dd th:text="${#lists.isEmpty(vista.curso().possibleDates())}
+                         ? '—'
+                         : ${#strings.listJoin(vista.curso().possibleDates(), ', ')}">2027-03-01</dd>
+
+            <dt th:if="${vista.curso().agreedDate() != null}">Fecha acordada</dt>
+            <dd th:if="${vista.curso().agreedDate() != null}"
+                th:text="${vista.curso().agreedDate()}">2027-03-01</dd>
+
+            <dt th:if="${vista.curso().program() != null}">Programa</dt>
+            <dd th:if="${vista.curso().program() != null}"
+                th:text="${vista.curso().program()}">4 módulos, 16 horas</dd>
+
+            <dt th:if="${vista.curso().budget() != null}">Presupuesto</dt>
+            <dd th:if="${vista.curso().budget() != null}"
+                th:text="${vista.curso().budget()}">180000.00</dd>
+
+            <dt>Nº de solicitud</dt>
+            <dd><code class="referencia" th:text="${vista.curso().id()}">52</code></dd>
+        </dl>
+    </div>
+
+    <h2 th:if="${vista.tieneActividades()}">Actividades en curso</h2>
+    <p class="bajada" th:if="${vista.tieneActividades()}">
+        Durante la preparación varias actividades avanzan en paralelo, así que puede haber
+        más de una a la vez.
+    </p>
+    <ul class="actividades" th:if="${vista.tieneActividades()}">
+        <li th:each="actividad : ${vista.actividades()}">
+            <span class="actividad-nombre" th:text="${actividad.activityName()}">Preparar materiales</span>
+            <span class="actividad-tipo"
+                  th:text="${actividad.activityType() == 'userTask'}
+                           ? 'Tarea pendiente'
+                           : 'Esperando'">Tarea pendiente</span>
+        </li>
+    </ul>
+
+    <div th:if="${vista.curso().report() != null}">
+        <h2>Informe de resultados</h2>
+        <div class="tarjeta">
+            <p th:text="${vista.curso().report()}">Contenido del informe</p>
+        </div>
+    </div>
+</section>
+</body>
+</html>

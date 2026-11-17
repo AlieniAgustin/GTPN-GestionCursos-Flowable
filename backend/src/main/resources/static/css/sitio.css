@@ -241,3 +241,105 @@ code.referencia {
     color: var(--acento);
     font-weight: 600;
 }
+
+/* Listado y detalle de cursos */
+.lista-cursos {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1rem;
+}
+
+.curso-cabecera {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.curso-titulo { font-size: 1.1rem; margin: 0; }
+
+.curso-titulo a {
+    color: var(--tinta);
+    text-decoration: none;
+}
+
+.curso-titulo a:hover { color: var(--acento); }
+
+.chip {
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.chip-activo {
+    background: var(--acento-claro);
+    color: var(--acento);
+}
+
+.chip-cerrado {
+    background: #eceff2;
+    color: var(--tinta-suave);
+}
+
+.curso-meta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin: 0.4rem 0 0;
+    font-size: 0.85rem;
+    color: var(--tinta-suave);
+}
+
+.curso-estado { margin: 0.6rem 0 0; }
+
+.curso-actividades {
+    margin: 0.8rem 0 0;
+    font-size: 0.9rem;
+    color: var(--tinta-suave);
+}
+
+.etiqueta {
+    font-weight: 600;
+    color: var(--tinta);
+}
+
+.volver { margin: 0 0 1rem; }
+
+.volver a {
+    color: var(--acento);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.actividades {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+}
+
+.actividades li {
+    background: var(--papel);
+    border: 1px solid var(--borde);
+    border-left: 3px solid var(--acento);
+    border-radius: 6px;
+    padding: 0.7rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.actividad-nombre { font-weight: 600; }
+
+.actividad-tipo {
+    font-size: 0.8rem;
+    color: var(--tinta-suave);
+}

@@ -5,15 +5,13 @@
 <section>
     <h1>Hola, <span th:text="${usuario}">usuario</span></h1>
 
-    <p class="bajada" th:if="${esEmpresa}">
-        Desde acá vas a poder seguir el estado de los cursos que contrataste.
-    </p>
-    <p class="bajada" th:unless="${esEmpresa}">
+    <p class="bajada">
         Desde acá vas a poder ver tus tareas pendientes y las disponibles para tu grupo.
     </p>
 
     <div class="tarjeta">
-        <p>Las pantallas de esta sección todavía están en construcción.</p>
+        <p>La bandeja de tareas todavía está en construcción.</p>
+        <p class="acciones"><a th:href="@{/mis-cursos}">Ver todos los cursos</a></p>
     </div>
 </section>
 </body>
