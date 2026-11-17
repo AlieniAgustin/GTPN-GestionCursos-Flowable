@@ -14,6 +14,7 @@ import com.backend.proxy.dto.course.ActivityDTO;
 import com.backend.proxy.security.Roles;
 import com.backend.proxy.service.CourseProgressService;
 import com.backend.proxy.service.CourseService;
+import com.backend.proxy.service.ProposalService;
 import com.backend.proxy.web.view.CursoVista;
 
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class CourseSiteController {
 
     private final CourseService courseService;
     private final CourseProgressService progressService;
+    private final ProposalService proposalService;
 
     @GetMapping("/mis-cursos")
     public String listado(Authentication authentication, Model model) {
@@ -60,6 +62,7 @@ public class CourseSiteController {
 
         model.addAttribute("esEmpresa", esEmpresa);
         model.addAttribute("vista", toVista(curso, progressService.findActiveActivities()));
+        model.addAttribute("propuestas", proposalService.versionesDe(courseId));
         return "cursos/detalle";
     }
 
