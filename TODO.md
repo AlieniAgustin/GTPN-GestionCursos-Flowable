@@ -92,12 +92,12 @@ La cadena de seguridad quedó partida en tres ([`SecurityConfig`](backend/src/ma
 - [ ] Completar *Revisar propuesta* **generando una nueva versión del PDF**. ( )
 - [ ] Completar *Archivar solicitud*. ( )
 - [ ] Completar *Confeccionar lista definitiva*. ( )
-- [ ] Completar *Evaluar recursos* con una pantalla que permita elegir aula física, aula virtual y/o equipamiento especial — **al menos una alternativa**. ( )
+- [x] Completar *Evaluar recursos* con una pantalla que permita elegir aula física, aula virtual y/o equipamiento especial — **al menos una alternativa**. Pantalla `/tareas/{id}/evaluar-recursos` en [`TaskFormSiteController`](backend/src/main/java/com/backend/proxy/web/TaskFormSiteController.java), a la que se llega desde el botón *Completar* de la bandeja una vez reclamada. Sin ninguna opción marcada vuelve al formulario con el error y no completa nada. Siempre manda las tres variables del gateway inclusivo (`requiereAula`, `requierePlataforma`, `requiereEquipamiento`), aunque sean `false`, para que el motor no falle con *Unknown property*. Verifica que la tarea sea de ese tipo y visible para el usuario. Verificado contra el stack: con *Aula virtual* el proceso abrió *Solicitar Aula Virtual*. (Agustin Cesari)
 - [ ] Permitir al jefe administrativo ver el informe y completar *Enviar informe a empresa y archivar expediente*. ( )
 
 **Funciones para el Equipo Docente**
 
-- [ ] Jefe docente: consultar sus tareas *Definir docente que desarrolla el curso*, **seleccionar uno de los tres docentes (puede elegirse a sí mismo), asignarlo a la tarea *Desarrollar curso*** y completar. ( )
+- [x] Jefe docente: consultar sus tareas *Definir docente que desarrolla el curso*, **seleccionar uno de los tres docentes (puede elegirse a sí mismo), asignarlo a la tarea *Desarrollar curso*** y completar. Pantalla `/tareas/{id}/definir-docente` con un desplegable de `TeacherRepository.findAvailableTeachers()` (jefedocente, docente1 y docente2). Solo acepta a alguien de esa lista y completa con `docenteSeleccionado`, que el modelo usa como responsable de *Desarrollar curso*. Verificado contra el stack: con docente2 elegido, *Desarrollar curso* le quedó asignada a docente2. `TaskFormSiteControllerTest` cubre las dos pantallas (13 tests) y la bandeja suma un test del enlace; el backend queda en 75 tests pasando. (Agustin Cesari)
 - [ ] Docente seleccionado: consultar sus tareas *Desarrollar curso* y completarlas. ( )
 
 > *Solicitar aula virtual*, *Contratar equipamiento* y *Liberar equipamiento* pueden hacerse desde Flowable UI, no hace falta pantalla propia. *Elaborar informe de resultados* también puede hacerse desde Flowable UI (el PDF del informe ya no es obligatorio).
