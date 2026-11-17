@@ -592,7 +592,7 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 
 | Enunciado                                | Qué falta                                                                                                                                            |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| § 4.1 Sitio web institucional            | Sección pública, login y acceso de empresas listos; faltan las pantallas de administración y equipo docente                                          |
+| § 4.1 Sitio web institucional            | Público, empresas y bandeja de tareas listos; faltan los formularios de cada tarea y el PDF de la propuesta                                          |
 | § 4.1.2 Acceso de la empresa             | La cuenta, el login y el listado de cursos propios ya funcionan por API; falta la pantalla                                                           |
 | § 4.1.3                                  | Generación del PDF de la propuesta y de sus nuevas versiones                                                                                         |
 | § 4.4 Minería de procesos                | No implementado el análisis con PM4Py (`exportar_history.py` / `analizar.py`) ni el CSV de la etapa de negociación                                   |

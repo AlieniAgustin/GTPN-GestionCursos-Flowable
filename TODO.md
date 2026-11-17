@@ -15,7 +15,7 @@ Checklist del equipo, derivada del enunciado [`docs/ProyectoCursos_V3.pdf`](docs
 | 1. Motor y modelo BPMN | Completo |
 | 2. BD de la institución | Completo |
 | 3. Backend BFF | Completo |
-| 4. Sitio web institucional | En curso — público, login y acceso de empresas listos |
+| 4. Sitio web institucional | En curso — público, empresas y bandeja de tareas listos |
 | 5. App Java (API Java) | Completo |
 | 6. App de comunicaciones (API REST) | Completo |
 | 7. Análisis de ejecuciones | Completo |
@@ -86,8 +86,9 @@ La cadena de seguridad quedó partida en tres ([`SecurityConfig`](backend/src/ma
 
 **Funciones para Administración** (ingresan con su usuario y contraseña de Flowable, §3.3)
 
-- [ ] Consultar **tareas asignadas y disponibles para su grupo**. ( )
-- [ ] **Reclamar y completar** tareas respetando las responsabilidades. Las asignadas directamente a un usuario no requieren reclamo. ( )
+- [x] Consultar **tareas asignadas y disponibles para su grupo** en `/tareas`. La bandeja las muestra en dos listas separadas, porque el enunciado trata los dos casos distinto. Cada tarea indica a qué curso pertenece, resuelto con una sola consulta de cursos por página. Es la misma pantalla para Administración y para el equipo docente: cada uno ve lo suyo según sus grupos. ( )
+- [x] **Reclamar y completar** respetando las responsabilidades. `TaskService` suma `claim()` y dos reglas del enunciado 2 que antes no estaban: una tarea de grupo **no se completa sin reclamarla primero**, y una tarea con responsable **solo la completa esa persona**. Las asignadas directamente a un jefe no requieren reclamo y aparecen listas para completar. Verificado contra el stack: completar sin reclamar responde *"Primero tenés que reclamar la tarea 'Preparar materiales'"*, `administrativo1` la reclama y la completa, y `jefeadministrativo` no puede ni reclamarla ni completarla. ( )
+- [x] Las tareas que **sí** se completan desde la bandeja son las de confirmación, catalogadas en [`TaskCatalog`](backend/src/main/java/com/backend/proxy/types/TaskCatalog.java) junto con las variables que dejan. Las que necesitan capturar datos aparecen marcadas *"Se completa desde Flowable UI"* hasta que tengan su formulario. ( )
 - [ ] Completar *Registrar y elaborar propuesta* con formulario y **generar el PDF** de la propuesta. ( )
 - [ ] Completar *Revisar propuesta* **generando una nueva versión del PDF**. ( )
 - [ ] Completar *Archivar solicitud*. ( )
