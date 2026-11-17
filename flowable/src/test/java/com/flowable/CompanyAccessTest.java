@@ -64,7 +64,7 @@ class CompanyAccessTest {
     @Test
     @DisplayName("4.1.2 Company access: a new company gets an account and its credentials")
     void testAccountIsCreatedForANewCompany() {
-        stubAccess(new CompanyAccessResponseDTO(7L, "ACME S.A.", "acme-sa", "Abc123xyz789", true));
+        stubAccess(new CompanyAccessResponseDTO("acme-sa", true));
 
         String processInstanceId = acceptProposal();
 
@@ -74,9 +74,6 @@ class CompanyAccessTest {
         assertEquals(true, runtimeService.getVariable(processInstanceId, "empresaAccesoHabilitado"));
         assertEquals(true, runtimeService.getVariable(processInstanceId, "empresaAccesoCreado"));
         assertEquals("acme-sa", runtimeService.getVariable(processInstanceId, "empresaUsuario"));
-        assertEquals(7L, runtimeService.getVariable(processInstanceId, "empresaId"));
-        // Comunicación simulada de las credenciales (enunciado 4.1.2)
-        assertEquals("Abc123xyz789", runtimeService.getVariable(processInstanceId, "empresaPasswordTemporal"));
 
         assertInPreparation(processInstanceId);
     }
@@ -84,15 +81,13 @@ class CompanyAccessTest {
     @Test
     @DisplayName("4.1.2 Company access: a returning company reuses its account, no new password")
     void testAccountIsReusedForAReturningCompany() {
-        stubAccess(new CompanyAccessResponseDTO(7L, "ACME S.A.", "acme-sa", null, false));
+        stubAccess(new CompanyAccessResponseDTO("acme-sa", false));
 
         String processInstanceId = acceptProposal();
 
         assertEquals(true, runtimeService.getVariable(processInstanceId, "empresaAccesoHabilitado"));
         assertEquals(false, runtimeService.getVariable(processInstanceId, "empresaAccesoCreado"));
         assertEquals("acme-sa", runtimeService.getVariable(processInstanceId, "empresaUsuario"));
-        assertNull(runtimeService.getVariable(processInstanceId, "empresaPasswordTemporal"),
-                "A reused account should not hand out a new password");
 
         assertInPreparation(processInstanceId);
     }

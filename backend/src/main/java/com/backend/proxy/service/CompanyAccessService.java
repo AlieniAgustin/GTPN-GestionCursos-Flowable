@@ -3,6 +3,8 @@ package com.backend.proxy.service;
 import java.security.SecureRandom;
 import java.text.Normalizer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class CompanyAccessService {
 
+    private static final Logger log = LoggerFactory.getLogger(CompanyAccessService.class);
     private static final String PASSWORD_ALPHABET = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static final int PASSWORD_LENGTH = 12;
 
@@ -47,10 +50,11 @@ public class CompanyAccessService {
                         "No course linked to process instance " + processInstanceId));
         Company company = course.getCompany();
 
-        // Ya contrato antes: se reutiliza la cuenta y el curso nuevo queda vinculado a ella
+        // Ya contrató antes: se reutiliza la cuenta y el curso nuevo queda vinculado a ella
         if (company.hasAccess()) {
-            return new CompanyAccessResponseDTO(
-                    company.getId(), company.getName(), company.getAccessUsername(), null, false);
+            log.info("[INFO] Reutilizando cuenta existente para '{}': usuario='{}'",
+                    company.getName(), company.getAccessUsername());
+            return new CompanyAccessResponseDTO(company.getAccessUsername(), false);
         }
 
         String username = buildUsername(company);
@@ -58,8 +62,11 @@ public class CompanyAccessService {
         company.enableAccess(username, passwordEncoder.encode(password));
         companyRepository.save(company);
 
-        return new CompanyAccessResponseDTO(
-                company.getId(), company.getName(), username, password, true);
+        // Simulación de la comunicación de las credenciales a la empresa (enunciado 4.1.2)
+        log.info("[SIMULACIÓN COMUNICACIÓN 4.1.2] Cuenta creada para '{}': usuario='{}' | password='{}'",
+                company.getName(), username, password);
+
+        return new CompanyAccessResponseDTO(username, true);
     }
 
     /**
