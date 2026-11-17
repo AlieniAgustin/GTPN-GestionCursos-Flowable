@@ -15,7 +15,7 @@ Checklist del equipo, derivada del enunciado [`docs/ProyectoCursos_V3.pdf`](docs
 | 1. Motor y modelo BPMN | Completo |
 | 2. BD de la institución | Completo |
 | 3. Backend BFF | Completo |
-| 4. Sitio web institucional | No empezado |
+| 4. Sitio web institucional | En curso — sección pública y login listos |
 | 5. App Java (API Java) | Completo |
 | 6. App de comunicaciones (API REST) | Completo |
 | 7. Análisis de ejecuciones | Completo |
@@ -68,16 +68,18 @@ Completo. El BFF autentica a los dos tipos de usuario, opera contra el motor y r
 
 ## 4. Sitio web de la institución (§4.1)
 
-No empezado. Interactúa con Flowable vía API REST.
+En curso. Son páginas server-side con **Thymeleaf dentro del módulo `backend`**: mismo Maven, mismo contenedor y misma sesión que la API, así que no hay CORS, ni Node, ni un servicio más que levantar. Los estilos están en [`static/css/sitio.css`](backend/src/main/resources/static/css/sitio.css) y las plantillas en [`templates/`](backend/src/main/resources/templates/).
+
+La cadena de seguridad quedó partida en tres ([`SecurityConfig`](backend/src/main/java/com/backend/proxy/security/SecurityConfig.java)): `/api/flowable/**` por API key, `/api/**` con 401 para los clientes REST, y el sitio con formulario de login y redirección. La API no cambió de comportamiento.
 
 **Sección pública**
 
-- [ ] Formulario de **solicitud de capacitación** con: datos de la empresa y del contacto, temática y descripción, cantidad estimada de participantes y fechas preferidas. Los DTOs de validación ya existen (`CourseRequestDTO`, `CompanyContactDTO`). ( )
-- [ ] Al enviarlo: **registrar la información e iniciar la instancia** del proceso (mensaje `Solicitud de curso`). ( )
+- [x] Formulario de **solicitud de capacitación** con datos de la empresa y del contacto, temática, descripción, cantidad de participantes y fechas preferidas. Es un form bean plano ([`SolicitudForm`](backend/src/main/java/com/backend/proxy/web/form/SolicitudForm.java)) porque un formulario HTML no manda objetos anidados ni listas tipadas; las fechas llegan como texto separado por comas y se parsean a mano para poder decir *"No se entendió la fecha '01/03/2027'"* en vez de tirar un error de binding. Los errores se muestran sobre cada campo y no se pierde lo cargado. ( )
+- [x] Al enviarlo: **registra la solicitud e inicia la instancia**. Reutiliza `CourseService.processCourse`, así que el curso queda en la BD de la institución con su `process_instance_id` y el proceso arranca por el mensaje `Solicitud de curso`. Verificado de punta a punta: la solicitud 102 de "Textiles Andinas" quedó en la base y dejó la tarea *Registrar y elaborar propuesta* en la bandeja del jefe administrativo. **Es el escenario 9 de la defensa.** Si el motor no responde, se avisa sin perder el formulario. ( )
 
 **Acceso de empresas**
 
-- [ ] Login de la empresa con las credenciales creadas por *Habilitar acceso* (bloque 1). ( )
+- [x] **Login** unificado en `/login` para los dos tipos de usuario, con [`SiteAuthenticationProvider`](backend/src/main/java/com/backend/proxy/security/SiteAuthenticationProvider.java) delegando en el mismo `AuthenticationService.resolveRole` que usa la API, para no duplicar la decisión de quién entra. Verificado en el navegador. ( )
 - [ ] **Consultar sus cursos** — solo los propios. ( )
 - [ ] **Ver el estado** de un curso: en preparación, confirmado y pendiente de inicio, en desarrollo, en elaboración del informe, finalizado o cancelado. ( )
 - [ ] Durante la preparación, **listar las actividades pendientes o en ejecución**, contemplando que varias corren en paralelo. ( )

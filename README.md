@@ -45,7 +45,8 @@ Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripc
 | `http://localhost:8080/process-api/**`                   | **API REST oficial de Flowable**: desplegar procesos, iniciar instancias, consultar y completar tareas. Es la que consumen las apps externas         | —                                                   |
 | `http://localhost:8088/flowable-ui/`                     | **Flowable UI**: Task App (bandeja de tareas), Modeler, Admin App e IDM App (usuarios y grupos). Sirve para operar el proceso a mano durante la demo | Docker                                              |
 | `localhost:5432`                                         | **PostgreSQL**: base compartida por el motor y la UI                                                                                                 | Docker                                              |
-| `http://localhost:8081`                                  | **Backend BFF**: intermediario entre las apps externas y Flowable; contiene la BD de la institución (empresas y cursos)                              | Docker                                              |
+| `http://localhost:8081`                                  | **Sitio web institucional**: portada pública para solicitar capacitaciones y acceso con credenciales (§4.1)                                         | Docker                                              |
+| `http://localhost:8081/api/**`                           | **Backend BFF**: API que consumen el sitio y las apps externas; contiene la BD de la institución (empresas y cursos)                                 | Docker                                              |
 | `http://localhost:8081/api/flowable/**`                  | API interna que usa el motor para volcar a la BD de la institución el estado del curso, sus datos (programa, presupuesto, fecha, informe) y el acceso de la empresa. Protegida por API key | —                           |
 
 > [!NOTE]
@@ -67,7 +68,8 @@ Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripc
 | `localhost:5432` (PostgreSQL)                       | `flowable`           | `flowable`            | Base `flowable`. Definido en [`docker-compose.yml`](docker-compose.yml)                                                                                       |
 | Backend → Flowable (cuenta técnica)                 | `admin`              | `test`                | `flowable.username` / `flowable.password` en [`backend/src/main/resources/application.properties`](backend/src/main/resources/application.properties)         |
 | `http://localhost:8081/api/flowable/**`             | header `X-API-KEY`   | `flowable-secret-key` | Autentica al motor contra el backend. Definido en [`flowable/.../application.properties`](flowable/src/main/resources/application.properties) y en el backend |
-| `http://localhost:8081/api/auth/login`              | los mismos de arriba | los mismos de arriba  | El BFF valida las credenciales contra el `/me` de Flowable y abre sesión (`JSESSIONID`)                                                                       |
+| `http://localhost:8081/login`                       | los mismos de arriba | los mismos de arriba  | Login del sitio. Acepta tanto al personal de la institución como a las empresas                                                                               |
+| `http://localhost:8081/api/auth/login`              | los mismos de arriba | los mismos de arriba  | El mismo login, para clientes REST. Abre sesión (`JSESSIONID`)                                                                                                |
 
 **De dónde sale cada uno:**
 
@@ -590,7 +592,7 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 
 | Enunciado                                | Qué falta                                                                                                                                            |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| § 4.1 Sitio web institucional            | No desarrollado: sección pública de solicitud + acceso por credenciales para empresas y administración                                               |
+| § 4.1 Sitio web institucional            | Sección pública y login listos; faltan las pantallas de empresas, administración y equipo docente                                                    |
 | § 4.1.2 Acceso de la empresa             | La cuenta, el login y el listado de cursos propios ya funcionan por API; falta la pantalla                                                           |
 | § 4.1.3                                  | Generación del PDF de la propuesta y de sus nuevas versiones                                                                                         |
 | § 4.4 Minería de procesos                | No implementado el análisis con PM4Py (`exportar_history.py` / `analizar.py`) ni el CSV de la etapa de negociación                                   |
