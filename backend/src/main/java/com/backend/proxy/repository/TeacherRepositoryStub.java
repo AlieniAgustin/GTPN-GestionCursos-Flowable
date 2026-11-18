@@ -6,14 +6,6 @@ import org.springframework.stereotype.Repository;
 
 import com.backend.proxy.dto.task.TeacherDTO;
 
-/**
- * Teaching staff catalog.
- *
- * <p>The enunciado (section 2) fixes the team at three people, the team lead included, and
- * section 3.3 says institutional staff authenticate with their Flowable credentials rather
- * than with accounts of the institution's own database. So the catalog mirrors the user ids
- * seeded into the engine; there is no separate teachers table to query.
- */
 @Repository
 public class TeacherRepositoryStub implements TeacherRepository {
 

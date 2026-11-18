@@ -7,20 +7,24 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Configuration
 @EnableWebSecurity
@@ -76,15 +80,25 @@ public class SecurityConfig {
     }
 
     /**
-     * Sesión estándar de Spring Security: {@code POST /api/auth/login} valida contra el
-     * IDM de Flowable y guarda el SecurityContext en la HttpSession, así que el resto de
-     * las llamadas solo necesitan la cookie JSESSIONID.
+     * Sesión estándar de Spring Security para la API REST: {@code POST /api/auth/login}
+     * es interceptado por {@link JsonAuthenticationFilter}, que valida contra el IDM
+     * de Flowable o BD de empresas, y guarda el SecurityContext en la HttpSession.
+     * Las llamadas siguientes solo necesitan la cookie JSESSIONID.
      */
     @Bean
     @Order(2)
     public SecurityFilterChain applicationSecurity(
-            HttpSecurity http
+            HttpSecurity http,
+            SiteAuthenticationProvider siteAuthenticationProvider,
+            ObjectMapper objectMapper
     ) throws Exception {
+        AuthenticationManager authenticationManager = new ProviderManager(siteAuthenticationProvider);
+        JsonAuthenticationFilter jsonAuthenticationFilter = new JsonAuthenticationFilter(
+                "/api/auth/login",
+                authenticationManager,
+                objectMapper
+        );
+
         return http
             .securityMatcher("/api/**")
             .cors(Customizer.withDefaults())
@@ -98,6 +112,13 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(PUBLIC_URLS).permitAll()
                 .anyRequest().authenticated()
+            )
+            .addFilterBefore(jsonAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .logout(logout -> logout
+                .logoutUrl("/api/auth/logout")
+                .logoutSuccessHandler((request, response, authentication) -> {
+                    response.setStatus(HttpStatus.NO_CONTENT.value());
+                })
             )
             // Para una API, "no estás autenticado" es 401, no 403
             .exceptionHandling(handling -> handling

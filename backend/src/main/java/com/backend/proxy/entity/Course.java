@@ -56,7 +56,6 @@ public class Course {
     private CourseStatus status;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
     private List<LocalDate> possibleDates = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
