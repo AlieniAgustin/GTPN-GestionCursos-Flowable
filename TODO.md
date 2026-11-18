@@ -19,7 +19,7 @@ Checklist del equipo, derivada del enunciado [`docs/ProyectoCursos_V3.pdf`](docs
 | 5. App Java (API Java) | Completo |
 | 6. App de comunicaciones (API REST) | Completo |
 | 7. Análisis de ejecuciones | Completo |
-| 8. Minería de procesos | No empezado |
+| 8. Minería de procesos | Completo — 🔴 detectó un defecto en los recordatorios |
 | 9. Entrega y demo | Escenarios 1–8 cubiertos por tests; 9, 10 y 11 ya se pueden mostrar con el sitio y las dos apps |
 
 ---
@@ -166,21 +166,26 @@ java -cp materiales/target/app.jar com.materiales.app.analysis.AnalysisApp
 
 ## 8. Introducción a la minería de procesos (§4.4)
 
-Análisis con PM4Py de la **etapa de negociación** (todo lo previo a la preparación del curso).
+Completo. Todo vive en [`mineria/`](mineria/) y la conclusión está en
+[`mineria/conclusion.md`](mineria/conclusion.md).
 
 ```bash
 sudo apt install python3-venv graphviz
-python3 -m venv .venv
-source .venv/bin/activate
-pip install pm4py pandas requests
+python3 -m venv .venv && .venv/bin/pip install pm4py pandas requests psycopg2-binary
 ```
 
-- [ ] **Generar el CSV** a partir de las actividades históricas de Flowable, adaptando el script provisto `exportar_history.py` al proceso implementado. ( )
-- [ ] **Obtener la representación gráfica** del comportamiento observado e identificar los **tres recorridos más frecuentes**, con cantidad y porcentaje de instancias de cada uno. Si hay menos de tres recorridos distintos, mostrar todos. Se puede usar el script provisto `analizar.py`. ( )
-- [ ] **Redactar la conclusión**: comparar el resultado con la etapa de negociación del modelo BPMN — coincidencias, diferencias y limitaciones del análisis. ( )
-- [ ] Entregar el CSV, el código o las instrucciones para reproducir el análisis, y una **captura de los resultados**. ( )
+- [x] **Generar el CSV** a partir de las actividades históricas. Los scripts que menciona el enunciado no estaban en el repo, así que se escribieron: [`exportar_history.py`](mineria/exportar_history.py) arma el event log con los nombres de columna que espera pm4py y recorta la **etapa de negociación**, que es lo que pide el análisis. **Lee de la base, no de la API REST**, y la razón importa: el modelo usa una compuerta basada en eventos, así que cada instancia que espera respuesta deja registradas las cuatro ramas (aceptación, rechazo, modificaciones y el plazo) aunque solo una haya ocurrido; las canceladas se distinguen solo por `DELETE_REASON_`, un campo que el REST no expone. Sin filtrarlas el log pasa de 6 a 19 recorridos y deja de significar algo. Queda `--fuente rest` como alternativa, avisando de la limitación. Se descartan además las negociaciones todavía abiertas, que no son un camino sino una foto a mitad de camino. ( )
+- [x] **Datos para el análisis.** [`generar_casos.py`](mineria/generar_casos.py) crea instancias recorriendo a propósito los cinco caminos de la negociación, dando de alta por el sitio y disparando los mensajes y temporizadores por la API REST. Aparecieron dos cosas al usarlo: el límite de cinco cursos (§3.1) hace que las solicitudes nuevas salgan no viables si no hay cupo —correcto, pero hay que tenerlo en cuenta—, y los temporizadores encadenados necesitan reintento, porque el motor tarda un instante en crear el siguiente job y sin esperar solo se dispara el primer recordatorio. ( )
+- [x] **Representación gráfica y los tres recorridos más frecuentes.** [`analizar.py`](mineria/analizar.py) genera el DFG y la red heurística en `mineria/resultados/`, e imprime los recorridos con cantidad y porcentaje. Sobre 44 instancias salieron **6 recorridos distintos**; los tres más frecuentes cubren el **77,3 %**: no viable (34,1 %), rechazo de la propuesta (29,5 %) y cierre por falta de respuesta (13,6 %). ( )
+- [x] **Conclusión** comparando con el modelo BPMN ([`conclusion.md`](mineria/conclusion.md)): coincidencias, diferencias y limitaciones. ( )
 
-> Hace falta generar bastantes instancias terminadas con recorridos variados antes de que el análisis sea interesante. La app del bloque 6 sirve para eso.
+### 🔴 Lo que encontró la minería
+
+El análisis detectó que **el proceso envía tres recordatorios en vez de dos**. El enunciado (§1.1) dice *"se enviarán como máximo dos recordatorios"*, pero el recorrido observado muestra tres envíos en el 100 % de los casos sin respuesta. La causa está en la compuerta `seenviaron2recordatorios`, que evalúa `${recordatorios <= 2}` después de incrementar el contador; debería ser `${recordatorios < 2}` / `${recordatorios >= 2}`.
+
+**Ningún test lo detectaba**: `NoResponseTest` verifica que la solicitud termine archivada, que es lo que pasa, pero no cuenta las vueltas del ciclo.
+
+- [ ] Corregir las condiciones de la compuerta y agregar a `NoResponseTest` una aserción sobre la cantidad de recordatorios. Después conviene regenerar el log para que el entregable refleje el modelo corregido. ( )
 
 ---
 

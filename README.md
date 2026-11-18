@@ -31,6 +31,7 @@ Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripc
 | [`comunicaciones/`](comunicaciones/) | App de escritorio (Swing) que simula las comunicaciones de la empresa por la **API REST** de Flowable (§4.2.2)                                                                                 |
 | [`docs/`](docs/)         | Enunciado y documentación funcional por sección del proceso                                                                                                                                                |
 | [`adr/`](adr/)           | Decisiones de arquitectura (compensación, cancelación no interruptiva, aulas simuladas, [qué va a la BD y qué queda como variable](adr/datos-proceso-vs-bd.md))                                            |
+| [`mineria/`](mineria/)   | Minería de procesos con PM4Py sobre la etapa de negociación (§4.4), con el event log y la [conclusión](mineria/conclusion.md)                                                                              |
 
 ---
 
@@ -586,6 +587,7 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 - **App de preparación de materiales** (§4.2.1): de escritorio, por la API Java de Flowable, con login contra el IDM, bandeja de tareas asignadas y reclamables, reclamo y completado.
 - **App de comunicaciones de la empresa** (§4.2.2): de escritorio, por la API REST, con las cinco comunicaciones y solo las habilitadas en el estado actual de cada instancia.
 - **Análisis de las ejecuciones** (§4.3): las tres consultas sobre el historial, por consola y desde la app de materiales.
+- **Minería de procesos** (§4.4): event log de la etapa de negociación, los tres recorridos más frecuentes y los gráficos con PM4Py.
 - **Sitio web institucional** (§4.1): sección pública de solicitud, login para personal y empresas, consulta de cursos con el estado en vivo, bandeja de tareas con reclamo y las seis pantallas de tarea (propuesta con PDF versionado, revisión, recursos, docente, informe y envío).
 - 20 tests automatizados del motor (escenarios 1 a 8, los cinco caminos de cierre de §3.4 y los plazos de §3.5), 99 del backend y el sitio, 26 de la app de materiales y 16 de la app de comunicaciones.
 
@@ -593,7 +595,7 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 
 | Enunciado                                | Qué falta                                                                                                                                            |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| § 4.4 Minería de procesos                | No implementado el análisis con PM4Py (`exportar_history.py` / `analizar.py`) ni el CSV de la etapa de negociación                                   |
+| § 1.1 Recordatorios                      | 🔴 El proceso envía **tres** recordatorios en vez de dos. Lo detectó la minería; detalle en [`mineria/conclusion.md`](mineria/conclusion.md)         |
 
 ---
 
