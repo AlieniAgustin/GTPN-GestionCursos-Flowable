@@ -11,14 +11,6 @@ import com.backend.proxy.dto.task.TeacherDTO;
 
 import lombok.RequiredArgsConstructor;
 
-/**
- * Equipo docente, leído del IDM de Flowable.
- *
- * <p>El enunciado (3.3) dice que el personal de la institución no tiene cuentas propias
- * en la base de la institución: vive en el motor. Por eso la lista sale del grupo
- * {@code docentes} y no de una tabla local ni de una constante: si el equipo cambia en
- * Flowable, el desplegable de <em>Definir docente</em> lo refleja sin tocar código.
- */
 @Repository
 @RequiredArgsConstructor
 public class FlowableTeacherRepository implements TeacherRepository {
