@@ -178,20 +178,25 @@ class TaskSiteControllerTest {
     }
 
     @Test
-    @DisplayName("4.1.4 Bandeja: Evaluar recursos y Definir docente llevan a su formulario del sitio")
+    @DisplayName("4.1.3 Bandeja: cada tarea con datos lleva a su formulario del sitio")
     @WithMockUser(username = "jefedocente", roles = {"INSTITUCION"})
     void testTasksWithSiteFormLinkToIt() throws Exception {
         when(courseService.findVisibleFor(anyString(), anyBoolean())).thenReturn(List.of());
         when(taskService.findInbox(anyString())).thenReturn(List.of(
                 task("t1", "Evaluar Recursos", "evaluarrecursos", "jefedocente"),
                 task("t2", "Definir Docente", "definirdocentequedesarrollaelcurso", "jefedocente"),
-                task("t3", "Elaborar informe", "elaborarinformederesultados", "jefedocente")));
+                task("t3", "Elaborar informe", "elaborarinformederesultados", "jefedocente"),
+                task("t4", "Enviar informe", "enviarinformeaempresayarchivarexpediente", "jefedocente")));
 
+        // Ya no queda ninguna tarea con formulario derivada a Flowable UI
         mockMvc.perform(get("/tareas"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("/tareas/t1/evaluar-recursos")))
                 .andExpect(content().string(containsString("/tareas/t2/definir-docente")))
-                .andExpect(content().string(containsString("Se completa desde Flowable UI")));
+                .andExpect(content().string(containsString("/tareas/t3/elaborar-informe")))
+                .andExpect(content().string(containsString("/tareas/t4/enviar-informe")))
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.not(containsString("Se completa desde Flowable UI"))));
     }
 
     private FlowableTaskDTO task(String id, String nombre, String key, String assignee) {

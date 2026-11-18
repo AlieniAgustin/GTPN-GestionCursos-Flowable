@@ -44,8 +44,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 /**
- * Pantallas del sitio para <em>Evaluar recursos</em> y <em>Definir docente</em>
- * (enunciado 4.1.4).
+ * Pantallas del sitio para <em>Evaluar recursos</em>, <em>Definir docente</em>,
+ * <em>Elaborar informe</em> y <em>Enviar informe y archivar</em>
+ * (enunciado 4.1.3 y 4.1.4).
  */
 @WebMvcTest(TaskFormSiteController.class)
 class TaskFormSiteControllerTest {
@@ -242,5 +243,132 @@ class TaskFormSiteControllerTest {
         mockMvc.perform(get("/tareas/{id}/definir-docente", TASK_ID))
                 .andExpect(redirectedUrl("/tareas"))
                 .andExpect(flash().attribute("error", "Esa tarea ya no está disponible para vos."));
+    }
+
+    // ------------------------------------------------------------- Elaborar informe
+
+    @Test
+    @DisplayName("Elaborar informe: el formulario arranca vacío y nombra el curso")
+    @WithMockUser(username = "jefedocente", roles = {"INSTITUCION"})
+    void testReportFormShows() throws Exception {
+        when(taskService.findTaskDefinitionKey(TASK_ID, "jefedocente"))
+                .thenReturn("elaborarinformederesultados");
+        when(taskService.findVariablesOfTask(anyString(), anyString())).thenReturn(Map.of());
+
+        mockMvc.perform(get("/tareas/{id}/elaborar-informe", TASK_ID))
+                .andExpect(status().isOk())
+                .andExpect(view().name("tareas/elaborar-informe"))
+                .andExpect(content().string(containsString("Introduccion a BPMN")));
+    }
+
+    @Test
+    @DisplayName("Elaborar informe: un informe en blanco vuelve al formulario sin completar")
+    @WithMockUser(username = "jefedocente", roles = {"INSTITUCION"})
+    void testReportBlankIsRejected() throws Exception {
+        when(taskService.findTaskDefinitionKey(TASK_ID, "jefedocente"))
+                .thenReturn("elaborarinformederesultados");
+        when(taskService.findVariablesOfTask(anyString(), anyString())).thenReturn(Map.of());
+
+        mockMvc.perform(post("/tareas/{id}/elaborar-informe", TASK_ID).with(csrf())
+                        .param("informe", "   "))
+                .andExpect(status().isOk())
+                .andExpect(view().name("tareas/elaborar-informe"))
+                .andExpect(model().attribute("error", containsString("Escribí el informe")));
+
+        verify(taskService, never()).complete(anyString(), anyMap(), anyString());
+    }
+
+    @Test
+    @DisplayName("Elaborar informe: se completa con la variable informe, sin espacios de más")
+    @WithMockUser(username = "jefedocente", roles = {"INSTITUCION"})
+    void testReportIsStored() throws Exception {
+        when(taskService.findTaskDefinitionKey(TASK_ID, "jefedocente"))
+                .thenReturn("elaborarinformederesultados");
+
+        mockMvc.perform(post("/tareas/{id}/elaborar-informe", TASK_ID).with(csrf())
+                        .param("informe", "  18 de 20 participantes aprobaron.  "))
+                .andExpect(redirectedUrl("/tareas"))
+                .andExpect(flash().attribute("mensaje", containsString("Informe elaborado")));
+
+        verify(taskService).complete(TASK_ID,
+                Map.of("informe", "18 de 20 participantes aprobaron."), "jefedocente");
+    }
+
+    // ---------------------------------------------------------------- Enviar informe
+
+    @Test
+    @DisplayName("Enviar informe: muestra el informe que dejó el equipo docente")
+    @WithMockUser(username = "jefeadministrativo", roles = {"INSTITUCION"})
+    void testSendFormShowsTheReport() throws Exception {
+        when(taskService.findTaskDefinitionKey(TASK_ID, "jefeadministrativo"))
+                .thenReturn("enviarinformeaempresayarchivarexpediente");
+        when(taskService.findVariablesOfTask(anyString(), anyString()))
+                .thenReturn(Map.of("informe", "18 de 20 participantes aprobaron."));
+
+        mockMvc.perform(get("/tareas/{id}/enviar-informe", TASK_ID))
+                .andExpect(status().isOk())
+                .andExpect(view().name("tareas/enviar-informe"))
+                .andExpect(content().string(containsString("18 de 20 participantes aprobaron.")));
+    }
+
+    @Test
+    @DisplayName("Enviar informe: si todavía no hay informe, lo avisa en vez de mostrar vacío")
+    @WithMockUser(username = "jefeadministrativo", roles = {"INSTITUCION"})
+    void testSendFormWithoutReportYet() throws Exception {
+        when(taskService.findTaskDefinitionKey(TASK_ID, "jefeadministrativo"))
+                .thenReturn("enviarinformeaempresayarchivarexpediente");
+        when(taskService.findVariablesOfTask(anyString(), anyString())).thenReturn(Map.of());
+
+        mockMvc.perform(get("/tareas/{id}/enviar-informe", TASK_ID))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("todavía no cargó el informe")));
+    }
+
+    @Test
+    @DisplayName("Enviar informe: sin confirmar no se cierra el curso")
+    @WithMockUser(username = "jefeadministrativo", roles = {"INSTITUCION"})
+    void testSendRequiresConfirmation() throws Exception {
+        when(taskService.findTaskDefinitionKey(TASK_ID, "jefeadministrativo"))
+                .thenReturn("enviarinformeaempresayarchivarexpediente");
+        when(taskService.findVariablesOfTask(anyString(), anyString()))
+                .thenReturn(Map.of("informe", "Informe"));
+
+        mockMvc.perform(post("/tareas/{id}/enviar-informe", TASK_ID).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("tareas/enviar-informe"))
+                .andExpect(model().attribute("error", containsString("Confirmá el envío")));
+
+        verify(taskService, never()).complete(anyString(), anyMap(), anyString());
+    }
+
+    @Test
+    @DisplayName("Enviar informe: al confirmar marca el envío y el archivado")
+    @WithMockUser(username = "jefeadministrativo", roles = {"INSTITUCION"})
+    void testSendCompletesTheCourse() throws Exception {
+        when(taskService.findTaskDefinitionKey(TASK_ID, "jefeadministrativo"))
+                .thenReturn("enviarinformeaempresayarchivarexpediente");
+
+        mockMvc.perform(post("/tareas/{id}/enviar-informe", TASK_ID).with(csrf())
+                        .param("confirmar", "true"))
+                .andExpect(redirectedUrl("/tareas"))
+                .andExpect(flash().attribute("mensaje", containsString("finalizado")));
+
+        verify(taskService).complete(TASK_ID,
+                Map.of("informeEnviado", true, "expedienteArchivado", true), "jefeadministrativo");
+    }
+
+    @Test
+    @DisplayName("Enviar informe: con otra tarea no se completa nada")
+    @WithMockUser(username = "jefeadministrativo", roles = {"INSTITUCION"})
+    void testSendWrongTaskKey() throws Exception {
+        when(taskService.findTaskDefinitionKey(TASK_ID, "jefeadministrativo"))
+                .thenReturn("archivarsolicitud");
+
+        mockMvc.perform(post("/tareas/{id}/enviar-informe", TASK_ID).with(csrf())
+                        .param("confirmar", "true"))
+                .andExpect(redirectedUrl("/tareas"))
+                .andExpect(flash().attribute("error", containsString("no corresponde")));
+
+        verify(taskService, never()).complete(anyString(), anyMap(), anyString());
     }
 }
