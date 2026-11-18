@@ -409,6 +409,23 @@ a.boton:hover { background: #00564a; }
     cursor: pointer;
 }
 
+/* Confirmación de envío del informe: la etiqueta lleva aclaración debajo */
+.opcion span {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.opcion small { color: var(--tinta-suave); }
+
+.espaciado { margin-top: 1.2rem; }
+
+/* El informe se guarda con los saltos de línea que escribió el equipo docente */
+.informe {
+    margin: 0;
+    white-space: pre-line;
+}
+
 button.chico,
 a.chico {
     padding: 0.4rem 0.9rem;

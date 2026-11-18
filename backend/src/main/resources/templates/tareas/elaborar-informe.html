@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('Elaborar informe de resultados', ~{::section})}">
+<body>
+<section>
+    <p class="volver"><a th:href="@{/tareas}">← Volver a mis tareas</a></p>
+
+    <h1>Elaborar informe de resultados</h1>
+    <p class="bajada">
+        Redactá el informe del curso<span th:if="${curso != null}"> <strong th:text="${curso}">Curso</strong></span>.
+        Después el jefe administrativo lo revisa y se lo envía a la empresa.
+    </p>
+
+    <div class="aviso malo" th:if="${error}" th:text="${error}">Error</div>
+
+    <form class="tarjeta" th:action="@{/tareas/{id}/elaborar-informe(id=${taskId})}" method="post">
+        <div class="campo">
+            <label for="informe">Informe</label>
+            <textarea id="informe" name="informe" rows="12"
+                      placeholder="Participantes, contenidos cubiertos, resultados de las evaluaciones y observaciones"
+                      th:text="${informe}"></textarea>
+        </div>
+
+        <button type="submit" class="principal">Completar tarea</button>
+    </form>
+</section>
+</body>
+</html>

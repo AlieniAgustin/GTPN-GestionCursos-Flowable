@@ -49,7 +49,9 @@ public final class TaskCatalog {
             "registraryelaborarpropuesta", "elaborar-propuesta",
             "revisarpropuesta", "revisar-propuesta",
             "evaluarrecursos", "evaluar-recursos",
-            "definirdocentequedesarrollaelcurso", "definir-docente"
+            "definirdocentequedesarrollaelcurso", "definir-docente",
+            "elaborarinformederesultados", "elaborar-informe",
+            "enviarinformeaempresayarchivarexpediente", "enviar-informe"
     );
 
     public static boolean seCompletaDirecto(String taskDefinitionKey) {

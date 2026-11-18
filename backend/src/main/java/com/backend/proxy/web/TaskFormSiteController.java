@@ -24,7 +24,9 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * Pantallas del sitio para las tareas que tienen que producir variables del proceso
- * (enunciado 4.1.4): <em>Evaluar recursos</em> y <em>Definir docente</em>.
+ * (enunciado 4.1.3 y 4.1.4): <em>Evaluar recursos</em>, <em>Definir docente</em>,
+ * <em>Elaborar informe de resultados</em> y <em>Enviar informe a empresa y archivar
+ * expediente</em>.
  *
  * <p>Cada pantalla tiene un GET que muestra el formulario y un POST que lo recibe.
  * Los dos primero verifican que la tarea sea del tipo esperado y que el usuario la
@@ -36,6 +38,8 @@ public class TaskFormSiteController {
 
     private static final String EVALUAR_RECURSOS = "evaluarrecursos";
     private static final String DEFINIR_DOCENTE = "definirdocentequedesarrollaelcurso";
+    private static final String ELABORAR_INFORME = "elaborarinformederesultados";
+    private static final String ENVIAR_INFORME = "enviarinformeaempresayarchivarexpediente";
     private static final String TAREA_EQUIVOCADA = "Esa pantalla no corresponde a la tarea elegida.";
 
     private final TaskService taskService;
@@ -160,6 +164,134 @@ public class TaskFormSiteController {
         model.addAttribute("taskId", taskId);
         model.addAttribute("curso", cursoDe(taskId, usuario));
         model.addAttribute("docentes", teacherRepository.findAvailableTeachers());
+    }
+
+    // ------------------------------------------------------------- Elaborar informe
+
+    @GetMapping("/tareas/{taskId}/elaborar-informe")
+    public String formularioInforme(@PathVariable String taskId, Authentication authentication,
+                                    Model model, RedirectAttributes redireccion) {
+        String usuario = authentication.getName();
+        try {
+            if (!esDelTipo(taskId, usuario, ELABORAR_INFORME)) {
+                redireccion.addFlashAttribute("error", TAREA_EQUIVOCADA);
+                return "redirect:/tareas";
+            }
+            prepararInforme(model, taskId, usuario, informeDe(taskId, usuario));
+            return "tareas/elaborar-informe";
+        } catch (Exception e) {
+            redireccion.addFlashAttribute("error", mensajeDe(e));
+            return "redirect:/tareas";
+        }
+    }
+
+    /**
+     * Completa <em>Elaborar informe de resultados</em> con la variable {@code informe},
+     * que después lee el jefe administrativo para enviarlo a la empresa.
+     */
+    @PostMapping("/tareas/{taskId}/elaborar-informe")
+    public String completarInforme(@PathVariable String taskId,
+                                   @RequestParam(required = false) String informe,
+                                   Authentication authentication, Model model,
+                                   RedirectAttributes redireccion) {
+        String usuario = authentication.getName();
+        try {
+            if (!esDelTipo(taskId, usuario, ELABORAR_INFORME)) {
+                redireccion.addFlashAttribute("error", TAREA_EQUIVOCADA);
+                return "redirect:/tareas";
+            }
+
+            if (informe == null || informe.isBlank()) {
+                prepararInforme(model, taskId, usuario, informe);
+                model.addAttribute("error", "Escribí el informe de resultados del curso.");
+                return "tareas/elaborar-informe";
+            }
+
+            taskService.complete(taskId, Map.of("informe", informe.trim()), usuario);
+            redireccion.addFlashAttribute("mensaje",
+                    "Informe elaborado. Pasa al jefe administrativo para su envío.");
+        } catch (Exception e) {
+            redireccion.addFlashAttribute("error", mensajeDe(e));
+        }
+        return "redirect:/tareas";
+    }
+
+    private void prepararInforme(Model model, String taskId, String usuario, String informe) {
+        model.addAttribute("taskId", taskId);
+        model.addAttribute("curso", cursoDe(taskId, usuario));
+        model.addAttribute("informe", informe);
+    }
+
+    // ---------------------------------------------------------------- Enviar informe
+
+    @GetMapping("/tareas/{taskId}/enviar-informe")
+    public String formularioEnvio(@PathVariable String taskId, Authentication authentication,
+                                  Model model, RedirectAttributes redireccion) {
+        String usuario = authentication.getName();
+        try {
+            if (!esDelTipo(taskId, usuario, ENVIAR_INFORME)) {
+                redireccion.addFlashAttribute("error", TAREA_EQUIVOCADA);
+                return "redirect:/tareas";
+            }
+            prepararEnvio(model, taskId, usuario);
+            return "tareas/enviar-informe";
+        } catch (Exception e) {
+            redireccion.addFlashAttribute("error", mensajeDe(e));
+            return "redirect:/tareas";
+        }
+    }
+
+    /**
+     * Completa <em>Enviar informe a empresa y archivar expediente</em>. Es el último paso
+     * del camino normal: al completarse el modelo dispara la compensación que libera los
+     * recursos reservados y la instancia termina como FINALIZADO.
+     *
+     * <p>Pide una confirmación explícita porque la acción no tiene vuelta atrás.
+     */
+    @PostMapping("/tareas/{taskId}/enviar-informe")
+    public String completarEnvio(@PathVariable String taskId,
+                                 @RequestParam(defaultValue = "false") boolean confirmar,
+                                 Authentication authentication, Model model,
+                                 RedirectAttributes redireccion) {
+        String usuario = authentication.getName();
+        try {
+            if (!esDelTipo(taskId, usuario, ENVIAR_INFORME)) {
+                redireccion.addFlashAttribute("error", TAREA_EQUIVOCADA);
+                return "redirect:/tareas";
+            }
+
+            if (!confirmar) {
+                prepararEnvio(model, taskId, usuario);
+                model.addAttribute("error",
+                        "Confirmá el envío del informe para cerrar el curso.");
+                return "tareas/enviar-informe";
+            }
+
+            taskService.complete(taskId, Map.of(
+                    "informeEnviado", true,
+                    "expedienteArchivado", true), usuario);
+            redireccion.addFlashAttribute("mensaje",
+                    "Informe enviado y expediente archivado. El curso quedó finalizado.");
+        } catch (Exception e) {
+            redireccion.addFlashAttribute("error", mensajeDe(e));
+        }
+        return "redirect:/tareas";
+    }
+
+    private void prepararEnvio(Model model, String taskId, String usuario) {
+        model.addAttribute("taskId", taskId);
+        model.addAttribute("curso", cursoDe(taskId, usuario));
+        model.addAttribute("informe", informeDe(taskId, usuario));
+    }
+
+    /**
+     * El informe se lee de la variable del proceso, que es donde lo dejó la tarea
+     * anterior: es la fuente de verdad mientras la instancia está viva, y no depende de
+     * que la sincronización con la base de la institución haya llegado.
+     */
+    private String informeDe(String taskId, String usuario) {
+        Object valor = taskService.findVariablesOfTask(taskId, usuario).get("informe");
+        return valor != null && !valor.toString().isBlank() ? valor.toString() : null;
     }
 
     // ------------------------------------------------------------------------ Comunes
