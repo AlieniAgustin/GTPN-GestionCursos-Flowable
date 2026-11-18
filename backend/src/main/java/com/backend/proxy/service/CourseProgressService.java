@@ -1,5 +1,6 @@
 package com.backend.proxy.service;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -15,41 +16,28 @@ import com.backend.proxy.types.CourseStatus;
 
 import lombok.RequiredArgsConstructor;
 
-/**
- * Traduce lo que está pasando en el motor al estado del curso que ve la empresa
- * (enunciado 4.1.2).
- *
- * <p>La base de la institución solo guarda **cómo terminó** el trámite, y recién cuando
- * cerró. Mientras el curso está en marcha, el estado hay que deducirlo de las actividades
- * que el motor tiene abiertas.
- */
 @Service
 @RequiredArgsConstructor
 public class CourseProgressService {
-
-    /**
-     * Una sola consulta trae las actividades activas de **todas** las instancias; después
-     * se agrupan en memoria. Así listar N cursos no dispara N llamadas al motor.
-     */
     private static final String ACTIVE_ACTIVITIES_URI =
             "/process-api/history/historic-activity-instances?finished=false&size=1000";
 
-    // El orden importa: se evalúa de la etapa más avanzada a la más temprana
-    private static final Set<String> INFORME = Set.of(
-            "elaborarinformederesultados", "enviarinformeaempresayarchivarexpediente");
-    private static final Set<String> DESARROLLO = Set.of("desarrollarcurso");
-    private static final Set<String> CONFIRMADO = Set.of(
-            "fechaprogramada", "definirdocentequedesarrollaelcurso", "enviarconfirmacion");
-    private static final Set<String> PREPARACION = Set.of("prepararcurso");
-    private static final Set<String> ESPERANDO_RESPUESTA = Set.of(
-            "aceptacion", "rechazo", "modificaciones", "plazo5dias", "enviarrecordatorio");
+    private record StageRule(CourseStage stage, Set<String> activities) {
+        boolean matches(Set<String> active) {
+            return !Collections.disjoint(active, activities);
+        }
+    }
+
+    private static final List<StageRule> STAGE_PRECEDENCE = List.of(
+            new StageRule(CourseStage.EN_ELABORACION_INFORME, Set.of("elaborarinformederesultados", "enviarinformeaempresayarchivarexpediente")),
+            new StageRule(CourseStage.EN_DESARROLLO, Set.of("desarrollarcurso")),
+            new StageRule(CourseStage.CONFIRMADO_PENDIENTE_INICIO, Set.of("fechaprogramada", "definirdocentequedesarrollaelcurso", "enviarconfirmacion")),
+            new StageRule(CourseStage.EN_PREPARACION, Set.of("prepararcurso")),
+            new StageRule(CourseStage.PROPUESTA_ENVIADA, Set.of("aceptacion", "rechazo", "modificaciones", "plazo5dias", "enviarrecordatorio"))
+    );
 
     private final FlowableClient flowableClient;
 
-    /**
-     * Actividades abiertas, agrupadas por instancia. Si el motor no responde se devuelve
-     * un mapa vacío: el sitio sigue mostrando lo que hay en la base.
-     */
     public Map<String, List<ActivityDTO>> findActiveActivities() {
         try {
             ActivityListDTO activities = flowableClient.get(ACTIVE_ACTIVITIES_URI)
@@ -73,10 +61,6 @@ public class CourseProgressService {
         return findActiveActivities().getOrDefault(processInstanceId, List.of());
     }
 
-    /**
-     * Estado del curso. Si la instancia ya cerró manda el resultado que quedó en la base;
-     * si sigue viva, se deduce de las actividades abiertas.
-     */
     public CourseStage resolveStage(CourseStatus status, List<ActivityDTO> activeActivities) {
         if (status != null) {
             return CourseStage.from(status);
@@ -86,38 +70,17 @@ public class CourseProgressService {
                 .map(ActivityDTO::activityId)
                 .collect(Collectors.toSet());
 
-        if (anyIn(active, INFORME)) {
-            return CourseStage.EN_ELABORACION_INFORME;
-        }
-        if (anyIn(active, DESARROLLO)) {
-            return CourseStage.EN_DESARROLLO;
-        }
-        if (anyIn(active, CONFIRMADO)) {
-            return CourseStage.CONFIRMADO_PENDIENTE_INICIO;
-        }
-        if (anyIn(active, PREPARACION)) {
-            return CourseStage.EN_PREPARACION;
-        }
-        if (anyIn(active, ESPERANDO_RESPUESTA)) {
-            return CourseStage.PROPUESTA_ENVIADA;
-        }
-        return CourseStage.EN_EVALUACION;
+        return STAGE_PRECEDENCE.stream()
+                .filter(rule -> rule.matches(active))
+                .map(StageRule::stage)
+                .findFirst()
+                .orElse(CourseStage.EN_EVALUACION);
     }
 
-    /**
-     * Las actividades que tiene sentido mostrarle a la empresa: las tareas y los eventos
-     * que el proceso está esperando, sin el subproceso contenedor ni las compuertas.
-     *
-     * <p>Durante la preparación son varias a la vez, una por cada rama paralela.
-     */
     public List<ActivityDTO> visibleActivities(List<ActivityDTO> activeActivities) {
         return activeActivities.stream()
                 .filter(ActivityDTO::isVisibleForCompany)
                 .sorted((a, b) -> a.activityName().compareToIgnoreCase(b.activityName()))
                 .toList();
-    }
-
-    private boolean anyIn(Set<String> active, Set<String> candidates) {
-        return active.stream().anyMatch(candidates::contains);
     }
 }
