@@ -15,12 +15,12 @@ Checklist del equipo, derivada del enunciado [`docs/ProyectoCursos_V3.pdf`](docs
 | 1. Motor y modelo BPMN | Completo |
 | 2. BD de la institución | Completo |
 | 3. Backend BFF | Completo |
-| 4. Sitio web institucional | En curso — público, empresas y bandeja de tareas listos |
+| 4. Sitio web institucional | Completo |
 | 5. App Java (API Java) | Completo |
 | 6. App de comunicaciones (API REST) | Completo |
 | 7. Análisis de ejecuciones | Completo |
 | 8. Minería de procesos | No empezado |
-| 9. Entrega y demo | Escenarios 1–8 cubiertos por tests; el 11 ya se puede mostrar con las dos apps; 9 y 10 dependen del sitio web |
+| 9. Entrega y demo | Escenarios 1–8 cubiertos por tests; 9, 10 y 11 ya se pueden mostrar con el sitio y las dos apps |
 
 ---
 
@@ -67,7 +67,7 @@ Completo. El BFF autentica a los dos tipos de usuario, opera contra el motor y r
 
 ## 4. Sitio web de la institución (§4.1)
 
-En curso. Son páginas server-side con **Thymeleaf dentro del módulo `backend`**: mismo Maven, mismo contenedor y misma sesión que la API, así que no hay CORS, ni Node, ni un servicio más que levantar. Los estilos están en [`static/css/sitio.css`](backend/src/main/resources/static/css/sitio.css) y las plantillas en [`templates/`](backend/src/main/resources/templates/).
+Completo. Son páginas server-side con **Thymeleaf dentro del módulo `backend`**: mismo Maven, mismo contenedor y misma sesión que la API, así que no hay CORS, ni Node, ni un servicio más que levantar. Los estilos están en [`static/css/sitio.css`](backend/src/main/resources/static/css/sitio.css) y las plantillas en [`templates/`](backend/src/main/resources/templates/).
 
 La cadena de seguridad quedó partida en tres ([`SecurityConfig`](backend/src/main/java/com/backend/proxy/security/SecurityConfig.java)): `/api/flowable/**` por API key, `/api/**` con 401 para los clientes REST, y el sitio con formulario de login y redirección. La API no cambió de comportamiento.
 
@@ -90,17 +90,21 @@ La cadena de seguridad quedó partida en tres ([`SecurityConfig`](backend/src/ma
 - [x] Las tareas que **sí** se completan desde la bandeja son las de confirmación, catalogadas en [`TaskCatalog`](backend/src/main/java/com/backend/proxy/types/TaskCatalog.java) junto con las variables que dejan. Las que necesitan capturar datos aparecen marcadas *"Se completa desde Flowable UI"* hasta que tengan su formulario. ( )
 - [x] Completar *Registrar y elaborar propuesta* con formulario y **generar el PDF** de la propuesta. Pantalla `/tareas/{id}/elaborar-propuesta` en [`ProposalSiteController`](backend/src/main/java/com/backend/proxy/web/ProposalSiteController.java): muestra la solicitud, pide programa, presupuesto y fechas posibles (precargadas con las que pidió la empresa) y valida cada campo sin perder lo escrito. Al enviar, [`ProposalService`](backend/src/main/java/com/backend/proxy/service/ProposalService.java) arma el PDF con OpenPDF ([`ProposalPdfBuilder`](backend/src/main/java/com/backend/proxy/service/ProposalPdfBuilder.java)), lo guarda como versión 1 en la tabla nueva `proposal_documents` y completa la tarea con `programa`, `presupuesto`, `fechasPropuestas` y `versionPropuesta`, todo en una transacción. Los PDF se descargan en `/mis-cursos/{id}/propuestas/{version}.pdf` con la misma visibilidad que el curso, y el detalle del curso lista las versiones. Deja lista la base para *Revisar propuesta*, que solo tiene que generar la versión siguiente. `ProposalServiceTest` y `ProposalSiteControllerTest` (12 tests); backend en 87. Verificado contra el stack: la instancia quedó esperando respuesta y el curso con programa y presupuesto en la BD. (Agustin Cesari)
 - [x] Completar *Revisar propuesta* **generando una nueva versión del PDF**. Pantalla `/tareas/{id}/revisar-propuesta` en el mismo [`ProposalSiteController`](backend/src/main/java/com/backend/proxy/web/ProposalSiteController.java) y con el mismo formulario que elaborar: muestra las **observaciones** que mandó la empresa al pedir modificaciones (variable `observaciones`, leída del motor) y arranca **precargado con la última versión** para cambiar solo lo pedido. Al enviar genera el PDF de la versión siguiente con el mismo `ProposalService.enviarPropuesta`, y el proceso vuelve a *Enviar propuesta* (recordatorios en 0). El detalle del curso lista todas las versiones con la última como vigente. 4 tests nuevos; backend en 91. Verificado contra el stack: modificaciones desde la API, versión 2 del PDF, presupuesto nuevo en la BD y la instancia otra vez esperando respuesta. (Agustin Cesari)
-- [ ] Completar *Archivar solicitud*. ( )
-- [ ] Completar *Confeccionar lista definitiva*. ( )
+- [x] Completar *Archivar solicitud* desde la bandeja: es una tarea de confirmación, ya catalogada en `TaskCatalog`, y viene asignada directamente al jefe administrativo así que no requiere reclamo. Verificado contra el stack: al completarla la instancia cerró con `resultadoCurso = RECHAZADO`. ( )
+- [x] Completar *Confeccionar lista definitiva* desde la bandeja. Es de grupo, así que hay que reclamarla primero; deja la variable `listaDefinitiva`. Verificado dentro del recorrido completo: cerró la rama de inscripciones y, con las otras dos, el subproceso de preparación. ( )
 - [x] Completar *Evaluar recursos* con una pantalla que permita elegir aula física, aula virtual y/o equipamiento especial — **al menos una alternativa**. Pantalla `/tareas/{id}/evaluar-recursos` en [`TaskFormSiteController`](backend/src/main/java/com/backend/proxy/web/TaskFormSiteController.java), a la que se llega desde el botón *Completar* de la bandeja una vez reclamada. Sin ninguna opción marcada vuelve al formulario con el error y no completa nada. Siempre manda las tres variables del gateway inclusivo (`requiereAula`, `requierePlataforma`, `requiereEquipamiento`), aunque sean `false`, para que el motor no falle con *Unknown property*. Verifica que la tarea sea de ese tipo y visible para el usuario. Verificado contra el stack: con *Aula virtual* el proceso abrió *Solicitar Aula Virtual*. (Agustin Cesari)
-- [ ] Permitir al jefe administrativo ver el informe y completar *Enviar informe a empresa y archivar expediente*. ( )
+- [x] Permitir al jefe administrativo **ver el informe** y completar *Enviar informe a empresa y archivar expediente*. Pantalla `/tareas/{id}/enviar-informe` en [`TaskFormSiteController`](backend/src/main/java/com/backend/proxy/web/TaskFormSiteController.java): muestra el informe que dejó el equipo docente y pide una confirmación explícita, porque es el paso que cierra el curso y no tiene vuelta atrás. Sin tildar la casilla vuelve al formulario sin completar nada. El informe se lee de la **variable del proceso**, que es la fuente de verdad mientras la instancia vive, y no de la BD: así la pantalla funciona aunque la sincronización no haya llegado. Verificado contra el stack: al confirmar, la instancia terminó con `resultadoCurso = FINALIZADO`, `aulaLiberada = true` por la compensación y el curso quedó FINALIZADO en la base. **Cierra el escenario 1 de la defensa de punta a punta desde el sitio.** ( )
 
 **Funciones para el Equipo Docente**
 
 - [x] Jefe docente: consultar sus tareas *Definir docente que desarrolla el curso*, **seleccionar uno de los tres docentes (puede elegirse a sí mismo), asignarlo a la tarea *Desarrollar curso*** y completar. Pantalla `/tareas/{id}/definir-docente` con un desplegable de `TeacherRepository.findAvailableTeachers()` (jefedocente, docente1 y docente2). Solo acepta a alguien de esa lista y completa con `docenteSeleccionado`, que el modelo usa como responsable de *Desarrollar curso*. Verificado contra el stack: con docente2 elegido, *Desarrollar curso* le quedó asignada a docente2. `TaskFormSiteControllerTest` cubre las dos pantallas (13 tests) y la bandeja suma un test del enlace; el backend queda en 75 tests pasando. (Agustin Cesari)
-- [ ] Docente seleccionado: consultar sus tareas *Desarrollar curso* y completarlas. ( )
+- [x] Docente seleccionado: consultar sus tareas *Desarrollar curso* y completarlas. Aparece en su bandeja ya asignada —la asigna el modelo con `docenteSeleccionado`, sin reclamo— y se completa con el botón directo, dejando `cursoDesarrollado`. Verificado: con `docente1` elegido, la tarea le llegó a él y al completarla el proceso pasó a *Elaborar informe*; `docente2` no la ve. ( )
 
-> *Solicitar aula virtual*, *Contratar equipamiento* y *Liberar equipamiento* pueden hacerse desde Flowable UI, no hace falta pantalla propia. *Elaborar informe de resultados* también puede hacerse desde Flowable UI (el PDF del informe ya no es obligatorio).
+- [x] Completar *Elaborar informe de resultados* desde el sitio. El enunciado lo da como opcional —puede hacerse desde Flowable UI— pero con la infraestructura ya armada salía barato y deja el recorrido completo sin salir del sitio. Pantalla `/tareas/{id}/elaborar-informe`, con la variable `informe` que después lee el jefe administrativo. ( )
+
+> *Solicitar aula virtual*, *Contratar equipamiento* y *Liberar equipamiento* se completan desde la bandeja con el botón directo, o desde Flowable UI: no necesitan pantalla propia. El PDF del informe no es obligatorio (tachado en el enunciado V3).
+>
+> Con estas dos pantallas **ya no queda ninguna tarea derivada a Flowable UI**. El mecanismo de `TareaVista.necesitaFormulario()` se mantiene igual, como red por si se suma una tarea con datos antes que su pantalla.
 
 ---
 

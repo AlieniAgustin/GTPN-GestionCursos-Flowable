@@ -586,15 +586,13 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 - **App de preparación de materiales** (§4.2.1): de escritorio, por la API Java de Flowable, con login contra el IDM, bandeja de tareas asignadas y reclamables, reclamo y completado.
 - **App de comunicaciones de la empresa** (§4.2.2): de escritorio, por la API REST, con las cinco comunicaciones y solo las habilitadas en el estado actual de cada instancia.
 - **Análisis de las ejecuciones** (§4.3): las tres consultas sobre el historial, por consola y desde la app de materiales.
-- 20 tests automatizados del motor (escenarios 1 a 8, los cinco caminos de cierre de §3.4 y los plazos de §3.5), 26 de la app de materiales y 16 de la app de comunicaciones.
+- **Sitio web institucional** (§4.1): sección pública de solicitud, login para personal y empresas, consulta de cursos con el estado en vivo, bandeja de tareas con reclamo y las seis pantallas de tarea (propuesta con PDF versionado, revisión, recursos, docente, informe y envío).
+- 20 tests automatizados del motor (escenarios 1 a 8, los cinco caminos de cierre de §3.4 y los plazos de §3.5), 99 del backend y el sitio, 26 de la app de materiales y 16 de la app de comunicaciones.
 
 ### Pendiente
 
 | Enunciado                                | Qué falta                                                                                                                                            |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| § 4.1 Sitio web institucional            | Público, empresas y bandeja de tareas listos; faltan los formularios de cada tarea y el PDF de la propuesta                                          |
-| § 4.1.2 Acceso de la empresa             | La cuenta, el login y el listado de cursos propios ya funcionan por API; falta la pantalla                                                           |
-| § 4.1.3                                  | Generación del PDF de la propuesta y de sus nuevas versiones                                                                                         |
 | § 4.4 Minería de procesos                | No implementado el análisis con PM4Py (`exportar_history.py` / `analizar.py`) ni el CSV de la etapa de negociación                                   |
 
 ---
