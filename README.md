@@ -27,9 +27,9 @@ Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripc
 | [`model/`](model/)       | Modelos BPMN: `cursosNuestraVersion.bpmn` (refinado, 7PMG) y `cursosOriginal.bpmn` (base de cátedra), más el [informe de justificación](model/informeDeJustificacionDeCambiosyDecisionesDeModeladoBPMN.md) |
 | [`flowable/`](flowable/) | Motor de procesos: Spring Boot 2.7.18 + Flowable 6.8.0, BPMN desplegable, DMN de viabilidad, listeners, delegates y API REST                                                                               |
 | [`backend/`](backend/)   | Backend-for-Frontend (Spring Boot 3) con la BD de la institución. Ver su [README](backend/README.md)                                                                                                       |
-| [`materiales/`](materiales/) | App de escritorio (Swing) para *Preparar materiales* por la **API Java** de Flowable (§4.2.1)                                                                                                          |
-| [`comunicaciones/`](comunicaciones/) | App de escritorio (Swing) que simula las comunicaciones de la empresa por la **API REST** de Flowable (§4.2.2)                                                                                 |
-| [`docs/`](docs/)         | Enunciado y documentación funcional por sección del proceso                                                                                                                                                |
+| [`materiales/`](materiales/) | App de escritorio (Swing) para *Preparar materiales* por la **API Java** de Flowable (§4.2.1), más el análisis de §4.3. Ver su [README](materiales/README.md)                                           |
+| [`comunicaciones/`](comunicaciones/) | App de escritorio (Swing) que simula las comunicaciones de la empresa por la **API REST** de Flowable (§4.2.2). Ver su [README](comunicaciones/README.md)                                      |
+| [`docs/`](docs/)         | Enunciado, documentación funcional por sección del proceso y el **[informe del proyecto](docs/informe/)** con el reparto de la defensa                                                                      |
 | [`adr/`](adr/)           | Decisiones de arquitectura (compensación, cancelación no interruptiva, aulas simuladas, [qué va a la BD y qué queda como variable](adr/datos-proceso-vs-bd.md))                                            |
 | [`mineria/`](mineria/)   | Minería de procesos con PM4Py sobre la etapa de negociación (§4.4), con el event log y la [conclusión](mineria/conclusion.md)                                                                              |
 
@@ -52,6 +52,43 @@ Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripc
 
 > [!NOTE]
 > La app Flowable y Flowable UI comparten la **misma base de datos**. Por eso un usuario creado desde la UI sirve para autenticarse contra la API REST, y viceversa.
+
+Las dos apps de escritorio **no ocupan ningún puerto**: no son servidores, son clientes. La de materiales habla con PostgreSQL por la API Java del motor y la de comunicaciones con la API REST de `8080`.
+
+---
+
+## Apps de escritorio: los tres comandos
+
+Con el stack levantado (ver [1. Levantar](#1-levantar)), esto es todo lo que hace falta para probarlas. El detalle de cada una está en su paso y en el README de su carpeta.
+
+**Preparación de materiales** (§4.2.1, API Java) — entrar con `administrativo1` / `password`:
+
+```bash
+cd materiales && ./build.sh && cd ..
+```
+
+```bash
+java -jar materiales/target/app.jar
+```
+
+**Comunicaciones de la empresa** (§4.2.2, API REST):
+
+```bash
+cd comunicaciones && ./build.sh && cd ..
+```
+
+```bash
+java -jar comunicaciones/target/app.jar
+```
+
+**Análisis de las ejecuciones** (§4.3) — también está como botón en la app de materiales:
+
+```bash
+java -cp materiales/target/app.jar com.materiales.app.analysis.AnalysisApp
+```
+
+> [!IMPORTANT]
+> `./build.sh` es obligatorio antes del primer `java -jar`, y hay que repetirlo después de cualquier `mvn clean`: `mvn test` compila pero no empaqueta, así que sin ese paso el jar no existe y sale `Unable to access jarfile`.
 
 ---
 
@@ -442,7 +479,7 @@ docker exec flowable-postgres psql -U flowable -d flowable -c 'select id, name, 
 
 ---
 
-### 9. Correr la app de materiales (§4.2.1)
+### 10. Correr la app de materiales (§4.2.1)
 
 App de escritorio, local a la intranet, que usa la **API Java** de Flowable: arma un `ProcessEngine` embebido contra la **misma base** del motor y trabaja con `IdentityService` y `TaskService`. No pasa por la API REST ni por el BFF.
 
@@ -478,7 +515,7 @@ Resultado esperado: **26 tests, 0 fallos**. Levantan un motor embebido sobre H2,
 
 ---
 
-### 10. Correr la app de comunicaciones (§4.2.2)
+### 11. Correr la app de comunicaciones (§4.2.2)
 
 App de escritorio que hace de empresa: elegís una solicitud y le mandás aceptación, rechazo, pedido de modificaciones, la nómina de participantes o la cancelación. Todo por la **API REST** del motor (`/process-api`), sin pasar por el BFF ni por la API Java.
 

@@ -202,8 +202,8 @@ Sí dejó una observación de modelado. El event log muestra que el nodo *Enviar
 - [ ] Código del servicio REST y de los componentes incorporados al motor. *(listo)*
 - [ ] Reglas de negocio. *(listo — DMN de viabilidad)*
 - [ ] Instrucciones para configurar usuarios y grupos y ejecutar la solución. *(listo — [README.md](README.md))*
-- [ ] **Informe breve** explicando variables, listeners y decisiones de implementación. Hay material en [`model/`](model/) y [`adr/`](adr/) para reusar. ( )
-- [ ] **Código de las tres aplicaciones externas** más las instrucciones para configurarlas y ejecutarlas. Dos de tres listas: [`materiales/`](materiales/) y [`comunicaciones/`](comunicaciones/), con sus pasos 9 y 10 en el [README](README.md). Falta el sitio web del bloque 4. ( )
+- [x] **Informe breve** explicando variables, listeners y decisiones de implementación. Está en [`docs/informe/`](docs/informe/), partido por etapas: un archivo por etapa del enunciado, más un [índice](docs/informe/README.md) con el **reparto de la exposición** entre los cuatro, la tabla de cobertura sección por sección, las 20 tareas de la institución repartidas y los 11 escenarios de la defensa con quién los muestra. El núcleo de lo que pide §5 —variables, listeners y decisiones— está en [06](docs/informe/06-variables-listeners-y-decisiones.md). Los documentos no repiten los ADR ni los documentos de diseño: los enlazan. ( )
+- [x] **Código de las tres aplicaciones externas** más las instrucciones para configurarlas y ejecutarlas. Las tres: el sitio dentro de [`backend/`](backend/), [`materiales/`](materiales/) y [`comunicaciones/`](comunicaciones/), cada una con su README y con sus pasos en el [README principal](README.md). ( )
 
 **Escenarios de la defensa**
 
