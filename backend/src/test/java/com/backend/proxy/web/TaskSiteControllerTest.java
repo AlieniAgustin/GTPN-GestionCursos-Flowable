@@ -177,6 +177,23 @@ class TaskSiteControllerTest {
                 .andExpect(content().string(containsString("Introduccion a BPMN")));
     }
 
+    @Test
+    @DisplayName("4.1.4 Bandeja: Evaluar recursos y Definir docente llevan a su formulario del sitio")
+    @WithMockUser(username = "jefedocente", roles = {"INSTITUCION"})
+    void testTasksWithSiteFormLinkToIt() throws Exception {
+        when(courseService.findVisibleFor(anyString(), anyBoolean())).thenReturn(List.of());
+        when(taskService.findInbox(anyString())).thenReturn(List.of(
+                task("t1", "Evaluar Recursos", "evaluarrecursos", "jefedocente"),
+                task("t2", "Definir Docente", "definirdocentequedesarrollaelcurso", "jefedocente"),
+                task("t3", "Elaborar informe", "elaborarinformederesultados", "jefedocente")));
+
+        mockMvc.perform(get("/tareas"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("/tareas/t1/evaluar-recursos")))
+                .andExpect(content().string(containsString("/tareas/t2/definir-docente")))
+                .andExpect(content().string(containsString("Se completa desde Flowable UI")));
+    }
+
     private FlowableTaskDTO task(String id, String nombre, String key, String assignee) {
         return new FlowableTaskDTO(id, nombre, key, assignee, "proc-1", "exec-1");
     }

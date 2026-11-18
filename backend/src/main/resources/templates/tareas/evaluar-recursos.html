@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('Evaluar recursos', ~{::section})}">
+<body>
+<section>
+    <p class="volver"><a th:href="@{/tareas}">← Volver a mis tareas</a></p>
+
+    <h1>Evaluar recursos</h1>
+    <p class="bajada">
+        Indicá qué recursos necesita el curso<span th:if="${curso != null}"> <strong th:text="${curso}">Curso</strong></span>.
+        Según lo que elijas, el proceso reserva el aula, pide el aula virtual o contrata el equipamiento.
+    </p>
+
+    <div class="aviso malo" th:if="${error}" th:text="${error}">Error</div>
+
+    <form class="tarjeta" th:action="@{/tareas/{id}/evaluar-recursos(id=${taskId})}" method="post">
+        <fieldset>
+            <legend>Recursos necesarios</legend>
+
+            <label class="opcion">
+                <input type="checkbox" name="requiereAula" value="true">
+                Aula física
+            </label>
+            <label class="opcion">
+                <input type="checkbox" name="requierePlataforma" value="true">
+                Aula virtual
+            </label>
+            <label class="opcion">
+                <input type="checkbox" name="requiereEquipamiento" value="true">
+                Equipamiento especial
+            </label>
+            <span class="ayuda">Elegí al menos uno.</span>
+        </fieldset>
+
+        <button type="submit" class="principal">Completar tarea</button>
+    </form>
+</section>
+</body>
+</html>

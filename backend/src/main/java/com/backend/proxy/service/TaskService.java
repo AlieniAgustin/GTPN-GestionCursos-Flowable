@@ -165,6 +165,17 @@ public class TaskService {
      * Flowable returns variables as a list of {@code {name, type, value, scope}} objects;
      * the strategies only care about name and value.
      */
+    /**
+     * Variables del proceso de una tarea, verificando antes que el usuario la pueda ver.
+     * Las usan las pantallas que muestran datos de etapas anteriores (por ejemplo, las
+     * observaciones de la empresa en <em>Revisar propuesta</em>).
+     */
+    public Map<String, Object> findVariablesOfTask(String taskId, String username) {
+        FlowableTaskDTO task = findTask(taskId);
+        assertVisibleFor(task, username);
+        return findProcessVariables(task.processInstanceId());
+    }
+
     private Map<String, Object> findProcessVariables(String processInstanceId) {
         List<FlowableVariable> variables = flowableClient
                 .get(PROCESS_INSTANCES_URI + processInstanceId + "/variables")

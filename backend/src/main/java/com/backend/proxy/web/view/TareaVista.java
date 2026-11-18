@@ -32,9 +32,24 @@ public record TareaVista(
     }
 
     /**
+     * Ya reclamada y con pantalla propia en el sitio: la bandeja ofrece ir al formulario.
+     */
+    public boolean tieneFormularioEnSitio() {
+        return !sePuedeReclamar() && TaskCatalog.formularioEnSitio(tarea.taskDefinitionKey()) != null;
+    }
+
+    /**
+     * Tramo de la URL del formulario ({@code /tareas/{id}/<tramo>}), si existe.
+     */
+    public String formulario() {
+        return TaskCatalog.formularioEnSitio(tarea.taskDefinitionKey());
+    }
+
+    /**
      * Ya reclamada, pero su pantalla todavía no existe: se completa desde Flowable UI.
      */
     public boolean necesitaFormulario() {
-        return !sePuedeReclamar() && TaskCatalog.necesitaFormulario(tarea.taskDefinitionKey());
+        return !sePuedeReclamar() && !tieneFormularioEnSitio()
+                && TaskCatalog.necesitaFormulario(tarea.taskDefinitionKey());
     }
 }
