@@ -46,6 +46,8 @@ public final class TaskCatalog {
      * ({@code /tareas/{id}/<tramo>}) donde se completan.
      */
     private static final Map<String, String> FORMULARIOS_EN_SITIO = Map.of(
+            "registraryelaborarpropuesta", "elaborar-propuesta",
+            "revisarpropuesta", "revisar-propuesta",
             "evaluarrecursos", "evaluar-recursos",
             "definirdocentequedesarrollaelcurso", "definir-docente"
     );

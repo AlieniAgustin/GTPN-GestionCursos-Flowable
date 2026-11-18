@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page(${revisar} ? 'Revisar propuesta' : 'Elaborar propuesta', ~{::section})}">
+<body>
+<section>
+    <p class="volver"><a th:href="@{/tareas}">← Volver a mis tareas</a></p>
+
+    <h1 th:text="${revisar} ? 'Revisar propuesta' : 'Elaborar propuesta'">Elaborar propuesta</h1>
+    <p class="bajada" th:unless="${revisar}">
+        Armá la propuesta para <strong th:text="${contexto.empresa()}">ACME SA</strong>.
+        Al enviarla se genera el PDF (versión <span th:text="${contexto.proximaVersion()}">1</span>)
+        y el proceso queda esperando la respuesta de la empresa.
+    </p>
+    <p class="bajada" th:if="${revisar}">
+        <strong th:text="${contexto.empresa()}">ACME SA</strong> pidió modificaciones. El formulario
+        arranca con la versión anterior: cambiá lo que haga falta y se genera la versión
+        <span th:text="${contexto.proximaVersion()}">2</span> del PDF.
+    </p>
+
+    <div class="aviso" th:if="${revisar}">
+        <strong>Observaciones de la empresa</strong>
+        <p class="observaciones" th:text="${observaciones != null} ? ${observaciones} : 'La empresa no dejó observaciones.'">
+            Bajar el presupuesto
+        </p>
+    </div>
+
+    <div class="tarjeta">
+        <dl class="datos">
+            <dt>Curso</dt>
+            <dd th:text="${contexto.curso()}">Introducción a BPMN</dd>
+            <dt>Descripción</dt>
+            <dd th:text="${contexto.descripcion()}">Modelado de procesos</dd>
+            <dt>Fechas que pidió la empresa</dt>
+            <dd th:text="${#lists.isEmpty(contexto.fechasSolicitadas())}
+                         ? '—'
+                         : ${#strings.listJoin(contexto.fechasSolicitadas(), ', ')}">2027-03-01</dd>
+        </dl>
+    </div>
+
+    <form class="tarjeta formulario-tarea"
+          th:action="@{/tareas/{id}/{accion}(id=${taskId}, accion=${accion})}" method="post">
+        <div class="campo">
+            <label for="programa">Programa</label>
+            <textarea id="programa" name="programa" rows="5"
+                      placeholder="Módulos, contenidos y carga horaria"
+                      th:text="${programa}"></textarea>
+            <span class="error-campo" th:if="${errores['programa']}" th:text="${errores['programa']}">Error</span>
+        </div>
+
+        <div class="campo">
+            <label for="presupuesto">Presupuesto (en pesos)</label>
+            <input type="text" id="presupuesto" name="presupuesto" inputmode="decimal"
+                   placeholder="180000" th:value="${presupuesto}">
+            <span class="error-campo" th:if="${errores['presupuesto']}" th:text="${errores['presupuesto']}">Error</span>
+        </div>
+
+        <div class="campo">
+            <label for="fechas">Fechas posibles</label>
+            <input type="text" id="fechas" name="fechas" th:value="${fechas}"
+                   placeholder="2027-03-01, 2027-03-08">
+            <span class="ayuda">Separadas por coma, en formato AAAA-MM-DD.</span>
+            <span class="error-campo" th:if="${errores['fechas']}" th:text="${errores['fechas']}">Error</span>
+        </div>
+
+        <button type="submit" class="principal"
+                th:text="${revisar} ? 'Generar nueva versión y enviar' : 'Generar PDF y enviar propuesta'">
+            Generar PDF y enviar propuesta
+        </button>
+    </form>
+</section>
+</body>
+</html>
