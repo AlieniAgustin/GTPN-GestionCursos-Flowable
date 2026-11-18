@@ -2,6 +2,7 @@ package com.backend.proxy.service;
 
 import java.security.SecureRandom;
 import java.text.Normalizer;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,31 +12,24 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.backend.proxy.dto.CompanyAccessResponseDTO;
 import com.backend.proxy.entity.Company;
+import com.backend.proxy.entity.CompanyAccess;
 import com.backend.proxy.entity.Course;
 import com.backend.proxy.exception.ResourceNotFoundException;
-import com.backend.proxy.repository.CompanyRepository;
+import com.backend.proxy.repository.CompanyAccessRepository;
 import com.backend.proxy.repository.CourseRepository;
 
 import lombok.RequiredArgsConstructor;
 
-/**
- * Habilita el acceso de la empresa al sitio (enunciado 4.1.2).
- *
- * <p>La llama la actividad automatica del proceso, por la API interna, una vez que la
- * empresa acepto la propuesta y antes de empezar la preparacion. Crea la cuenta si la
- * empresa todavia no tiene una, o reutiliza la que ya quedo de una contratacion
- * anterior. El curso queda vinculado a esa cuenta por su empresa.
- */
 @Service
 @RequiredArgsConstructor
-public class CompanyAccessService {
+public class AccessService {
 
-    private static final Logger log = LoggerFactory.getLogger(CompanyAccessService.class);
+    private static final Logger log = LoggerFactory.getLogger(AccessService.class);
     private static final String PASSWORD_ALPHABET = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static final int PASSWORD_LENGTH = 12;
 
     private final CourseRepository courseRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyAccessRepository companyAccessRepository;
     private final PasswordEncoder passwordEncoder;
     private final SecureRandom random = new SecureRandom();
 
@@ -48,36 +42,42 @@ public class CompanyAccessService {
         Course course = courseRepository.findByprocessInstanceId(processInstanceId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "No course linked to process instance " + processInstanceId));
+
         Company company = course.getCompany();
 
-        if (company.hasAccess()) {
-            log.info("[INFO] Reutilizando cuenta existente para '{}': usuario='{}'",
-                    company.getName(), company.getAccessUsername());
-            return new CompanyAccessResponseDTO(company.getAccessUsername(), false);
+        Optional<CompanyAccess> existingAccess = companyAccessRepository.findByCompany(company);
+        if (existingAccess.isPresent()) {
+            String username = existingAccess.get().getUsername();
+            log.info("[INFO] Reutilizando cuenta existente para '{}': usuario='{}'", company.getName(), username);
+            return new CompanyAccessResponseDTO(username, false);
         }
 
         String username = buildUsername(company);
         String password = generatePassword();
-        company.enableAccess(username, passwordEncoder.encode(password));
-        companyRepository.save(company);
+        CompanyAccess access = new CompanyAccess(company, username, passwordEncoder.encode(password));
+        companyAccessRepository.save(access);
 
-        // Simulación de la comunicación de las credenciales a la empresa (enunciado 4.1.2)
-        log.info("[SIMULACIÓN COMUNICACIÓN 4.1.2] Cuenta creada para '{}': usuario='{}' | password='{}'",
-                company.getName(), username, password);
+        log.info("Cuenta creada para '{}': usuario='{}' | password='{}'", company.getName(), username, password);
 
         return new CompanyAccessResponseDTO(username, true);
     }
 
-    /**
-     * Usuario derivado de la razon social. Si ya lo tomo otra empresa, se desambigua
-     * con el id, que es unico.
-     */
+    public boolean validateCredentials(String username, String rawPassword) {
+        return companyAccessRepository.findByUsername(username)
+                .map(access -> passwordEncoder.matches(rawPassword, access.getPasswordHash()))
+                .orElse(false);
+    }
+
+    public Optional<CompanyAccess> findByUsername(String username) {
+        return companyAccessRepository.findByUsername(username);
+    }
+
     private String buildUsername(Company company) {
         String slug = slugify(company.getName());
         if (slug.isBlank()) {
             slug = "empresa";
         }
-        if (companyRepository.existsByAccessUsername(slug)) {
+        if (companyAccessRepository.existsByUsername(slug)) {
             return slug + "-" + company.getId();
         }
         return slug;

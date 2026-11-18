@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.backend.proxy.dto.CompanyAccessResponseDTO;
 import com.backend.proxy.dto.CourseDetailsUpdateDTO;
 import com.backend.proxy.dto.CourseStatusUpdateDTO;
-import com.backend.proxy.service.CompanyAccessService;
+import com.backend.proxy.service.AccessService;
 import com.backend.proxy.service.CourseService;
 
 import jakarta.validation.Valid;
@@ -22,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class InternalFlowableController {
     private final CourseService courseService;
-    private final CompanyAccessService companyAccessService;
+    private final AccessService accessService;
 
     @PutMapping("/courses/{processId}")
     public ResponseEntity<Void> updateStatus(
@@ -46,6 +46,6 @@ public class InternalFlowableController {
 
     @PostMapping("/courses/{processId}/company-access")
     public ResponseEntity<CompanyAccessResponseDTO> enableCompanyAccess(@PathVariable String processId) {
-        return ResponseEntity.ok(companyAccessService.enableAccess(processId));
+        return ResponseEntity.ok(accessService.enableAccess(processId));
     }
 }

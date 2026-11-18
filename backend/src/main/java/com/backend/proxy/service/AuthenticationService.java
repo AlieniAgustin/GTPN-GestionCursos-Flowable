@@ -2,12 +2,9 @@ package com.backend.proxy.service;
 
 import java.util.Optional;
 
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.backend.proxy.dto.auth.LoginResponseDTO;
-import com.backend.proxy.entity.Company;
-import com.backend.proxy.repository.CompanyRepository;
 import com.backend.proxy.security.Roles;
 
 import lombok.RequiredArgsConstructor;
@@ -23,12 +20,8 @@ import lombok.RequiredArgsConstructor;
 public class AuthenticationService {
 
     private final FlowableAuthService flowableAuthService;
-    private final CompanyRepository companyRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final AccessService accessService;
 
-    /**
-     * Autentica credenciales y devuelve el resultado con rol de negocio.
-     */
     public Optional<LoginResponseDTO> authenticate(String username, String password) {
         return resolveRole(username, password)
                 .map(role -> new LoginResponseDTO(
@@ -55,11 +48,6 @@ public class AuthenticationService {
     }
 
     private boolean authenticatesAsCompany(String username, String password) {
-        Optional<Company> company = companyRepository.findByAccessUsername(username);
-        if (company.isEmpty()) {
-            return false;
-        }
-        String hash = company.get().getAccessPasswordHash();
-        return hash != null && passwordEncoder.matches(password, hash);
+        return accessService.validateCredentials(username, password);
     }
 }

@@ -3,12 +3,15 @@ package com.backend.proxy.entity;
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 
@@ -30,11 +33,8 @@ public class Company {
     @Column(nullable = false)
     private String phone;
 
-    @Column(name = "access_username", unique = true)
-    private String accessUsername;
-
-    @Column(name = "access_password_hash")
-    private String accessPasswordHash;
+    @OneToOne(mappedBy = "company", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private CompanyAccess access;
 
     @OneToMany(mappedBy = "company")
     private List<Course> courses = new ArrayList<>();
@@ -49,17 +49,14 @@ public class Company {
     }
 
     public boolean hasAccess() {
-        return accessUsername != null && accessPasswordHash != null;
+        return access != null;
+    }
+
+    public String getAccessUsername() {
+        return access != null ? access.getUsername() : null;
     }
 
     public void enableAccess(String username, String passwordHash) {
-        if (username == null || username.isBlank()) {
-            throw new IllegalArgumentException("Company access username cannot be blank");
-        }
-        if (passwordHash == null || passwordHash.isBlank()) {
-            throw new IllegalArgumentException("Company access password cannot be blank");
-        }
-        this.accessUsername = username;
-        this.accessPasswordHash = passwordHash;
+        this.access = new CompanyAccess(this, username, passwordHash);
     }
 }

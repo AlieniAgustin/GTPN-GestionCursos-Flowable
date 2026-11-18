@@ -13,7 +13,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.backend.proxy.dto.auth.LoginResponseDTO;
 import com.backend.proxy.entity.Company;
+import com.backend.proxy.entity.CompanyAccess;
+import com.backend.proxy.repository.CompanyAccessRepository;
 import com.backend.proxy.repository.CompanyRepository;
+import com.backend.proxy.repository.CourseRepository;
 import com.backend.proxy.security.Roles;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,7 +35,14 @@ class AuthenticationServiceTest {
     @Autowired
     private CompanyRepository companyRepository;
 
+    @Autowired
+    private CompanyAccessRepository companyAccessRepository;
+
+    @Autowired
+    private CourseRepository courseRepository;
+
     private FlowableAuthService flowableAuthService;
+    private AccessService accessService;
     private PasswordEncoder passwordEncoder;
     private AuthenticationService authenticationService;
 
@@ -40,7 +50,9 @@ class AuthenticationServiceTest {
     void setUp() {
         flowableAuthService = Mockito.mock(FlowableAuthService.class);
         passwordEncoder = new BCryptPasswordEncoder();
-        authenticationService = new AuthenticationService(flowableAuthService, companyRepository, passwordEncoder);
+        accessService = new AccessService(courseRepository, companyAccessRepository, passwordEncoder);
+        authenticationService = new AuthenticationService(flowableAuthService, accessService);
+        companyAccessRepository.deleteAll();
         companyRepository.deleteAll();
     }
 
@@ -96,8 +108,8 @@ class AuthenticationServiceTest {
     }
 
     private Company saveCompanyWithPassword(String username, String rawPassword) {
-        Company company = new Company("ACME SA", "+543581234567", "contacto@acme.com");
-        company.enableAccess(username, passwordEncoder.encode(rawPassword));
-        return companyRepository.save(company);
+        Company company = companyRepository.save(new Company("ACME SA", "+543581234567", "contacto@acme.com"));
+        companyAccessRepository.save(new CompanyAccess(company, username, passwordEncoder.encode(rawPassword)));
+        return company;
     }
 }
