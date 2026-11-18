@@ -19,7 +19,9 @@ tres más frecuentes cubren el **77,3 %**:
 |---|---|---|---|
 | 1 | 15 | 34,1 % | Solicitud recibida → Evaluar Viabilidad → **Notificar Decisión** |
 | 2 | 13 | 29,5 % | … → Elaborar propuesta → Enviar propuesta → Esperar respuesta → **Rechazo** → Archivar → Cerrada |
-| 3 | 6 | 13,6 % | … → Esperar respuesta → (5 días → Recordatorio) **×3** → Archivar → Cerrada |
+| 3 | 6 | 13,6 % | … → Esperar respuesta → (5 días → Recordatorio) **×3** → Archivar → Cerrada ⁽*⁾ |
+
+⁽*⁾ El nodo se atraviesa tres veces pero solo envía dos recordatorios: ver 3.1.
 
 Los tres restantes:
 
@@ -53,37 +55,49 @@ diagrama no contemple:
 
 ## 3. Diferencias encontradas
 
-### 3.1 El modelo envía tres recordatorios, no dos
+### 3.1 El log sugiere tres recordatorios, pero solo se envían dos
 
-Es el hallazgo principal y surge directamente del recorrido 3:
+Es el hallazgo principal y aparece en el recorrido 3:
 
 ```
 Esperar respuesta → 5 días → Enviar recordatorio
 Esperar respuesta → 5 días → Enviar recordatorio
-Esperar respuesta → 5 días → Enviar recordatorio   ← uno de más
+Esperar respuesta → 5 días → Enviar recordatorio   ← tercera vuelta
 Archivar solicitud
 ```
 
-El enunciado (§1.1) dice que *"se enviarán como máximo dos recordatorios"* y que
-*"si transcurren otros cinco días después del segundo sin recibir respuesta, se archiva
-la solicitud"*. El log muestra **tres envíos** en el 100 % de los casos sin respuesta
-(6 de 6).
+Leído así, parece que el proceso manda un recordatorio de más: el enunciado (§1.1) dice
+que *"se enviarán como máximo dos recordatorios"*. **No es lo que ocurre.** El script de
+la actividad incrementa el contador siempre, pero solo envía cuando todavía no llegó al
+máximo:
 
-La causa está en la compuerta `seenviaron2recordatorios` del BPMN:
-
-```xml
-flow_recordatorios_no → esperarrespuesta    ${recordatorios <= 2}
-flow_recordatorios_si → archivarsolicitud   ${recordatorios > 2}
+```groovy
+def n = (execution.getVariable('recordatorios') ?: 0) + 1
+execution.setVariable('recordatorios', n)
+if (n <= 2) {
+  println "Recordatorio ${n} enviado"
+}
 ```
 
-El contador se incrementa **antes** de evaluar la condición, así que con
-`recordatorios = 2` todavía entra por la rama *no* y manda un tercero. Las condiciones
-correctas serían `${recordatorios < 2}` y `${recordatorios >= 2}`.
+Verificado contra el motor: en un caso sin respuesta el log imprime exactamente
+`Recordatorio 1 enviado` y `Recordatorio 2 enviado`, y nada más. El comportamiento
+**cumple el enunciado**.
 
-Vale la pena notar que **ningún test lo detectó**: `NoResponseTest` verifica que la
-solicitud termine archivada por falta de respuesta, que es lo que efectivamente pasa, pero
-no cuenta los recordatorios. La minería lo expuso porque mira la secuencia completa y no
-solo el resultado.
+Lo que la minería expone es una **discrepancia entre el modelo y la implementación**: el
+control de cuántos recordatorios se mandan vive dentro del script, no en el flujo. En el
+diagrama, la compuerta `seenviaron2recordatorios` evalúa `${recordatorios <= 2}` *después*
+de pasar por la actividad, así que el token atraviesa *Enviar recordatorio* tres veces y
+la tercera no hace nada. El event log —que solo ve las actividades, no el código de
+adentro— registra tres ejecuciones de una actividad que se llama "Enviar recordatorio".
+
+Es exactamente el tipo de cosa para la que sirve esta técnica: el log no miente sobre lo
+que el motor ejecutó, pero el modelo no cuenta toda la historia. Un analista que mirara
+solo el diagrama y el log concluiría que se mandan tres.
+
+> **Mejora sugerida (no es un defecto):** mover la decisión al flujo, evaluando la
+> compuerta **antes** de la actividad —`5 días → ¿ya van 2? → sí: archivar / no: enviar
+> recordatorio`—. El comportamiento sería el mismo, pero el modelo quedaría
+> autoexplicativo y el log dejaría de mostrar una vuelta que no envía nada.
 
 ### 3.2 El modelo registra más actividad de la que ocurre
 
@@ -127,7 +141,7 @@ a mitad de camino. Incluirlas agregaba variantes que no corresponden a ningún c
 variantes, el DFG y la red heurística reproducen el modelo casi exactamente, lo cual
 confirma la implementación pero no aporta hallazgos por sí solo. El valor del análisis
 acá estuvo en comparar las **secuencias observadas** contra lo que pide el enunciado, que
-es lo que destapó el problema de los recordatorios.
+es lo que destapó la diferencia entre lo que el diagrama sugiere y lo que el proceso hace.
 
 ---
 
@@ -136,15 +150,18 @@ es lo que destapó el problema de los recordatorios.
 La implementación respeta la estructura de la etapa de negociación: los seis recorridos
 observados son todos caminos previstos en el diagrama y no apareció ninguno espurio. La
 compuerta de viabilidad, las cuatro respuestas posibles de la empresa y el ciclo de
-renegociación se comportan como el modelo indica.
+renegociación se comportan como el modelo indica. **No se encontró ninguna desviación
+respecto de lo que pide el enunciado.**
 
-La minería sí detectó **una desviación respecto del enunciado**: el proceso envía tres
-recordatorios en lugar de dos, por un error de borde en la condición de la compuerta. Es
-un defecto que la suite de tests no cubría, porque los tests verifican el resultado final
-—la solicitud archivada— y no la cantidad de vueltas del ciclo. Encontrar eso justifica el
-análisis: es precisamente el tipo de discrepancia entre modelo y ejecución que esta
-técnica busca.
+El análisis sí dejó una observación que vale la pena: el event log sugiere que se envían
+tres recordatorios cuando en realidad se envían dos, porque el límite está dentro del
+script de la actividad y no en el flujo del diagrama. El comportamiento es correcto, pero
+modelo y log cuentan historias distintas. Es un buen ejemplo de para qué sirve la minería
+—y también de su principal limitación: ve lo que el motor ejecutó, no lo que el código
+decidió adentro—. Mover esa decisión a la compuerta dejaría el modelo autoexplicativo.
 
-> **Pendiente:** corregir las condiciones a `${recordatorios < 2}` / `${recordatorios >= 2}`
-> y agregar al `NoResponseTest` una aserción sobre la cantidad de recordatorios. Después
-> de eso conviene regenerar el log para que el entregable refleje el modelo corregido.
+Sobre la técnica en sí: con seis variantes y datos generados a propósito, el valor no
+estuvo en el descubrimiento automático —el DFG reproduce el modelo casi exactamente— sino
+en **comparar las secuencias observadas contra el enunciado**, actividad por actividad.
+Ahí es donde apareció la diferencia entre lo que el diagrama sugiere y lo que el proceso
+hace.
