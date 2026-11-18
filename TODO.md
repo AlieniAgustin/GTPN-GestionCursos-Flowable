@@ -19,7 +19,7 @@ Checklist del equipo, derivada del enunciado [`docs/ProyectoCursos_V3.pdf`](docs
 | 5. App Java (API Java) | Completo |
 | 6. App de comunicaciones (API REST) | Completo |
 | 7. Análisis de ejecuciones | Completo |
-| 8. Minería de procesos | Completo — 🔴 detectó un defecto en los recordatorios |
+| 8. Minería de procesos | Completo |
 | 9. Entrega y demo | Escenarios 1–8 cubiertos por tests; 9, 10 y 11 ya se pueden mostrar con el sitio y las dos apps |
 
 ---
@@ -179,17 +179,22 @@ python3 -m venv .venv && .venv/bin/pip install pm4py pandas requests psycopg2-bi
 - [x] **Representación gráfica y los tres recorridos más frecuentes.** [`analizar.py`](mineria/analizar.py) genera el DFG y la red heurística en `mineria/resultados/`, e imprime los recorridos con cantidad y porcentaje. Sobre 44 instancias salieron **6 recorridos distintos**; los tres más frecuentes cubren el **77,3 %**: no viable (34,1 %), rechazo de la propuesta (29,5 %) y cierre por falta de respuesta (13,6 %). ( )
 - [x] **Conclusión** comparando con el modelo BPMN ([`conclusion.md`](mineria/conclusion.md)): coincidencias, diferencias y limitaciones. ( )
 
-### 🔴 Lo que encontró la minería
+### Lo que encontró la minería
 
-El análisis detectó que **el proceso envía tres recordatorios en vez de dos**. El enunciado (§1.1) dice *"se enviarán como máximo dos recordatorios"*, pero el recorrido observado muestra tres envíos en el 100 % de los casos sin respuesta. La causa está en la compuerta `seenviaron2recordatorios`, que evalúa `${recordatorios <= 2}` después de incrementar el contador; debería ser `${recordatorios < 2}` / `${recordatorios >= 2}`.
+El análisis **no encontró desviaciones** respecto del enunciado: los seis recorridos observados son todos caminos previstos en el diagrama.
 
-**Ningún test lo detectaba**: `NoResponseTest` verifica que la solicitud termine archivada, que es lo que pasa, pero no cuenta las vueltas del ciclo.
+Sí dejó una observación de modelado. El event log muestra que el nodo *Enviar recordatorio* se atraviesa **tres veces**, lo que leído de golpe parece incumplir el "máximo dos recordatorios" de §1.1. **No lo incumple**: el script envía solo si `n <= 2`, y se verificó contra el motor que imprime exactamente `Recordatorio 1 enviado` y `Recordatorio 2 enviado`. Lo que pasa es que el límite vive dentro del script y no en el flujo, así que el token pasa una vez de más sin hacer nada.
 
-- [ ] Corregir las condiciones de la compuerta y agregar a `NoResponseTest` una aserción sobre la cantidad de recordatorios. Después conviene regenerar el log para que el entregable refleje el modelo corregido. ( )
+- [ ] *(Opcional, mejora de modelado)* Mover la decisión a la compuerta para que evalúe **antes** de la actividad: `5 días → ¿ya van 2? → sí: archivar / no: enviar recordatorio`. El comportamiento no cambia, pero el modelo queda autoexplicativo y el log deja de mostrar una vuelta vacía. ( )
 
 ---
 
 ## 9. Entrega y demostración (§5)
+
+> Para la defensa: `.venv/bin/python scripts/preparar_demo.py --limpiar` deja una
+> instancia parada en cada estado del proceso e imprime dónde ver cada escenario y con
+> qué usuario. Los escenarios 7 (falta de aulas) y los plazos en vivo se habilitan con
+> las variables comentadas de [`docker-compose.yml`](docker-compose.yml).
 
 **Material a entregar**
 

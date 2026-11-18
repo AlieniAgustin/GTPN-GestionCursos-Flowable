@@ -404,7 +404,29 @@ curl -s -u admin:test "http://localhost:8080/process-api/history/historic-proces
 
 ---
 
-### 8. Cargar datos de prueba
+### 8. Preparar la demo
+
+Deja el stack con **una instancia parada en cada estado**, para no recorrer el flujo
+entero en vivo durante la presentación. Al terminar imprime qué quedó dónde y con qué
+usuario verlo.
+
+```bash
+.venv/bin/python scripts/preparar_demo.py --limpiar
+```
+
+`--limpiar` cierra lo que haya en curso antes de empezar. Hace falta porque solo cinco
+cursos pueden estar en ejecución a la vez (§3.1): sin cupo, las solicitudes nuevas salen
+*no viables* y los escenarios no se arman. Usa el venv de [`mineria/`](mineria/README.md).
+
+Para los dos escenarios que dependen de los plazos y de los recursos, hay variables
+comentadas en [`docker-compose.yml`](docker-compose.yml):
+
+- **Escenario 7 (falta de aulas):** `AULAS_DISPONIBLES: 1` y pedir aula física en dos cursos.
+- **Plazos en vivo:** `PROCESO_PLAZO_RESPUESTA: PT1M` para no esperar cinco días.
+
+---
+
+### 9. Cargar datos de prueba
 
 Da de alta empresas y solicitudes por la API del BFF —igual que lo haría el sitio web— y las deja repartidas en cuatro estados: aceptada y en preparación, rechazada, con modificaciones pendientes y recién ingresada. Sirve para tener algo que mostrar en la demo y recorridos variados para el análisis de §4.3 y la minería de §4.4.
 
@@ -595,7 +617,7 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 
 | Enunciado                                | Qué falta                                                                                                                                            |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| § 1.1 Recordatorios                      | 🔴 El proceso envía **tres** recordatorios en vez de dos. Lo detectó la minería; detalle en [`mineria/conclusion.md`](mineria/conclusion.md)         |
+| § 1.1 Recordatorios *(opcional)*         | El límite de dos recordatorios está dentro del script y no en el flujo: funciona bien, pero el modelo no lo refleja. Ver [`mineria/conclusion.md`](mineria/conclusion.md) |
 
 ---
 
