@@ -8,7 +8,10 @@
         Acá están las tareas que tenés asignadas y las que podés reclamar porque son de tu grupo.
     </p>
 
-    <div class="aviso bueno" th:if="${mensaje}" th:text="${mensaje}">Listo</div>
+    <div class="aviso bueno" th:if="${mensaje}">
+        <span th:text="${mensaje}">Listo</span>
+        <a th:if="${enlace}" th:href="@{${enlace}}" th:text="${enlaceTexto}" target="_blank">Ver</a>
+    </div>
     <div class="aviso malo" th:if="${error}" th:text="${error}">Error</div>
 
     <h2>Asignadas a mí</h2>
@@ -27,6 +30,9 @@
                   th:action="@{/tareas/{id}/completar(id=${t.id()})}" method="post">
                 <button type="submit" class="principal chico">Completar</button>
             </form>
+
+            <a th:if="${t.tieneFormularioEnSitio()}" class="boton principal chico"
+               th:href="@{/tareas/{id}/{form}(id=${t.id()},form=${t.formulario()})}">Completar</a>
 
             <span class="nota" th:if="${t.necesitaFormulario()}">
                 Se completa desde Flowable UI

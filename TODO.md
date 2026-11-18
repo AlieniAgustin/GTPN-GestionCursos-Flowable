@@ -15,12 +15,12 @@ Checklist del equipo, derivada del enunciado [`docs/ProyectoCursos_V3.pdf`](docs
 | 1. Motor y modelo BPMN | Completo |
 | 2. BD de la institución | Completo |
 | 3. Backend BFF | Completo |
-| 4. Sitio web institucional | En curso — público, empresas y bandeja de tareas listos |
+| 4. Sitio web institucional | Completo |
 | 5. App Java (API Java) | Completo |
 | 6. App de comunicaciones (API REST) | Completo |
 | 7. Análisis de ejecuciones | Completo |
-| 8. Minería de procesos | No empezado |
-| 9. Entrega y demo | Escenarios 1–8 cubiertos por tests; el 11 ya se puede mostrar con las dos apps; 9 y 10 dependen del sitio web |
+| 8. Minería de procesos | Completo |
+| 9. Entrega y demo | Escenarios 1–8 cubiertos por tests; 9, 10 y 11 ya se pueden mostrar con el sitio y las dos apps |
 
 ---
 
@@ -67,7 +67,7 @@ Completo. El BFF autentica a los dos tipos de usuario, opera contra el motor y r
 
 ## 4. Sitio web de la institución (§4.1)
 
-En curso. Son páginas server-side con **Thymeleaf dentro del módulo `backend`**: mismo Maven, mismo contenedor y misma sesión que la API, así que no hay CORS, ni Node, ni un servicio más que levantar. Los estilos están en [`static/css/sitio.css`](backend/src/main/resources/static/css/sitio.css) y las plantillas en [`templates/`](backend/src/main/resources/templates/).
+Completo. Son páginas server-side con **Thymeleaf dentro del módulo `backend`**: mismo Maven, mismo contenedor y misma sesión que la API, así que no hay CORS, ni Node, ni un servicio más que levantar. Los estilos están en [`static/css/sitio.css`](backend/src/main/resources/static/css/sitio.css) y las plantillas en [`templates/`](backend/src/main/resources/templates/).
 
 La cadena de seguridad quedó partida en tres ([`SecurityConfig`](backend/src/main/java/com/backend/proxy/security/SecurityConfig.java)): `/api/flowable/**` por API key, `/api/**` con 401 para los clientes REST, y el sitio con formulario de login y redirección. La API no cambió de comportamiento.
 
@@ -88,19 +88,23 @@ La cadena de seguridad quedó partida en tres ([`SecurityConfig`](backend/src/ma
 - [x] Consultar **tareas asignadas y disponibles para su grupo** en `/tareas`. La bandeja las muestra en dos listas separadas, porque el enunciado trata los dos casos distinto. Cada tarea indica a qué curso pertenece, resuelto con una sola consulta de cursos por página. Es la misma pantalla para Administración y para el equipo docente: cada uno ve lo suyo según sus grupos. ( )
 - [x] **Reclamar y completar** respetando las responsabilidades. `TaskService` suma `claim()` y dos reglas del enunciado 2 que antes no estaban: una tarea de grupo **no se completa sin reclamarla primero**, y una tarea con responsable **solo la completa esa persona**. Las asignadas directamente a un jefe no requieren reclamo y aparecen listas para completar. Verificado contra el stack: completar sin reclamar responde *"Primero tenés que reclamar la tarea 'Preparar materiales'"*, `administrativo1` la reclama y la completa, y `jefeadministrativo` no puede ni reclamarla ni completarla. ( )
 - [x] Las tareas que **sí** se completan desde la bandeja son las de confirmación, catalogadas en [`TaskCatalog`](backend/src/main/java/com/backend/proxy/types/TaskCatalog.java) junto con las variables que dejan. Las que necesitan capturar datos aparecen marcadas *"Se completa desde Flowable UI"* hasta que tengan su formulario. ( )
-- [ ] Completar *Registrar y elaborar propuesta* con formulario y **generar el PDF** de la propuesta. ( )
-- [ ] Completar *Revisar propuesta* **generando una nueva versión del PDF**. ( )
-- [ ] Completar *Archivar solicitud*. ( )
-- [ ] Completar *Confeccionar lista definitiva*. ( )
-- [ ] Completar *Evaluar recursos* con una pantalla que permita elegir aula física, aula virtual y/o equipamiento especial — **al menos una alternativa**. ( )
-- [ ] Permitir al jefe administrativo ver el informe y completar *Enviar informe a empresa y archivar expediente*. ( )
+- [x] Completar *Registrar y elaborar propuesta* con formulario y **generar el PDF** de la propuesta. Pantalla `/tareas/{id}/elaborar-propuesta` en [`ProposalSiteController`](backend/src/main/java/com/backend/proxy/web/ProposalSiteController.java): muestra la solicitud, pide programa, presupuesto y fechas posibles (precargadas con las que pidió la empresa) y valida cada campo sin perder lo escrito. Al enviar, [`ProposalService`](backend/src/main/java/com/backend/proxy/service/ProposalService.java) arma el PDF con OpenPDF ([`ProposalPdfBuilder`](backend/src/main/java/com/backend/proxy/service/ProposalPdfBuilder.java)), lo guarda como versión 1 en la tabla nueva `proposal_documents` y completa la tarea con `programa`, `presupuesto`, `fechasPropuestas` y `versionPropuesta`, todo en una transacción. Los PDF se descargan en `/mis-cursos/{id}/propuestas/{version}.pdf` con la misma visibilidad que el curso, y el detalle del curso lista las versiones. Deja lista la base para *Revisar propuesta*, que solo tiene que generar la versión siguiente. `ProposalServiceTest` y `ProposalSiteControllerTest` (12 tests); backend en 87. Verificado contra el stack: la instancia quedó esperando respuesta y el curso con programa y presupuesto en la BD. (Agustin Cesari)
+- [x] Completar *Revisar propuesta* **generando una nueva versión del PDF**. Pantalla `/tareas/{id}/revisar-propuesta` en el mismo [`ProposalSiteController`](backend/src/main/java/com/backend/proxy/web/ProposalSiteController.java) y con el mismo formulario que elaborar: muestra las **observaciones** que mandó la empresa al pedir modificaciones (variable `observaciones`, leída del motor) y arranca **precargado con la última versión** para cambiar solo lo pedido. Al enviar genera el PDF de la versión siguiente con el mismo `ProposalService.enviarPropuesta`, y el proceso vuelve a *Enviar propuesta* (recordatorios en 0). El detalle del curso lista todas las versiones con la última como vigente. 4 tests nuevos; backend en 91. Verificado contra el stack: modificaciones desde la API, versión 2 del PDF, presupuesto nuevo en la BD y la instancia otra vez esperando respuesta. (Agustin Cesari)
+- [x] Completar *Archivar solicitud* desde la bandeja: es una tarea de confirmación, ya catalogada en `TaskCatalog`, y viene asignada directamente al jefe administrativo así que no requiere reclamo. Verificado contra el stack: al completarla la instancia cerró con `resultadoCurso = RECHAZADO`. ( )
+- [x] Completar *Confeccionar lista definitiva* desde la bandeja. Es de grupo, así que hay que reclamarla primero; deja la variable `listaDefinitiva`. Verificado dentro del recorrido completo: cerró la rama de inscripciones y, con las otras dos, el subproceso de preparación. ( )
+- [x] Completar *Evaluar recursos* con una pantalla que permita elegir aula física, aula virtual y/o equipamiento especial — **al menos una alternativa**. Pantalla `/tareas/{id}/evaluar-recursos` en [`TaskFormSiteController`](backend/src/main/java/com/backend/proxy/web/TaskFormSiteController.java), a la que se llega desde el botón *Completar* de la bandeja una vez reclamada. Sin ninguna opción marcada vuelve al formulario con el error y no completa nada. Siempre manda las tres variables del gateway inclusivo (`requiereAula`, `requierePlataforma`, `requiereEquipamiento`), aunque sean `false`, para que el motor no falle con *Unknown property*. Verifica que la tarea sea de ese tipo y visible para el usuario. Verificado contra el stack: con *Aula virtual* el proceso abrió *Solicitar Aula Virtual*. (Agustin Cesari)
+- [x] Permitir al jefe administrativo **ver el informe** y completar *Enviar informe a empresa y archivar expediente*. Pantalla `/tareas/{id}/enviar-informe` en [`TaskFormSiteController`](backend/src/main/java/com/backend/proxy/web/TaskFormSiteController.java): muestra el informe que dejó el equipo docente y pide una confirmación explícita, porque es el paso que cierra el curso y no tiene vuelta atrás. Sin tildar la casilla vuelve al formulario sin completar nada. El informe se lee de la **variable del proceso**, que es la fuente de verdad mientras la instancia vive, y no de la BD: así la pantalla funciona aunque la sincronización no haya llegado. Verificado contra el stack: al confirmar, la instancia terminó con `resultadoCurso = FINALIZADO`, `aulaLiberada = true` por la compensación y el curso quedó FINALIZADO en la base. **Cierra el escenario 1 de la defensa de punta a punta desde el sitio.** ( )
 
 **Funciones para el Equipo Docente**
 
-- [ ] Jefe docente: consultar sus tareas *Definir docente que desarrolla el curso*, **seleccionar uno de los tres docentes (puede elegirse a sí mismo), asignarlo a la tarea *Desarrollar curso*** y completar. ( )
-- [ ] Docente seleccionado: consultar sus tareas *Desarrollar curso* y completarlas. ( )
+- [x] Jefe docente: consultar sus tareas *Definir docente que desarrolla el curso*, **seleccionar uno de los tres docentes (puede elegirse a sí mismo), asignarlo a la tarea *Desarrollar curso*** y completar. Pantalla `/tareas/{id}/definir-docente` con un desplegable de `TeacherRepository.findAvailableTeachers()` (jefedocente, docente1 y docente2). Solo acepta a alguien de esa lista y completa con `docenteSeleccionado`, que el modelo usa como responsable de *Desarrollar curso*. Verificado contra el stack: con docente2 elegido, *Desarrollar curso* le quedó asignada a docente2. `TaskFormSiteControllerTest` cubre las dos pantallas (13 tests) y la bandeja suma un test del enlace; el backend queda en 75 tests pasando. (Agustin Cesari)
+- [x] Docente seleccionado: consultar sus tareas *Desarrollar curso* y completarlas. Aparece en su bandeja ya asignada —la asigna el modelo con `docenteSeleccionado`, sin reclamo— y se completa con el botón directo, dejando `cursoDesarrollado`. Verificado: con `docente1` elegido, la tarea le llegó a él y al completarla el proceso pasó a *Elaborar informe*; `docente2` no la ve. ( )
 
-> *Solicitar aula virtual*, *Contratar equipamiento* y *Liberar equipamiento* pueden hacerse desde Flowable UI, no hace falta pantalla propia. *Elaborar informe de resultados* también puede hacerse desde Flowable UI (el PDF del informe ya no es obligatorio).
+- [x] Completar *Elaborar informe de resultados* desde el sitio. El enunciado lo da como opcional —puede hacerse desde Flowable UI— pero con la infraestructura ya armada salía barato y deja el recorrido completo sin salir del sitio. Pantalla `/tareas/{id}/elaborar-informe`, con la variable `informe` que después lee el jefe administrativo. ( )
+
+> *Solicitar aula virtual*, *Contratar equipamiento* y *Liberar equipamiento* se completan desde la bandeja con el botón directo, o desde Flowable UI: no necesitan pantalla propia. El PDF del informe no es obligatorio (tachado en el enunciado V3).
+>
+> Con estas dos pantallas **ya no queda ninguna tarea derivada a Flowable UI**. El mecanismo de `TareaVista.necesitaFormulario()` se mantiene igual, como red por si se suma una tarea con datos antes que su pantalla.
 
 ---
 
@@ -162,25 +166,35 @@ java -cp materiales/target/app.jar com.materiales.app.analysis.AnalysisApp
 
 ## 8. Introducción a la minería de procesos (§4.4)
 
-Análisis con PM4Py de la **etapa de negociación** (todo lo previo a la preparación del curso).
+Completo. Todo vive en [`mineria/`](mineria/) y la conclusión está en
+[`mineria/conclusion.md`](mineria/conclusion.md).
 
 ```bash
 sudo apt install python3-venv graphviz
-python3 -m venv .venv
-source .venv/bin/activate
-pip install pm4py pandas requests
+python3 -m venv .venv && .venv/bin/pip install pm4py pandas requests psycopg2-binary
 ```
 
-- [ ] **Generar el CSV** a partir de las actividades históricas de Flowable, adaptando el script provisto `exportar_history.py` al proceso implementado. ( )
-- [ ] **Obtener la representación gráfica** del comportamiento observado e identificar los **tres recorridos más frecuentes**, con cantidad y porcentaje de instancias de cada uno. Si hay menos de tres recorridos distintos, mostrar todos. Se puede usar el script provisto `analizar.py`. ( )
-- [ ] **Redactar la conclusión**: comparar el resultado con la etapa de negociación del modelo BPMN — coincidencias, diferencias y limitaciones del análisis. ( )
-- [ ] Entregar el CSV, el código o las instrucciones para reproducir el análisis, y una **captura de los resultados**. ( )
+- [x] **Generar el CSV** a partir de las actividades históricas. Los scripts que menciona el enunciado no estaban en el repo, así que se escribieron: [`exportar_history.py`](mineria/exportar_history.py) arma el event log con los nombres de columna que espera pm4py y recorta la **etapa de negociación**, que es lo que pide el análisis. **Lee de la base, no de la API REST**, y la razón importa: el modelo usa una compuerta basada en eventos, así que cada instancia que espera respuesta deja registradas las cuatro ramas (aceptación, rechazo, modificaciones y el plazo) aunque solo una haya ocurrido; las canceladas se distinguen solo por `DELETE_REASON_`, un campo que el REST no expone. Sin filtrarlas el log pasa de 6 a 19 recorridos y deja de significar algo. Queda `--fuente rest` como alternativa, avisando de la limitación. Se descartan además las negociaciones todavía abiertas, que no son un camino sino una foto a mitad de camino. ( )
+- [x] **Datos para el análisis.** [`generar_casos.py`](mineria/generar_casos.py) crea instancias recorriendo a propósito los cinco caminos de la negociación, dando de alta por el sitio y disparando los mensajes y temporizadores por la API REST. Aparecieron dos cosas al usarlo: el límite de cinco cursos (§3.1) hace que las solicitudes nuevas salgan no viables si no hay cupo —correcto, pero hay que tenerlo en cuenta—, y los temporizadores encadenados necesitan reintento, porque el motor tarda un instante en crear el siguiente job y sin esperar solo se dispara el primer recordatorio. ( )
+- [x] **Representación gráfica y los tres recorridos más frecuentes.** [`analizar.py`](mineria/analizar.py) genera el DFG y la red heurística en `mineria/resultados/`, e imprime los recorridos con cantidad y porcentaje. Sobre 44 instancias salieron **6 recorridos distintos**; los tres más frecuentes cubren el **77,3 %**: no viable (34,1 %), rechazo de la propuesta (29,5 %) y cierre por falta de respuesta (13,6 %). ( )
+- [x] **Conclusión** comparando con el modelo BPMN ([`conclusion.md`](mineria/conclusion.md)): coincidencias, diferencias y limitaciones. ( )
 
-> Hace falta generar bastantes instancias terminadas con recorridos variados antes de que el análisis sea interesante. La app del bloque 6 sirve para eso.
+### Lo que encontró la minería
+
+El análisis **no encontró desviaciones** respecto del enunciado: los seis recorridos observados son todos caminos previstos en el diagrama.
+
+Sí dejó una observación de modelado. El event log muestra que el nodo *Enviar recordatorio* se atraviesa **tres veces**, lo que leído de golpe parece incumplir el "máximo dos recordatorios" de §1.1. **No lo incumple**: el script envía solo si `n <= 2`, y se verificó contra el motor que imprime exactamente `Recordatorio 1 enviado` y `Recordatorio 2 enviado`. Lo que pasa es que el límite vive dentro del script y no en el flujo, así que el token pasa una vez de más sin hacer nada.
+
+- [ ] *(Opcional, mejora de modelado)* Mover la decisión a la compuerta para que evalúe **antes** de la actividad: `5 días → ¿ya van 2? → sí: archivar / no: enviar recordatorio`. El comportamiento no cambia, pero el modelo queda autoexplicativo y el log deja de mostrar una vuelta vacía. ( )
 
 ---
 
 ## 9. Entrega y demostración (§5)
+
+> Para la defensa: `.venv/bin/python scripts/preparar_demo.py --limpiar` deja una
+> instancia parada en cada estado del proceso e imprime dónde ver cada escenario y con
+> qué usuario. Los escenarios 7 (falta de aulas) y los plazos en vivo se habilitan con
+> las variables comentadas de [`docker-compose.yml`](docker-compose.yml).
 
 **Material a entregar**
 
@@ -188,8 +202,8 @@ pip install pm4py pandas requests
 - [ ] Código del servicio REST y de los componentes incorporados al motor. *(listo)*
 - [ ] Reglas de negocio. *(listo — DMN de viabilidad)*
 - [ ] Instrucciones para configurar usuarios y grupos y ejecutar la solución. *(listo — [README.md](README.md))*
-- [ ] **Informe breve** explicando variables, listeners y decisiones de implementación. Hay material en [`model/`](model/) y [`adr/`](adr/) para reusar. ( )
-- [ ] **Código de las tres aplicaciones externas** más las instrucciones para configurarlas y ejecutarlas. Dos de tres listas: [`materiales/`](materiales/) y [`comunicaciones/`](comunicaciones/), con sus pasos 9 y 10 en el [README](README.md). Falta el sitio web del bloque 4. ( )
+- [x] **Informe breve** explicando variables, listeners y decisiones de implementación. Está en [`docs/informe/`](docs/informe/), partido por etapas: un archivo por etapa del enunciado, más un [índice](docs/informe/README.md) con el **reparto de la exposición** entre los cuatro, la tabla de cobertura sección por sección, las 20 tareas de la institución repartidas y los 11 escenarios de la defensa con quién los muestra. El núcleo de lo que pide §5 —variables, listeners y decisiones— está en [06](docs/informe/06-variables-listeners-y-decisiones.md). Los documentos no repiten los ADR ni los documentos de diseño: los enlazan. ( )
+- [x] **Código de las tres aplicaciones externas** más las instrucciones para configurarlas y ejecutarlas. Las tres: el sitio dentro de [`backend/`](backend/), [`materiales/`](materiales/) y [`comunicaciones/`](comunicaciones/), cada una con su README y con sus pasos en el [README principal](README.md). ( )
 
 **Escenarios de la defensa**
 

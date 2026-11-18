@@ -43,6 +43,17 @@
         </dl>
     </div>
 
+    <div th:unless="${#lists.isEmpty(propuestas)}">
+        <h2>Propuestas</h2>
+        <ul class="actividades">
+            <li th:each="v, it : ${propuestas}">
+                <a th:href="@{/mis-cursos/{id}/propuestas/{v}.pdf(id=${vista.curso().id()}, v=${v})}"
+                   target="_blank" th:text="|Propuesta versión ${v} (PDF)|">Propuesta versión 1 (PDF)</a>
+                <span class="actividad-tipo" th:if="${it.first}">Vigente</span>
+            </li>
+        </ul>
+    </div>
+
     <h2 th:if="${vista.tieneActividades()}">Actividades en curso</h2>
     <p class="bajada" th:if="${vista.tieneActividades()}">
         Durante la preparación varias actividades avanzan en paralelo, así que puede haber

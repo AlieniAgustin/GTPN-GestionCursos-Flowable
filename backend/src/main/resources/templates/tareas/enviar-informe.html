@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('Enviar informe y archivar', ~{::section})}">
+<body>
+<section>
+    <p class="volver"><a th:href="@{/tareas}">← Volver a mis tareas</a></p>
+
+    <h1>Enviar informe y archivar expediente</h1>
+    <p class="bajada">
+        Revisá el informe del curso<span th:if="${curso != null}"> <strong th:text="${curso}">Curso</strong></span>
+        antes de enviarlo. Al confirmar se archiva el expediente, se liberan los recursos
+        reservados y el curso queda finalizado.
+    </p>
+
+    <div class="aviso malo" th:if="${error}" th:text="${error}">Error</div>
+
+    <h2>Informe de resultados</h2>
+    <div class="tarjeta">
+        <p th:if="${informe != null}" th:text="${informe}" class="informe">Contenido del informe</p>
+        <p th:if="${informe == null}" class="nota">
+            El equipo docente todavía no cargó el informe.
+        </p>
+    </div>
+
+    <form class="tarjeta espaciado" th:action="@{/tareas/{id}/enviar-informe(id=${taskId})}" method="post">
+        <label class="opcion">
+            <input type="checkbox" name="confirmar" value="true">
+            <span>
+                <strong>Confirmo el envío del informe a la empresa</strong>
+                <small>Esta acción cierra el curso y no se puede deshacer.</small>
+            </span>
+        </label>
+
+        <button type="submit" class="principal">Enviar y archivar</button>
+    </form>
+</section>
+</body>
+</html>

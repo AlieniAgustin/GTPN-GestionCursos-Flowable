@@ -36,6 +36,9 @@ services:
       # §3.5 Plazos. Descomentar para la demo en vivo (duraciones ISO-8601)
       # PROCESO_PLAZO_RESPUESTA: PT1M
       # PROCESO_FECHA_CURSO_OFFSET: PT2M
+      # §4 Aulas del web service simulado. Bajalo a 1 para mostrar el escenario 7
+      # (falta de aulas) con dos cursos pidiendo aula a la vez
+      # AULAS_DISPONIBLES: 1
     depends_on:
       postgres:
         condition: service_healthy

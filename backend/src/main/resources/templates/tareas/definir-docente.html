@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('Definir docente', ~{::section})}">
+<body>
+<section>
+    <p class="volver"><a th:href="@{/tareas}">← Volver a mis tareas</a></p>
+
+    <h1>Definir docente</h1>
+    <p class="bajada">
+        Elegí quién va a dictar el curso<span th:if="${curso != null}"> <strong th:text="${curso}">Curso</strong></span>.
+        Esa persona va a recibir la tarea <em>Desarrollar curso</em> cuando llegue la fecha.
+    </p>
+
+    <div class="aviso malo" th:if="${error}" th:text="${error}">Error</div>
+
+    <form class="tarjeta" th:action="@{/tareas/{id}/definir-docente(id=${taskId})}" method="post">
+        <div class="campo">
+            <label for="userId">Docente</label>
+            <select id="userId" name="userId" required>
+                <option value="">Elegí un docente…</option>
+                <option th:each="d : ${docentes}"
+                        th:value="${d.userId()}"
+                        th:text="|${d.name()} (${d.userId()})|">Docente 1 (docente1)</option>
+            </select>
+        </div>
+
+        <button type="submit" class="principal">Completar tarea</button>
+    </form>
+</section>
+</body>
+</html>

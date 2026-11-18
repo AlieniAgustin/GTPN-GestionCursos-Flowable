@@ -51,6 +51,9 @@ class CourseSiteControllerTest {
     @MockBean
     private CourseProgressService progressService;
 
+    @MockBean
+    private com.backend.proxy.service.ProposalService proposalService;
+
     @Test
     @DisplayName("4.1.2 Listado: a una empresa se le piden solo sus cursos")
     @WithMockUser(username = "acme-sa", roles = {"EMPRESA"})

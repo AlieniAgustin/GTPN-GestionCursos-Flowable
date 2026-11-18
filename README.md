@@ -27,10 +27,11 @@ Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripc
 | [`model/`](model/)       | Modelos BPMN: `cursosNuestraVersion.bpmn` (refinado, 7PMG) y `cursosOriginal.bpmn` (base de cátedra), más el [informe de justificación](model/informeDeJustificacionDeCambiosyDecisionesDeModeladoBPMN.md) |
 | [`flowable/`](flowable/) | Motor de procesos: Spring Boot 2.7.18 + Flowable 6.8.0, BPMN desplegable, DMN de viabilidad, listeners, delegates y API REST                                                                               |
 | [`backend/`](backend/)   | Backend-for-Frontend (Spring Boot 3) con la BD de la institución. Ver su [README](backend/README.md)                                                                                                       |
-| [`materiales/`](materiales/) | App de escritorio (Swing) para *Preparar materiales* por la **API Java** de Flowable (§4.2.1)                                                                                                          |
-| [`comunicaciones/`](comunicaciones/) | App de escritorio (Swing) que simula las comunicaciones de la empresa por la **API REST** de Flowable (§4.2.2)                                                                                 |
-| [`docs/`](docs/)         | Enunciado y documentación funcional por sección del proceso                                                                                                                                                |
+| [`materiales/`](materiales/) | App de escritorio (Swing) para *Preparar materiales* por la **API Java** de Flowable (§4.2.1), más el análisis de §4.3. Ver su [README](materiales/README.md)                                           |
+| [`comunicaciones/`](comunicaciones/) | App de escritorio (Swing) que simula las comunicaciones de la empresa por la **API REST** de Flowable (§4.2.2). Ver su [README](comunicaciones/README.md)                                      |
+| [`docs/`](docs/)         | Enunciado, documentación funcional por sección del proceso y el **[informe del proyecto](docs/informe/)** con el reparto de la defensa                                                                      |
 | [`adr/`](adr/)           | Decisiones de arquitectura (compensación, cancelación no interruptiva, aulas simuladas, [qué va a la BD y qué queda como variable](adr/datos-proceso-vs-bd.md))                                            |
+| [`mineria/`](mineria/)   | Minería de procesos con PM4Py sobre la etapa de negociación (§4.4), con el event log y la [conclusión](mineria/conclusion.md)                                                                              |
 
 ---
 
@@ -51,6 +52,43 @@ Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripc
 
 > [!NOTE]
 > La app Flowable y Flowable UI comparten la **misma base de datos**. Por eso un usuario creado desde la UI sirve para autenticarse contra la API REST, y viceversa.
+
+Las dos apps de escritorio **no ocupan ningún puerto**: no son servidores, son clientes. La de materiales habla con PostgreSQL por la API Java del motor y la de comunicaciones con la API REST de `8080`.
+
+---
+
+## Apps de escritorio: los tres comandos
+
+Con el stack levantado (ver [1. Levantar](#1-levantar)), esto es todo lo que hace falta para probarlas. El detalle de cada una está en su paso y en el README de su carpeta.
+
+**Preparación de materiales** (§4.2.1, API Java) — entrar con `administrativo1` / `password`:
+
+```bash
+cd materiales && ./build.sh && cd ..
+```
+
+```bash
+java -jar materiales/target/app.jar
+```
+
+**Comunicaciones de la empresa** (§4.2.2, API REST):
+
+```bash
+cd comunicaciones && ./build.sh && cd ..
+```
+
+```bash
+java -jar comunicaciones/target/app.jar
+```
+
+**Análisis de las ejecuciones** (§4.3) — también está como botón en la app de materiales:
+
+```bash
+java -cp materiales/target/app.jar com.materiales.app.analysis.AnalysisApp
+```
+
+> [!IMPORTANT]
+> `./build.sh` es obligatorio antes del primer `java -jar`, y hay que repetirlo después de cualquier `mvn clean`: `mvn test` compila pero no empaqueta, así que sin ese paso el jar no existe y sale `Unable to access jarfile`.
 
 ---
 
@@ -403,7 +441,29 @@ curl -s -u admin:test "http://localhost:8080/process-api/history/historic-proces
 
 ---
 
-### 8. Cargar datos de prueba
+### 8. Preparar la demo
+
+Deja el stack con **una instancia parada en cada estado**, para no recorrer el flujo
+entero en vivo durante la presentación. Al terminar imprime qué quedó dónde y con qué
+usuario verlo.
+
+```bash
+.venv/bin/python scripts/preparar_demo.py --limpiar
+```
+
+`--limpiar` cierra lo que haya en curso antes de empezar. Hace falta porque solo cinco
+cursos pueden estar en ejecución a la vez (§3.1): sin cupo, las solicitudes nuevas salen
+*no viables* y los escenarios no se arman. Usa el venv de [`mineria/`](mineria/README.md).
+
+Para los dos escenarios que dependen de los plazos y de los recursos, hay variables
+comentadas en [`docker-compose.yml`](docker-compose.yml):
+
+- **Escenario 7 (falta de aulas):** `AULAS_DISPONIBLES: 1` y pedir aula física en dos cursos.
+- **Plazos en vivo:** `PROCESO_PLAZO_RESPUESTA: PT1M` para no esperar cinco días.
+
+---
+
+### 9. Cargar datos de prueba
 
 Da de alta empresas y solicitudes por la API del BFF —igual que lo haría el sitio web— y las deja repartidas en cuatro estados: aceptada y en preparación, rechazada, con modificaciones pendientes y recién ingresada. Sirve para tener algo que mostrar en la demo y recorridos variados para el análisis de §4.3 y la minería de §4.4.
 
@@ -419,7 +479,7 @@ docker exec flowable-postgres psql -U flowable -d flowable -c 'select id, name, 
 
 ---
 
-### 9. Correr la app de materiales (§4.2.1)
+### 10. Correr la app de materiales (§4.2.1)
 
 App de escritorio, local a la intranet, que usa la **API Java** de Flowable: arma un `ProcessEngine` embebido contra la **misma base** del motor y trabaja con `IdentityService` y `TaskService`. No pasa por la API REST ni por el BFF.
 
@@ -455,7 +515,7 @@ Resultado esperado: **26 tests, 0 fallos**. Levantan un motor embebido sobre H2,
 
 ---
 
-### 10. Correr la app de comunicaciones (§4.2.2)
+### 11. Correr la app de comunicaciones (§4.2.2)
 
 App de escritorio que hace de empresa: elegís una solicitud y le mandás aceptación, rechazo, pedido de modificaciones, la nómina de participantes o la cancelación. Todo por la **API REST** del motor (`/process-api`), sin pasar por el BFF ni por la API Java.
 
@@ -586,16 +646,15 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 - **App de preparación de materiales** (§4.2.1): de escritorio, por la API Java de Flowable, con login contra el IDM, bandeja de tareas asignadas y reclamables, reclamo y completado.
 - **App de comunicaciones de la empresa** (§4.2.2): de escritorio, por la API REST, con las cinco comunicaciones y solo las habilitadas en el estado actual de cada instancia.
 - **Análisis de las ejecuciones** (§4.3): las tres consultas sobre el historial, por consola y desde la app de materiales.
-- 20 tests automatizados del motor (escenarios 1 a 8, los cinco caminos de cierre de §3.4 y los plazos de §3.5), 26 de la app de materiales y 16 de la app de comunicaciones.
+- **Minería de procesos** (§4.4): event log de la etapa de negociación, los tres recorridos más frecuentes y los gráficos con PM4Py.
+- **Sitio web institucional** (§4.1): sección pública de solicitud, login para personal y empresas, consulta de cursos con el estado en vivo, bandeja de tareas con reclamo y las seis pantallas de tarea (propuesta con PDF versionado, revisión, recursos, docente, informe y envío).
+- 20 tests automatizados del motor (escenarios 1 a 8, los cinco caminos de cierre de §3.4 y los plazos de §3.5), 99 del backend y el sitio, 26 de la app de materiales y 16 de la app de comunicaciones.
 
 ### Pendiente
 
 | Enunciado                                | Qué falta                                                                                                                                            |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| § 4.1 Sitio web institucional            | Público, empresas y bandeja de tareas listos; faltan los formularios de cada tarea y el PDF de la propuesta                                          |
-| § 4.1.2 Acceso de la empresa             | La cuenta, el login y el listado de cursos propios ya funcionan por API; falta la pantalla                                                           |
-| § 4.1.3                                  | Generación del PDF de la propuesta y de sus nuevas versiones                                                                                         |
-| § 4.4 Minería de procesos                | No implementado el análisis con PM4Py (`exportar_history.py` / `analizar.py`) ni el CSV de la etapa de negociación                                   |
+| § 1.1 Recordatorios *(opcional)*         | El límite de dos recordatorios está dentro del script y no en el flujo: funciona bien, pero el modelo no lo refleja. Ver [`mineria/conclusion.md`](mineria/conclusion.md) |
 
 ---
 

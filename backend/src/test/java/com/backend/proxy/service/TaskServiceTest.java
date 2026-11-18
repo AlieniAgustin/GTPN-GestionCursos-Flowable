@@ -18,7 +18,8 @@ import com.backend.proxy.dto.task.TaskDetailResponse;
 import com.backend.proxy.exception.ResourceNotFoundException;
 import com.backend.proxy.exception.TaskAlreadyClaimedException;
 import com.backend.proxy.exception.TaskNotClaimedException;
-import com.backend.proxy.repository.TeacherRepositoryStub;
+import com.backend.proxy.dto.task.TeacherDTO;
+import com.backend.proxy.repository.TeacherRepository;
 import com.backend.proxy.strategy.task.DefineTeacherStrategy;
 import com.backend.proxy.strategy.task.DeliverCourseStrategy;
 import com.backend.proxy.strategy.task.PrepareReportStrategy;
@@ -51,7 +52,7 @@ class TaskServiceTest {
         flowableClient = Mockito.mock(FlowableClient.class, Mockito.RETURNS_DEEP_STUBS);
         taskService = new TaskService(
                 List.of(
-                        new DefineTeacherStrategy(new TeacherRepositoryStub()),
+                        new DefineTeacherStrategy(equipoDocente()),
                         new DeliverCourseStrategy(),
                         new PrepareReportStrategy(),
                         new SendReportStrategy()),
@@ -170,6 +171,16 @@ class TaskServiceTest {
 
         when(flowableClient.get(anyString()).retrieve().body(FlowableTaskListDTO.class)).thenReturn(null);
         assertTrue(taskService.findInbox("administrativo1").isEmpty(), "Sin datos la bandeja va vacía");
+    }
+
+    /**
+     * El equipo docente que el IDM de Flowable devolvería: tres personas (enunciado 2).
+     */
+    private TeacherRepository equipoDocente() {
+        return () -> List.of(
+                new TeacherDTO("docente1", "Hernan Rossi"),
+                new TeacherDTO("docente2", "Sofia Quiroga"),
+                new TeacherDTO("jefedocente", "Marcela Ibanez"));
     }
 
     private FlowableTaskDTO task(String definitionKey) {

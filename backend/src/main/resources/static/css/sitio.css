@@ -377,7 +377,57 @@ code.referencia {
     color: var(--tinta-suave);
 }
 
-button.chico {
+a.boton {
+    display: inline-block;
+    text-decoration: none;
+    background: var(--acento);
+    color: #fff;
+    border-radius: 5px;
+    font-weight: 600;
+}
+
+a.boton:hover { background: #00564a; }
+
+.aviso.bueno a {
+    color: inherit;
+    font-weight: 600;
+    margin-left: 0.4rem;
+}
+
+.formulario-tarea { margin-top: 1rem; }
+
+.observaciones {
+    margin: 0.3rem 0 0;
+    white-space: pre-line;
+}
+
+.opcion {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.7rem;
+    cursor: pointer;
+}
+
+/* Confirmación de envío del informe: la etiqueta lleva aclaración debajo */
+.opcion span {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.opcion small { color: var(--tinta-suave); }
+
+.espaciado { margin-top: 1.2rem; }
+
+/* El informe se guarda con los saltos de línea que escribió el equipo docente */
+.informe {
+    margin: 0;
+    white-space: pre-line;
+}
+
+button.chico,
+a.chico {
     padding: 0.4rem 0.9rem;
     font-size: 0.9rem;
 }
