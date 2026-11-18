@@ -94,3 +94,8 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Minería de procesos (§4.4): entorno de Python
+.venv/
+__pycache__/
+*.pyc
