@@ -47,8 +47,19 @@ public class IdentitySeeder implements CommandLineRunner {
      * Section 3.3: Administracion has 2 people (one of them is the administrative chief)
      * and Docentes has 3 (one of them is the team chief). Five users in total.
      */
-    private static final List<String> ADMINISTRATIVOS = List.of("jefeadministrativo", "administrativo1");
-    private static final List<String> DOCENTES = List.of("jefedocente", "docente1", "docente2");
+    /**
+     * Los cinco usuarios del enunciado 3.3, con nombre y apellido: las pantallas del
+     * sitio y las apps los muestran en los desplegables, y "docente1" a secas no dice
+     * de quién se trata.
+     */
+    private static final Map<String, String[]> ADMINISTRATIVOS = Map.of(
+            "jefeadministrativo", new String[]{"Laura", "Gimenez"},
+            "administrativo1", new String[]{"Pablo", "Ferreyra"});
+
+    private static final Map<String, String[]> DOCENTES = Map.of(
+            "jefedocente", new String[]{"Marcela", "Ibanez"},
+            "docente1", new String[]{"Hernan", "Rossi"},
+            "docente2", new String[]{"Sofia", "Quiroga"});
 
     private final IdentityService identityService;
 
@@ -65,13 +76,13 @@ public class IdentitySeeder implements CommandLineRunner {
 
         ensureUser(TECHNICAL_USER, TECHNICAL_PASSWORD, "Admin", "System");
 
-        ADMINISTRATIVOS.forEach(userId -> {
-            ensureUser(userId, DEFAULT_PASSWORD, null, null);
+        ADMINISTRATIVOS.forEach((userId, nombre) -> {
+            ensureUser(userId, DEFAULT_PASSWORD, nombre[0], nombre[1]);
             ensureMembership(userId, GROUP_ADMINISTRACION);
         });
 
-        DOCENTES.forEach(userId -> {
-            ensureUser(userId, DEFAULT_PASSWORD, null, null);
+        DOCENTES.forEach((userId, nombre) -> {
+            ensureUser(userId, DEFAULT_PASSWORD, nombre[0], nombre[1]);
             ensureMembership(userId, GROUP_DOCENTES);
         });
 
@@ -90,7 +101,17 @@ public class IdentitySeeder implements CommandLineRunner {
     }
 
     private void ensureUser(String userId, String password, String firstName, String lastName) {
-        if (identityService.createUserQuery().userId(userId).count() > 0) {
+        User existente = identityService.createUserQuery().userId(userId).singleResult();
+        if (existente != null) {
+            // Una base sembrada antes de que el seed cargara nombres queda sin ellos:
+            // se completan ahora para que los desplegables no muestren solo el id
+            if (firstName != null && (existente.getFirstName() == null
+                    || existente.getFirstName().isBlank())) {
+                existente.setFirstName(firstName);
+                existente.setLastName(lastName);
+                identityService.saveUser(existente);
+                LOG.info("Completed name of existing user '{}'", userId);
+            }
             return;
         }
         User user = identityService.newUser(userId);
