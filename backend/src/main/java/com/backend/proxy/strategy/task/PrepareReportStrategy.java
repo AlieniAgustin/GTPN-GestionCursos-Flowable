@@ -38,10 +38,6 @@ public class PrepareReportStrategy implements TaskStrategy {
         );
     }
 
-    /**
-     * El temario se guarda como variable del proceso cuando se elabora la propuesta.
-     * Si todavía no está, el jefe docente escribe el informe sin esa ayuda.
-     */
     private List<String> coveredTopics(Map<String, Object> processVariables) {
         Object topics = processVariables.get("temario");
         if (topics instanceof List<?> list) {

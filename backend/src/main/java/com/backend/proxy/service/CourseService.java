@@ -50,7 +50,6 @@ public class CourseService {
             course.setProcessInstanceId(response.processInstanceId());
             course = courseRepository.save(course);
         }
-
         return CourseResponseDTO.from(course);
     }
 
@@ -87,7 +86,7 @@ public class CourseService {
         course.transitionTo(courseStatus);
         courseRepository.save(course);
     }
-    
+
     @Transactional
     public void updateCourseDetails(String processId, CourseDetailsUpdateDTO details) {
         if (processId == null || processId.isBlank()) {

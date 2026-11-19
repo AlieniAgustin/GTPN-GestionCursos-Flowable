@@ -31,8 +31,6 @@ public class FlowableTeacherRepository implements TeacherRepository {
             return List.of();
         }
 
-        // Orden estable por id: el motor no garantiza uno y el desplegable no debería
-        // cambiar de orden entre pantallas
         return pagina.data().stream()
                 .sorted(Comparator.comparing(IdentityUserDTO::id))
                 .map(usuario -> new TeacherDTO(usuario.id(), usuario.displayName()))

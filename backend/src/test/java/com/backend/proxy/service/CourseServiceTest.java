@@ -72,7 +72,6 @@ class CourseServiceTest {
         assertEquals("proc-1", persisted.getProcessInstanceId());
         assertEquals("ACME SA", persisted.getCompany().getName());
 
-        // El BFF manda el contexto del curso, no los nombres de las variables del BPMN
         ArgumentCaptor<CourseProcessStartRequest> startRequest = ArgumentCaptor.forClass(CourseProcessStartRequest.class);
         Mockito.verify(flowableClient).startCourseProcess(startRequest.capture());
         assertEquals(

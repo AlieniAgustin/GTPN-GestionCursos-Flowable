@@ -173,9 +173,6 @@ class TaskServiceTest {
         assertTrue(taskService.findInbox("administrativo1").isEmpty(), "Sin datos la bandeja va vacía");
     }
 
-    /**
-     * El equipo docente que el IDM de Flowable devolvería: tres personas (enunciado 2).
-     */
     private TeacherRepository equipoDocente() {
         return () -> List.of(
                 new TeacherDTO("docente1", "Hernan Rossi"),
