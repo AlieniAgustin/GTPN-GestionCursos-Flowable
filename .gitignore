@@ -101,6 +101,5 @@ __pycache__/
 *.pyc
 
 # MkDocs
-site/
 .cache/
 
