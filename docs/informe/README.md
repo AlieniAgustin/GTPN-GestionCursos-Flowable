@@ -127,6 +127,24 @@ Para dejar el stack con una instancia parada en cada estado:
 
 El script imprime, para cada escenario, dónde verlo y con qué usuario.
 
+### Guiones paso a paso
+
+En [`escenarios/`](escenarios/) están los guiones de la demo: qué hacer, en qué pantalla y
+con qué usuario, sin comandos de terminal. Empezar por
+[`00-preparacion-de-la-demo.md`](escenarios/00-preparacion-de-la-demo.md), que es lo único
+que se ejecuta por consola.
+
+| Escenario | Guion | Explica |
+|---|---|---|
+| — | [00 — Preparación de la demo](escenarios/00-preparacion-de-la-demo.md) | — |
+| 1 | [Aceptación y finalización normal](escenarios/01-aceptacion-y-finalizacion-normal-con-liberacion-de-recursos.md) | Alieni |
+| 3 | [Rechazo de la propuesta](escenarios/03-rechazo-de-la-propuesta.md) | Alieni |
+| 4 | [Cierre por falta de respuesta](escenarios/04-cierre-por-falta-de-respuesta.md) | Alieni |
+| 5 | [Límite de cursos en ejecución](escenarios/05-limite-de-cursos-en-ejecucion.md) | Alieni |
+| 6 | [Cancelación con compensación](escenarios/06-cancelacion-con-compensacion.md) | Alieni |
+
+Los escenarios 2, 7, 8, 9, 10 y 11 todavía no tienen guion: son de Cesari, Damián y Fran.
+
 ---
 
 ## Material a entregar (§5)
