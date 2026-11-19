@@ -75,7 +75,7 @@ class TaskFormSiteControllerTest {
                 new FlowableTaskDTO(TASK_ID, "Tarea", "x", "alguien", "proc-1", "exec-1")));
         when(courseService.findVisibleFor(anyString(), anyBoolean())).thenReturn(List.of(
                 new CourseResponseDTO(1L, "proc-1", "Introduccion a BPMN",
-                        "Desc", null, "ACME SA", null, null, null, List.of(), null)));
+                        "Desc", null, "ACME SA", null, null, null, List.of(), null, List.of())));
     }
 
     // ---------------------------------------------------------------- Evaluar recursos

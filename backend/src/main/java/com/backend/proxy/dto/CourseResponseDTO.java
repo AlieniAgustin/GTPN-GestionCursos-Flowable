@@ -26,11 +26,12 @@ public record CourseResponseDTO(
     BigDecimal budget,
     LocalDate agreedDate,
     List<LocalDate> possibleDates,
-    String report
+    String report,
+    List<ProposalSummaryDTO> proposals
 ) {
 
     /**
-     * Debe invocarse dentro de la transaccion: toca la empresa, que es lazy.
+     * Debe invocarse dentro de la transaccion: toca la empresa y las propuestas, que son lazy.
      */
     public static CourseResponseDTO from(Course course) {
         return new CourseResponseDTO(
@@ -44,7 +45,10 @@ public record CourseResponseDTO(
                 course.getBudget(),
                 course.getAgreedDate(),
                 course.getPossibleDates(),
-                course.getReport()
+                course.getReport(),
+                course.getProposals().stream()
+                        .map(proposal -> ProposalSummaryDTO.from(course.getId(), proposal))
+                        .toList()
         );
     }
 }
