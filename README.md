@@ -221,27 +221,8 @@ cd flowable && mvn clean compile
 cd flowable && mvn test -DforkCount=0
 ```
 
-Resultado esperado: **20 tests, 0 fallos** — `HappyPathTest`, `CompensationTest` (3), `ClassroomUnavailableTest`, `NoResponseTest`, `TaskAssignmentTest`, `CourseLimitExceededTest`, `ProposalRejectionTest`, `ProposalModificationsTest`, `ClosingPathsTest` (2), `CompanyAccessTest` (3), `CourseDateTest` (3), `IdentitySeederTest` y `AppTest`.
-
-> [!WARNING]
-> **Problema de entorno: el apóstrofe en la ruta.**
-> Si la ruta absoluta del proyecto contiene un apóstrofe (por ejemplo `.../Computer's Science/...`), `mvn test` a secas **siempre falla** con:
->
-> ```
-> The forked VM terminated without properly saying goodbye. VM crash or System.exit called?
-> Process Exit Code: 2
-> ```
->
-> No es un problema del código ni de los tests. Maven Surefire arma el comando del JVM hijo como `/bin/sh -c cd "...Computer\'s Science..."`, y dentro de comillas dobles el `\'` queda literal, así que el `cd` apunta a una ruta inexistente y el fork muere antes de arrancar.
->
-> Soluciones, de menor a mayor esfuerzo:
->
-> 1. `-DforkCount=0` — corre los tests en la JVM de Maven, sin fork. Es lo que recomendamos.
-> 2. Mover el repositorio a una ruta sin apóstrofes ni comillas.
->
-> `./build.sh` **no** se ve afectado porque usa `-DskipTests`.
-
-Casi todos los tests sobreescriben el datasource a H2 en memoria, pero `AppTest` levanta el contexto con la configuración real del perfil `dev`, así que **necesita el contenedor de PostgreSQL arriba** y escribe en la misma base que usa Docker: cada corrida redesplega el BPMN y suma una versión nueva del proceso. Para correr solo los tests aislados: `mvn test -DforkCount=0 -Dtest='!AppTest'`.
+> [!NOTE]
+> `AppTest` levanta el contexto completo contra PostgreSQL. Para correr únicamente los tests en memoria con H2: `mvn test -DforkCount=0 -Dtest='!AppTest'`.
 
 ---
 
@@ -530,8 +511,6 @@ Tres cosas que la app **no** hace a propósito: no crea ni migra tablas (`databa
 cd materiales && mvn test
 ```
 
-Resultado esperado: **26 tests, 0 fallos**. Levantan un motor embebido sobre H2, así que no necesitan PostgreSQL ni pantalla.
-
 ---
 
 ### 11. Correr la app de comunicaciones (§4.2.2)
@@ -563,8 +542,6 @@ Para tener solicitudes que mostrar: `./scripts/seed-demo.sh`.
 ```bash
 cd comunicaciones && mvn test
 ```
-
-Resultado esperado: **16 tests, 0 fallos**. Usan el servidor HTTP del JDK como stub de la API REST, así que no necesitan el motor levantado.
 
 > [!TIP]
 > Esta app es la forma práctica de generar muchas instancias terminadas con recorridos variados, que es lo que necesitan el análisis de §4.3 y la minería de §4.4 para dar algo interesante.
@@ -667,7 +644,7 @@ Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el l
 - **Análisis de las ejecuciones** (§4.3): las tres consultas sobre el historial, por consola y desde la app de materiales.
 - **Minería de procesos** (§4.4): event log de la etapa de negociación, los tres recorridos más frecuentes y los gráficos con PM4Py.
 - **Sitio web institucional** (§4.1): sección pública de solicitud, login para personal y empresas, consulta de cursos con el estado en vivo, bandeja de tareas con reclamo y las seis pantallas de tarea (propuesta con PDF versionado, revisión, recursos, docente, informe y envío).
-- 20 tests automatizados del motor (escenarios 1 a 8, los cinco caminos de cierre de §3.4 y los plazos de §3.5), 99 del backend y el sitio, 26 de la app de materiales y 16 de la app de comunicaciones.
+- Suite de tests automatizados cubriendo el motor de procesos, BFF, seguridad y aplicaciones de escritorio.
 
 ### Pendiente
 
