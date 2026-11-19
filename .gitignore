@@ -99,3 +99,8 @@ Thumbs.db
 .venv/
 __pycache__/
 *.pyc
+
+# MkDocs
+site/
+.cache/
+

@@ -1,0 +1,72 @@
+site_name: Backend Proxy - Gestión de Cursos Flowable
+site_description: Documentación técnica y arquitectura del Backend Proxy (Spring Boot 3, Flowable BPMN, HATEOAS, Seguridad).
+site_author: Equipo de Arquitectura
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  language: es
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Cambiar a modo oscuro
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Cambiar a modo claro
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+nav:
+  - Inicio: index.md
+  - Arquitectura:
+      - Visión General: arquitectura/overview.md
+      - Seguridad y Autenticación: arquitectura/seguridad.md
+      - Integración con Flowable: arquitectura/integracion-flowable.md
+      - Patrón Strategy para Tareas: arquitectura/estrategia-tareas.md
+  - API y Endpoints:
+      - Controladores REST: api/controladores.md
+      - Manejo Centralizado de Errores: api/errores.md
+      - Swagger y OpenAPI: api/swagger.md
+  - Modelo de Datos:
+      - Entidades y Persistencia: modelo/entidades.md
+  - Guías de Desarrollo:
+      - Setup y Ejecución: guias/setup.md
+      - Pruebas y Testing: guias/testing.md
+      - Convenciones y Extensión: guias/convenciones.md

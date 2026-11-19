@@ -113,7 +113,21 @@ Cuando ocurre una falla de integración o el motor de procesos rechaza una opera
 
 ---
 
-## Siguientes Pasos
+## Documentación Técnica con MkDocs
+
+El módulo cuenta con un sitio completo de documentación técnica construido con **MkDocs Material**, que detalla la arquitectura, organización de filtros de Spring Security, endpoints y pruebas:
+
+```bash
+# Para iniciar el servidor de documentación en vivo:
+cd backend
+mkdocs serve
+
+# O desde la raíz del repositorio:
+mkdocs serve -f backend/mkdocs.yml
+```
+
+Luego accede a [http://127.0.0.1:8000/](http://127.0.0.1:8000/).
+
 
 1. **Controlador de Autenticación (`AuthController`):** Exponer `POST /api/auth/login` (consumiendo `FlowableAuthService.login`) y `POST /api/auth/logout`.
 2. **Controladores de Cursos (`CursosController`):** Implementar endpoints de negocio bajo `/api/cursos` que utilicen `flowableRestClient` para iniciar instancias, consultar tareas asignadas y completar formularios.
