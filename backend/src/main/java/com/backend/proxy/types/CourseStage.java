@@ -2,14 +2,6 @@ package com.backend.proxy.types;
 
 import com.backend.proxy.types.CourseStatus;
 
-/**
- * Estado del curso tal como lo ve la empresa (enunciado 4.1.2).
- *
- * <p>Es distinto de {@link CourseStatus}: aquel guarda en la base **cómo terminó** el
- * trámite y solo existe cuando la instancia cerró. Este describe en qué punto del proceso
- * está el curso ahora, y para los cursos en marcha se deduce de las actividades que el
- * motor tiene activas.
- */
 public enum CourseStage {
 
     EN_EVALUACION(

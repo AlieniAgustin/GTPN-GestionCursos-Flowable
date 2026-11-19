@@ -68,7 +68,6 @@ class CourseServiceTest {
         assertEquals("proc-1", created.processInstanceId(), "El curso queda vinculado a su instancia");
         assertEquals("ACME SA", created.companyName());
 
-        // Verificamos que realmente se persistió en base de datos
         Course persisted = courseRepository.findById(created.id()).orElseThrow();
         assertEquals("proc-1", persisted.getProcessInstanceId());
         assertEquals("ACME SA", persisted.getCompany().getName());

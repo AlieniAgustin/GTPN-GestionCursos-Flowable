@@ -12,13 +12,6 @@ import org.springframework.stereotype.Component;
 
 import com.backend.proxy.service.AuthenticationService;
 
-/**
- * Autentica el formulario de login del sitio (enunciado 4.1).
- *
- * <p>Delega en {@link AuthenticationService#resolveRole} para no duplicar la decisión de
- * quién puede entrar: el personal de la institución se valida contra el IDM de Flowable y
- * las empresas contra la cuenta que les creó el proceso.
- */
 @Component
 public class SiteAuthenticationProvider implements AuthenticationProvider {
 

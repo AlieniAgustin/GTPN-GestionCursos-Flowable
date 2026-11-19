@@ -9,9 +9,7 @@ import com.backend.proxy.dto.task.FlowableTaskDTO;
 import com.backend.proxy.dto.task.TaskDetailResponse;
 import com.backend.proxy.repository.TeacherRepository;
 
-/**
- * Strategy for aggregating context and building action URL for 'definirdocentequedesarrollaelcurso'.
- */
+
 @Component
 public class DefineTeacherStrategy implements TaskStrategy {
 

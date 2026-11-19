@@ -21,15 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
-/**
- * Enunciado 4.1.2: la empresa tiene que poder ver en qué estado está su curso —en
- * preparación, confirmado y pendiente de inicio, en desarrollo, en elaboración del
- * informe, finalizado o cancelado— y qué actividades están pendientes, contemplando las
- * que corren en paralelo.
- *
- * <p>Ese estado no está en la base: se deduce de las actividades que el motor tiene
- * abiertas.
- */
 class CourseProgressServiceTest {
 
     private FlowableClient flowableClient;
@@ -77,7 +68,6 @@ class CourseProgressServiceTest {
         assertEquals(CourseStage.EN_ELABORACION_INFORME, progressService.resolveStage(null, List.of(
                 activity("elaborarinformederesultados", "userTask"))));
 
-        // El envío del informe sigue siendo la etapa de informe, no un curso cerrado
         assertEquals(CourseStage.EN_ELABORACION_INFORME, progressService.resolveStage(null, List.of(
                 activity("enviarinformeaempresayarchivarexpediente", "userTask"))));
     }
@@ -139,7 +129,6 @@ class CourseProgressServiceTest {
                 .thenThrow(new RestClientException("motor caido"));
 
         assertTrue(progressService.findActiveActivities().isEmpty());
-        // Sin actividades el curso se muestra como en evaluación, no revienta la página
         assertEquals(CourseStage.EN_EVALUACION, progressService.resolveStage(null, List.of()));
     }
 

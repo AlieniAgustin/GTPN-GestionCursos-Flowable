@@ -31,13 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Contrato HTTP del alta y la consulta de cursos (enunciado 4.1.1 y 4.1.2).
- *
- * <p>Corre con la cadena de filtros puesta, así el usuario de {@code @WithMockUser} llega
- * al controlador y se puede comprobar que cada rol consulta lo que le corresponde. Quién
- * puede autenticarse se ejercita aparte, en {@code AuthenticationServiceTest}.
- */
+
 @WebMvcTest(CourseController.class)
 @org.springframework.context.annotation.Import(GlobalExceptionHandler.class)
 class CourseControllerTest {

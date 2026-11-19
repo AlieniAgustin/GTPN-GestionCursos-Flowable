@@ -41,10 +41,6 @@ public final class TaskCatalog {
             "enviarinformeaempresayarchivarexpediente"
     );
 
-    /**
-     * Tareas con formulario que ya tienen su pantalla en el sitio, con el tramo de la URL
-     * ({@code /tareas/{id}/<tramo>}) donde se completan.
-     */
     private static final Map<String, String> FORMULARIOS_EN_SITIO = Map.of(
             "registraryelaborarpropuesta", "elaborar-propuesta",
             "revisarpropuesta", "revisar-propuesta",

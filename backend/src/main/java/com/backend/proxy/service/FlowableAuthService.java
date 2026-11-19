@@ -5,13 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
-/**
- * Valida las credenciales del personal de la institucion contra el IDM de Flowable
- * (enunciado 3.3: no se mantienen cuentas propias para el personal).
- *
- * <p>Solo responde si las credenciales sirven; quien arma la sesion es
- * {@link AuthenticationService}.
- */
+
 @Service
 public class FlowableAuthService {
 
@@ -33,7 +27,6 @@ public class FlowableAuthService {
 
             return response.getStatusCode().is2xxSuccessful();
         } catch (Exception ex) {
-            // Credenciales invalidas (401) o motor caido: en ambos casos no autentica
             return false;
         }
     }

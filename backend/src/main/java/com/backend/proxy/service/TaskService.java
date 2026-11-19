@@ -46,10 +46,6 @@ public class TaskService {
         return strategy.buildDetail(task, findProcessVariables(task.processInstanceId()));
     }
 
-    /**
-     * Bandeja del usuario: lo que tiene asignado mas lo que puede reclamar por su grupo
-     * candidato (enunciado 4.1.3).
-     */
     public List<FlowableTaskDTO> findInbox(String username) {
         FlowableTaskListDTO tasks = flowableClient
                 .get("/process-api/runtime/tasks?candidateOrAssigned=" + encode(username) + "&size=100")
@@ -102,14 +98,6 @@ public class TaskService {
         return task.taskDefinitionKey();
     }
 
-    /**
-     * Reclama una tarea de grupo (enunciado 2: "uno de sus miembros deberá reclamar la
-     * tarea antes de completarla").
-     *
-     * <p>Solo se pueden reclamar las que están en la bandeja del usuario y todavía no
-     * tienen responsable: si otro la reclamó primero, el motor responde 409 y acá se
-     * traduce a un mensaje entendible.
-     */
     public void claim(String taskId, String username) {
         FlowableTaskDTO task = findTask(taskId);
         assertVisibleFor(task, username);
@@ -124,15 +112,8 @@ public class TaskService {
                 .toBodilessEntity();
     }
 
-    /**
-     * Completa la tarea en el motor con las variables que deja esa etapa.
-     *
-     * @param taskId identificador de la tarea en Flowable
-     * @param variables variables del proceso a persistir al avanzar el token
-     * @param username quien la completa: tiene que ser su responsable
-     */
+  
     public void complete(String taskId, Map<String, Object> variables, String username) {
-        // Falla con 404 antes de intentar completar, para no devolver un error del motor
         FlowableTaskDTO task = findTask(taskId);
         assertVisibleFor(task, username);
         assertClaimedBy(task, username);
@@ -161,15 +142,7 @@ public class TaskService {
         return task;
     }
 
-    /**
-     * Flowable returns variables as a list of {@code {name, type, value, scope}} objects;
-     * the strategies only care about name and value.
-     */
-    /**
-     * Variables del proceso de una tarea, verificando antes que el usuario la pueda ver.
-     * Las usan las pantallas que muestran datos de etapas anteriores (por ejemplo, las
-     * observaciones de la empresa en <em>Revisar propuesta</em>).
-     */
+   
     public Map<String, Object> findVariablesOfTask(String taskId, String username) {
         FlowableTaskDTO task = findTask(taskId);
         assertVisibleFor(task, username);
