@@ -122,7 +122,7 @@ class CourseControllerTest {
 
     private CourseResponseDTO course(Long id) {
         return new CourseResponseDTO(id, "proc-1", "Curso de Flowable", "Descripcion",
-                null, "ACME SA", null, null, null, List.of(LocalDate.of(2027, 3, 1)), null);
+                null, "ACME SA", null, null, null, List.of(LocalDate.of(2027, 3, 1)), null, List.of());
     }
 
     private String validRequest() {

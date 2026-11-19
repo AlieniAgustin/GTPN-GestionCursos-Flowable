@@ -167,7 +167,7 @@ class TaskSiteControllerTest {
     void testTasksShowTheirCourse() throws Exception {
         when(courseService.findVisibleFor(anyString(), anyBoolean())).thenReturn(List.of(
                 new com.backend.proxy.dto.CourseResponseDTO(1L, "proc-1", "Introduccion a BPMN",
-                        "Desc", null, "ACME SA", null, null, null, List.of(), null)));
+                        "Desc", null, "ACME SA", null, null, null, List.of(), null, List.of())));
         when(taskService.findInbox(anyString())).thenReturn(List.of(
                 task("t1", "Archivar solicitud", "archivarsolicitud", "jefeadministrativo")));
 

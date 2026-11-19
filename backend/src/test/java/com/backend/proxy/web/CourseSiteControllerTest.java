@@ -138,7 +138,7 @@ class CourseSiteControllerTest {
     private CourseResponseDTO course() {
         return new CourseResponseDTO(52L, "proc-1", "Introduccion a BPMN", "Modelado de procesos",
                 null, "ACME SA", null, null, LocalDate.of(2027, 3, 1),
-                List.of(LocalDate.of(2027, 3, 1)), null);
+                List.of(LocalDate.of(2027, 3, 1)), null, List.of());
     }
 
     private ActivityDTO activity(String id, String name) {

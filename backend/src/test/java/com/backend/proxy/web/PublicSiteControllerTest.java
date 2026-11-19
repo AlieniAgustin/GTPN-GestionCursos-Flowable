@@ -136,6 +136,6 @@ class PublicSiteControllerTest {
 
     private CourseResponseDTO course() {
         return new CourseResponseDTO(102L, "proc-1", "Liderazgo de Equipos", "Descripcion",
-                null, "Textiles Andinas", null, null, null, List.of(LocalDate.of(2027, 5, 10)), null);
+                null, "Textiles Andinas", null, null, null, List.of(LocalDate.of(2027, 5, 10)), null, List.of());
     }
 }
