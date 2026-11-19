@@ -19,6 +19,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -61,6 +63,16 @@ public class Course {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
+
+    /**
+     * Versiones de la propuesta enviadas a la empresa (1 curso → N propuestas), de la más
+     * nueva a la más vieja. El dueño de la relación es {@link ProposalDocument#getCourse()}:
+     * la clave foránea {@code course_id} vive en {@code proposal_documents}, así que este
+     * lado no agrega columnas a {@code courses}.
+     */
+    @OneToMany(mappedBy = "course", fetch = FetchType.LAZY)
+    @OrderBy("version DESC")
+    private List<ProposalDocument> proposals = new ArrayList<>();
 
     protected Course() {
     }
