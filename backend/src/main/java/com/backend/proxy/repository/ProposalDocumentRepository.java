@@ -14,5 +14,7 @@ public interface ProposalDocumentRepository extends JpaRepository<ProposalDocume
 
     Optional<ProposalDocument> findByCourseIdAndVersion(Long courseId, int version);
 
+    Optional<ProposalDocument> findFirstByCourseIdOrderByVersionDesc(Long courseId);
+
     List<ProposalDocument> findByCourseIdOrderByVersionDesc(Long courseId);
 }

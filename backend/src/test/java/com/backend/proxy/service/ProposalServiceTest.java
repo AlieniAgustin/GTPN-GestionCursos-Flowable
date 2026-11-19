@@ -48,7 +48,6 @@ class ProposalServiceTest {
         courseRepository = Mockito.mock(CourseRepository.class);
         proposalRepository = Mockito.mock(ProposalDocumentRepository.class);
         taskService = Mockito.mock(TaskService.class);
-        // El PDF se arma de verdad: así el test también prueba que OpenPDF genera el archivo
         service = new ProposalService(courseRepository, proposalRepository, new ProposalPdfBuilder(), taskService);
 
         Course curso = new Course(new Company("ACME SA", "+54358", "rrhh@acme.com"),
@@ -113,9 +112,8 @@ class ProposalServiceTest {
     @DisplayName("Revisar: la última versión trae lo que se envió, para precargar el formulario")
     void testLastVersion() {
         Course curso = courseRepository.findByprocessInstanceId(PROCESO).orElseThrow();
-        when(proposalRepository.findByCourseIdOrderByVersionDesc(any())).thenReturn(List.of(
-                new ProposalDocument(curso, 2, "v2", new BigDecimal("150000"), FECHAS, "jefeadministrativo", new byte[0]),
-                new ProposalDocument(curso, 1, "v1", new BigDecimal("180000"), FECHAS, "jefeadministrativo", new byte[0])));
+        when(proposalRepository.findFirstByCourseIdOrderByVersionDesc(any())).thenReturn(Optional.of(
+                new ProposalDocument(curso, 2, "v2", new BigDecimal("150000"), FECHAS, "jefeadministrativo", new byte[0])));
 
         ProposalService.Version ultima = service.ultimaVersion(1L).orElseThrow();
 

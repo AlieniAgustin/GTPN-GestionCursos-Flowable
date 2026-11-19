@@ -53,7 +53,7 @@ public class ProposalService {
                 course.getCompany().getName(),
                 course.getDescription(),
                 course.getPossibleDates(),
-                proposalRepository.countByCourseId(course.getId()) + 1);
+                proximaVersion(course.getId()));
     }
 
     /**
@@ -68,7 +68,7 @@ public class ProposalService {
     public int enviarPropuesta(String taskId, String processInstanceId, String programa,
                                BigDecimal presupuesto, List<LocalDate> fechas, String usuario) {
         Course course = cursoDe(processInstanceId);
-        int version = proposalRepository.countByCourseId(course.getId()) + 1;
+        int version = proximaVersion(course.getId());
 
         byte[] pdf = pdfBuilder.build(new ProposalPdfBuilder.Datos(
                 course.getCompany().getName(),
@@ -100,8 +100,7 @@ public class ProposalService {
 
     @Transactional(readOnly = true)
     public Optional<Version> ultimaVersion(Long courseId) {
-        return proposalRepository.findByCourseIdOrderByVersionDesc(courseId).stream()
-                .findFirst()
+        return proposalRepository.findFirstByCourseIdOrderByVersionDesc(courseId)
                 .map(doc -> new Version(doc.getVersion(), doc.getProgram(), doc.getBudget(),
                         List.copyOf(doc.getProposedDates())));
     }
@@ -120,6 +119,10 @@ public class ProposalService {
                 .map(ProposalDocument::getPdf)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Proposal " + version + " not found for course " + courseId));
+    }
+
+    private int proximaVersion(Long courseId) {
+        return proposalRepository.countByCourseId(courseId) + 1;
     }
 
     private Course cursoDe(String processInstanceId) {
