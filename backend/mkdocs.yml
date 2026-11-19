@@ -1,5 +1,5 @@
 site_name: Backend Proxy - Gestión de Cursos Flowable
-site_description: Documentación técnica y arquitectura del Backend Proxy (Spring Boot 3, Flowable BPMN, HATEOAS, Seguridad).
+site_description: Documentación técnica y arquitectura del Backend Proxy 
 site_author: Equipo de Arquitectura
 
 docs_dir: docs
