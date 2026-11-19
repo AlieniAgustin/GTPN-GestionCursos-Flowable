@@ -26,7 +26,7 @@ Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripc
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`model/`](model/)       | Modelos BPMN: `cursosNuestraVersion.bpmn` (refinado, 7PMG) y `cursosOriginal.bpmn` (base de cátedra), más el [informe de justificación](model/informeDeJustificacionDeCambiosyDecisionesDeModeladoBPMN.md) |
 | [`flowable/`](flowable/) | Motor de procesos: Spring Boot 2.7.18 + Flowable 6.8.0, BPMN desplegable, DMN de viabilidad, listeners, delegates y API REST                                                                               |
-| [`backend/`](backend/)   | Backend-for-Frontend (Spring Boot 3) con la BD de la institución. Ver su [README](backend/README.md)                                                                                                       |
+| [`backend/`](backend/)   | Backend-for-Frontend (Spring Boot 3) con la BD de la institución. Ver su [README](backend/README.md) y documentación técnica en [`backend/docs/`](backend/docs/) |
 | [`materiales/`](materiales/) | App de escritorio (Swing) para *Preparar materiales* por la **API Java** de Flowable (§4.2.1), más el análisis de §4.3. Ver su [README](materiales/README.md)                                           |
 | [`comunicaciones/`](comunicaciones/) | App de escritorio (Swing) que simula las comunicaciones de la empresa por la **API REST** de Flowable (§4.2.2). Ver su [README](comunicaciones/README.md)                                      |
 | [`docs/`](docs/)         | Enunciado, documentación funcional por sección del proceso y el **[informe del proyecto](docs/informe/)** con el reparto de la defensa                                                                      |
@@ -48,6 +48,7 @@ Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripc
 | `localhost:5432`                                         | **PostgreSQL**: base compartida por el motor y la UI                                                                                                 | Docker                                              |
 | `http://localhost:8081`                                  | **Sitio web institucional**: portada pública para solicitar capacitaciones y acceso con credenciales (§4.1)                                         | Docker                                              |
 | `http://localhost:8081/api/**`                           | **Backend BFF**: API que consumen el sitio y las apps externas; contiene la BD de la institución (empresas y cursos)                                 | Docker                                              |
+| `http://localhost:8081/swagger-ui.html`                  | **Swagger UI / OpenAPI**: documentación interactiva y catálogo de endpoints de la API REST del backend                                              | Docker                                              |
 | `http://localhost:8081/api/flowable/**`                  | API interna que usa el motor para volcar a la BD de la institución el estado del curso, sus datos (programa, presupuesto, fecha, informe) y el acceso de la empresa. Protegida por API key | —                           |
 
 > [!NOTE]
@@ -349,6 +350,24 @@ curl -s -X PUT http://localhost:8081/api/flowable/courses/{processId}/details -H
 ```
 
 Qué dato vive en la BD y cuál queda como variable del proceso está documentado en [`adr/datos-proceso-vs-bd.md`](adr/datos-proceso-vs-bd.md).
+
+#### 6.1 Documentación Técnica del Backend (MkDocs y Swagger)
+
+El módulo backend cuenta con documentación técnica detallada:
+
+- **Sitio de arquitectura con MkDocs Material** (`backend/docs/`):
+  Explica en profundidad la arquitectura, seguridad (filtros Spring Security), integración con Flowable BPM, patrón Strategy para tareas de usuario y guías de testing.
+  ```bash
+  cd backend && mkdocs serve
+  # O desde la raíz del repo:
+  mkdocs serve -f backend/mkdocs.yml
+  ```
+  Acceso en vivo: [http://127.0.0.1:8000/](http://127.0.0.1:8000/).
+
+- **Swagger UI / OpenAPI 3**:
+  Con el contenedor `flowable-backend` o la app local levantada en el puerto `8081`:
+  - **Swagger UI:** [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html)
+  - **OpenAPI JSON:** [http://localhost:8081/v3/api-docs](http://localhost:8081/v3/api-docs)
 
 ---
 
