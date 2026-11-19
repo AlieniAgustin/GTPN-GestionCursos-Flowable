@@ -26,6 +26,13 @@ from generar_casos import EMPRESAS, Motor, elaborar_propuesta  # noqa: E402
 
 FECHA_LEJANA_DIAS = 60
 
+# Escenario 1: minutos desde que corre el script hasta el inicio del curso. En 0 el curso
+# arranca hoy, así que el temporizador "Fecha programada" ya está vencido cuando la demo
+# llega ahí y dispara en unos 4 segundos. Si querés mostrarlo esperando, poné 2 o 3 y
+# corré el script justo antes de presentar: la instancia queda parada en el temporizador
+# hasta que se cumpla la hora acordada.
+MINUTOS_HASTA_INICIO = 0
+
 
 class Demo:
     def __init__(self, bff, motor, sesion):
@@ -68,13 +75,22 @@ class Demo:
             return True
         return False
 
-    def hasta_preparacion(self, instancia, fecha_dias=FECHA_LEJANA_DIAS):
-        """Propuesta + aceptación: deja la instancia con las tres ramas abiertas."""
+    def hasta_preparacion(self, instancia, fecha_dias=FECHA_LEJANA_DIAS, minutos=0):
+        """Propuesta + aceptación: deja la instancia con las tres ramas abiertas.
+
+        ``fecha_dias`` es la fecha de inicio que acuerda la empresa, contada en días desde
+        hoy. Con ``minutos`` se acuerda en cambio una hora puntual dentro de hoy, para
+        mostrar el temporizador esperando un rato corto en vez de hasta la fecha real.
+        """
         import datetime
         if not elaborar_propuesta(self.motor, instancia, 150000):
             raise RuntimeError("la solicitud salió NO VIABLE: no hay cupo "
                                "(hay cinco cursos en ejecución). Probá con --limpiar")
-        fecha = (datetime.date.today() + datetime.timedelta(days=fecha_dias)).isoformat()
+        if minutos:
+            fecha = (datetime.datetime.now().astimezone()
+                     + datetime.timedelta(minutes=minutos)).replace(microsecond=0).isoformat()
+        else:
+            fecha = (datetime.date.today() + datetime.timedelta(days=fecha_dias)).isoformat()
         self.motor.mensaje(instancia, "Aceptación", {"fechaAcordada": fecha})
         time.sleep(0.6)
 
@@ -127,7 +143,11 @@ class Demo:
 
     def escenario_en_preparacion(self):
         i = self.nueva("Atencion al Cliente", 3)
-        self.hasta_preparacion(i)
+        # Este es el curso del escenario 1, el único que se recorre hasta el final en vivo.
+        # Se acuerda el inicio para hoy a propósito: cuando la demo llega al temporizador
+        # "Fecha programada" ya está vencido y dispara en unos segundos, en vez de dejar la
+        # instancia esperando la fecha real. Subir MINUTOS_HASTA_INICIO para verlo esperar.
+        self.hasta_preparacion(i, fecha_dias=0, minutos=MINUTOS_HASTA_INICIO)
         # Se deja con las tres ramas abiertas: es lo que la empresa ve en su pantalla
         self.anotar("10. Acceso de la empresa y preparación en paralelo",
                     "sitio: mis cursos (empresa) — tres ramas a la vez", "la empresa", i)

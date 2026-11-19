@@ -95,23 +95,32 @@ Salir de la sesión y entrar con **`jefedocente` / `password`**.
 Si la fecha acordada fuera lejana, la instancia quedaría esperando en **Fecha programada**
 y no se podría seguir.
 
-**Cómo evitar la espera, sin comandos:** la fecha la define la empresa **cuando acepta la
-propuesta**, desde la app de comunicaciones. Al elegir *Aceptar la propuesta*, la app pide:
+**Para esta demo no hay que esperar nada.** La fecha de inicio la acuerda la empresa al
+aceptar la propuesta, y para *Atención al Cliente* el script la dejó **en el día de hoy**.
+Así que cuando el token llega a *Fecha programada* el plazo ya está cumplido y el
+temporizador dispara **en unos 4 segundos**.
 
-```
-Fecha acordada de inicio del curso (AAAA-MM-DD o AAAA-MM-DDTHH:MM):
-```
+Igual el momento se puede mostrar, y conviene hacerlo:
 
-Si ahí se escribe **la fecha de hoy o una pasada**, el temporizador vence de inmediato y
-*Desarrollar curso* aparece enseguida. Es lo que hace el script de preparación con los
-cursos de la demo.
+- **Antes** de completar *Definir docente*, señalar el evento en el diagrama: no tiene
+  ninguna fecha escrita, espera una variable.
+- **Al completar**, el token queda unos segundos en *Fecha programada*. Si se refresca la
+  instancia en ese momento se la ve **parada ahí, sin ninguna tarea abierta**: el proceso
+  está esperando.
+- Refrescar de nuevo y ya apareció *Desarrollar curso*.
 
-> Si en algún momento hiciera falta cambiar el plazo por defecto, está en
-> [`docker-compose.yml`](../../../docker-compose.yml): hay una línea comentada
-> `PROCESO_FECHA_CURSO_OFFSET` que se puede descomentar. **No hace falta para esta demo.**
+Lo que hay que decir es que dispara ahora porque la fecha acordada es hoy; si se hubiera
+acordado marzo, la instancia se quedaría esperando en ese mismo punto hasta marzo.
 
-En el diagrama vale la pena señalar que *Fecha programada* **no tiene ninguna fecha
-escrita**: es una expresión que se resuelve con una variable.
+> **Si querés verlo esperar un rato de verdad**, en
+> [`scripts/preparar_demo.py`](../../../scripts/preparar_demo.py) está la constante
+> `MINUTOS_HASTA_INICIO`, arriba del archivo. Puesta en `2` o `3`, la fecha acordada pasa a
+> ser una hora puntual de hoy, y la instancia se queda parada en el temporizador hasta
+> cumplirla. Hay que correr la preparación justo antes de presentar, porque esos minutos se
+> cuentan desde que corre el script. **En `0`, que es como está, dispara solo.**
+>
+> La variable `PROCESO_FECHA_CURSO_OFFSET` del `docker-compose.yml` **no sirve para esto**:
+> solo se usa cuando la empresa acepta sin mandar fecha, y acá siempre manda una.
 
 ---
 
