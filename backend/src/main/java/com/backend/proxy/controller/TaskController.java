@@ -20,12 +20,11 @@ import com.backend.proxy.dto.task.FlowableTaskDTO;
 import com.backend.proxy.dto.task.TaskDetailResponse;
 import com.backend.proxy.service.TaskService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
-/**
- * REST controller for HATEOAS task inspection and strongly-typed task completion
- * for institutional users (development, course delivery, report and archiving).
- */
+@Tag(name = "Tareas", description = "Endpoints de bandeja de entrada e inspección/resolución de tareas de Flowable")
 @RestController
 @RequestMapping("/api/tasks")
 public class TaskController {
@@ -36,19 +35,13 @@ public class TaskController {
         this.taskService = taskService;
     }
 
-    /**
-     * Bandeja del usuario: las tareas que tiene asignadas y las que puede reclamar por
-     * su grupo candidato (enunciado 4.1.3).
-     */
+    @Operation(summary = "Bandeja de tareas", description = "Lista las tareas asignadas o reclamables por el usuario autenticado")
     @GetMapping
     public ResponseEntity<List<FlowableTaskDTO>> inbox(@AuthenticationPrincipal String username) {
         return ResponseEntity.ok(taskService.findInbox(username));
     }
-
-    /**
-     * Unified aggregated query endpoint (Query).
-     * Dispatches dynamically via TaskStrategy based on taskDefinitionKey.
-     */
+    // se le envia al usuario lo que necesita para resolver, y a donde tiene que responder 
+    @Operation(summary = "Detalle de tarea", description = "Retorna el detalle agregado y contexto para resolver una tarea de Flowable")
     @GetMapping("/{taskId}/detail")
     public ResponseEntity<TaskDetailResponse<?>> getDetail(
             @PathVariable String taskId,
@@ -56,10 +49,7 @@ public class TaskController {
         return ResponseEntity.ok(taskService.getTaskDetail(taskId, username));
     }
 
-    /**
-     * Completion action: Define Teacher.
-     * Task: 'definirdocentequedesarrollaelcurso' (Teaching team lead).
-     */
+    @Operation(summary = "Completar tarea: Definir docente", description = "Asigna el docente responsable del desarrollo del curso")
     @PostMapping("/{taskId}/define-teacher")
     public ResponseEntity<Void> completeDefineTeacher(
             @PathVariable String taskId,
@@ -69,10 +59,7 @@ public class TaskController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Completion action: Deliver Course.
-     * Task: 'desarrollarcurso' (Dynamically assigned teacher).
-     */
+    @Operation(summary = "Completar tarea: Desarrollar curso", description = "Marca el curso como desarrollado por el docente asignado")
     @PostMapping("/{taskId}/deliver-course")
     public ResponseEntity<Void> completeDeliverCourse(
             @PathVariable String taskId,
@@ -82,10 +69,7 @@ public class TaskController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Completion action: Prepare Results Report.
-     * Task: 'elaborarinformederesultados' (Teaching team lead).
-     */
+    @Operation(summary = "Completar tarea: Elaborar informe", description = "Registra el informe de resultados del curso")
     @PostMapping("/{taskId}/prepare-report")
     public ResponseEntity<Void> completePrepareReport(
             @PathVariable String taskId,
@@ -95,10 +79,7 @@ public class TaskController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Completion action: Send Report and Archive File.
-     * Task: 'enviarinformeaempresayarchivarexpediente' (Administrative lead).
-     */
+    @Operation(summary = "Completar tarea: Enviar informe y archivar", description = "Confirma el envío del informe a la empresa y archiva el expediente")
     @PostMapping("/{taskId}/send-report")
     public ResponseEntity<Void> completeSendReport(
             @PathVariable String taskId,

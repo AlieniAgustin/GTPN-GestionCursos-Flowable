@@ -17,8 +17,11 @@ import com.backend.proxy.dto.CourseResponseDTO;
 import com.backend.proxy.security.Roles;
 import com.backend.proxy.service.CourseService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
+@Tag(name = "Cursos", description = "Endpoints de gestión y consulta de cursos")
 @RestController
 @RequestMapping("/api/courses")
 public class CourseController {
@@ -29,6 +32,7 @@ public class CourseController {
         this.courseService = courseService;
     }
 
+    @Operation(summary = "Crear nuevo curso", description = "Procesa una nueva solicitud de curso e inicia el proceso correspondiente")
     @PostMapping
     public ResponseEntity<CourseResponseDTO> create(@Valid @RequestBody CourseRequestDTO courseRequest) {
         CourseResponseDTO course = courseService.processCourse(courseRequest);
@@ -36,12 +40,14 @@ public class CourseController {
         return ResponseEntity.created(location).body(course);
     }
 
+    @Operation(summary = "Listar cursos", description = "Retorna los cursos visibles para el usuario autenticado")
     @GetMapping
     public ResponseEntity<List<CourseResponseDTO>> list(Authentication authentication) {
         return ResponseEntity.ok(courseService.findVisibleFor(
                 authentication.getName(), Roles.isCompany(authentication)));
     }
 
+    @Operation(summary = "Detalle de curso", description = "Retorna el detalle del curso solicitado si el usuario tiene permisos")
     @GetMapping("/{courseId}")
     public ResponseEntity<CourseResponseDTO> detail(
             @PathVariable Long courseId,

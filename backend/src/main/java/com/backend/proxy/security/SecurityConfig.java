@@ -33,15 +33,12 @@ public class SecurityConfig {
     private static final String[] PUBLIC_URLS = {
         "/api/auth/login",
         "/health",
-        // Sin esto, cualquier excepción se reenvía a /error, que al estar protegido
-        // devuelve 403 y tapa el ApiErrorResponse del GlobalExceptionHandler.
-        "/error"
+        "/error",
+        "/v3/api-docs/**",
+        "/swagger-ui/**",
+        "/swagger-ui.html"
     };
 
-    /**
-     * Sección pública del sitio (enunciado 4.1.1): portada, alta de solicitudes,
-     * login y estáticos.
-     */
     private static final String[] PUBLIC_PAGES = {
         "/",
         "/solicitudes",
@@ -50,7 +47,10 @@ public class SecurityConfig {
         "/health",
         "/error",
         "/css/**",
-        "/js/**"
+        "/js/**",
+        "/v3/api-docs/**",
+        "/swagger-ui/**",
+        "/swagger-ui.html"
     };
 
     @Bean
@@ -79,12 +79,7 @@ public class SecurityConfig {
             .build();
     }
 
-    /**
-     * Sesión estándar de Spring Security para la API REST: {@code POST /api/auth/login}
-     * es interceptado por {@link JsonAuthenticationFilter}, que valida contra el IDM
-     * de Flowable o BD de empresas, y guarda el SecurityContext en la HttpSession.
-     * Las llamadas siguientes solo necesitan la cookie JSESSIONID.
-     */
+    
     @Bean
     @Order(2)
     public SecurityFilterChain applicationSecurity(
@@ -120,20 +115,12 @@ public class SecurityConfig {
                     response.setStatus(HttpStatus.NO_CONTENT.value());
                 })
             )
-            // Para una API, "no estás autenticado" es 401, no 403
             .exceptionHandling(handling -> handling
                 .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
             )
             .build();
     }
 
-    /**
-     * Sitio web institucional (enunciado 4.1). A diferencia de la API, acá un usuario
-     * sin sesión no recibe un 401 sino que va a parar al formulario de login.
-     *
-     * <p>La sección pública —portada y alta de solicitudes— queda abierta: según el
-     * enunciado (4.1.1) cualquier empresa puede pedir una capacitación sin tener cuenta.
-     */
     @Bean
     @Order(3)
     public SecurityFilterChain websiteSecurity(
@@ -168,11 +155,6 @@ public class SecurityConfig {
             .build();
     }
 
-    /**
-     * Hashea las contrasenas de las cuentas de empresa que crea
-     * "Habilitar acceso de la empresa" (enunciado 4.1.2). El personal de la institucion
-     * no pasa por aca: se valida contra el IDM de Flowable (enunciado 3.3).
-     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
