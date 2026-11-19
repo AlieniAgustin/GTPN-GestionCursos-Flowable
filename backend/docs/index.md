@@ -27,6 +27,18 @@ Para ejecutar el backend y explorar la documentación interactiva:
 
 ---
 
+## Dónde Vive Cada Servicio
+
+| Servicio | Directorio / Módulo | Contenedor Docker | Puerto / URL |
+|---|---|---|---|
+| **Backend Proxy (BFF)** | [`backend/`](file:///home/francisco/GTPN-GestionCursos-Flowable/backend/) | `flowable-backend` | [http://localhost:8081](http://localhost:8081) |
+| **Flowable Engine** | [`flowable/`](file:///home/francisco/GTPN-GestionCursos-Flowable/flowable/) | `flowable-app` | [http://localhost:8080](http://localhost:8080) |
+| **Flowable UI** | Imagen `flowable/flowable-ui` | `flowable-ui` | [http://localhost:8088/flowable-ui/](http://localhost:8088/flowable-ui/) |
+| **PostgreSQL Database** | Imagen `postgres:15-alpine` | `flowable-postgres` | `localhost:5432` |
+| **Documentación MkDocs** | [`backend/docs/`](file:///home/francisco/GTPN-GestionCursos-Flowable/backend/docs/) | Servidor local MkDocs | [http://127.0.0.1:8000](http://127.0.0.1:8000) |
+
+---
+
 ## Mapa de la Documentación
 
 | Sección | Descripción | Contenido Clave |

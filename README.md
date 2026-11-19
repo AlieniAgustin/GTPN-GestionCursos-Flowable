@@ -1,720 +1,164 @@
-# Gestión de Cursos de Capacitación — GTPN
+# Gestión de Cursos de Capacitación
 
-[![Java 17](https://img.shields.io/badge/Java-17-ED8B00?style=flat-square&logo=openjdk&logoColor=white)](https://openjdk.org/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.7.18-6DB33F?style=flat-square&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
-[![Flowable](https://img.shields.io/badge/Flowable-6.8.0-009688?style=flat-square)](https://www.flowable.com/)
-[![Maven](https://img.shields.io/badge/Apache%20Maven-3.8+-C71A36?style=flat-square&logo=apache-maven&logoColor=white)](https://maven.apache.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+![Java 17](https://img.shields.io/badge/Java-17-ED8B00?style=flat-square&logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.7.18-6DB33F?style=flat-square&logo=springboot&logoColor=white)
+![Flowable](https://img.shields.io/badge/Flowable-6.8.0-009688?style=flat-square)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?style=flat-square&logo=postgresql&logoColor=white)
 
-Proyecto final de **Gestión y Tecnologías de Procesos de Negocio (GTPN)**: implementación en Flowable del proceso de organización de cursos de capacitación de una institución especializada.
+Proceso de negocio de una institución de capacitación, implementado en [Flowable](https://www.flowable.com/): desde la solicitud de una empresa hasta el archivo del expediente. Proyecto final de **Gestión y Tecnologías de Procesos de Negocio (GTPN)**.
 
-Enunciado oficial: [`docs/ProyectoCursos_V3.pdf`](docs/ProyectoCursos_V3.pdf).
+[Proceso](#el-proceso) · [Inicio rápido](#inicio-rápido) · [Apps de escritorio](#apps-de-escritorio) · [Configuración](#configuración) · [Estructura](#estructura)
 
----
+Enunciado: [`docs/ProyectoCursos_V3.pdf`](docs/ProyectoCursos_V3.pdf)
 
-## El problema en dos párrafos
+## El proceso
 
-Las empresas solicitan cursos para capacitar a sus empleados. La institución evalúa la **viabilidad** (si ya tiene cinco o más cursos en ejecución, rechaza y finaliza), elabora una propuesta y negocia con la empresa, que puede aceptarla, rechazarla o pedir modificaciones. Si pasan cinco días sin respuesta se envía un recordatorio (máximo dos); si tampoco hay respuesta, se archiva la solicitud.
+1. **Solicitud y viabilidad.** Una empresa pide un curso. Un DMN evalúa la viabilidad: con 5 o más cursos en ejecución se rechaza.
+2. **Negociación.** La institución elabora una propuesta y la empresa la acepta, rechaza o pide modificaciones. Sin respuesta en 5 días se envía un recordatorio (máx. 2) y luego se archiva.
+3. **Preparación.** Tres ramas en paralelo: inscripciones, materiales y recursos. Si la empresa cancela, se compensan los recursos ya gestionados.
+4. **Ejecución y cierre.** Se define el docente, se dicta el curso, se elabora el informe y se archiva el expediente liberando recursos.
 
-Aceptada la propuesta, se **prepara el curso** en tres ramas paralelas (inscripciones, materiales y recursos). Durante la preparación la empresa puede **cancelar**, lo que compensa los recursos ya gestionados. Si todo avanza, el jefe docente define quién dicta el curso, el docente lo desarrolla, se elabora el informe de resultados y el jefe administrativo lo envía y archiva el expediente, liberando los recursos.
+## Arquitectura y Dónde Vive Cada Servicio
 
----
+| Servicio / Componente | Directorio / Origen | Contenedor Docker | Puerto Host / URL | Red Interna Compose | Descripción |
+| --- | --- | --- | --- | --- | --- |
+| **Backend Proxy (BFF)** | [`backend/`](backend/) | `flowable-backend` | `localhost:8081` | `backend:8081` | BFF en Spring Boot 3 con la BD de la institución, API REST, sitio web y Swagger en `/swagger-ui.html`. |
+| **Flowable Engine** | [`flowable/`](flowable/) | `flowable-app` | `localhost:8080` | `flowable-app:8080` | Motor de procesos (Spring Boot + Flowable): BPMN, DMN, listeners, delegates y API REST. |
+| **Flowable UI** | Imagen `flowable/flowable-ui` | `flowable-ui` | `localhost:8088/flowable-ui/` | `flowable-ui:8080` | Task App, Modeler, Admin e IDM. |
+| **PostgreSQL** | Imagen `postgres:15-alpine` | `flowable-postgres` | `localhost:5432` | `postgres:5432` | Base de datos relacional compartida (`flowable` / `flowable`). |
+| **App de Materiales** | [`materiales/`](materiales/) | Proceso Java Swing | — | — | App Swing para preparar materiales, por la API Java. |
+| **App de Comunicaciones** | [`comunicaciones/`](comunicaciones/) | Proceso Java Swing | — | — | App Swing que simula a la empresa, por la API REST. |
+| **Minería de Procesos** | [`mineria/`](mineria/) | Scripts Python / PM4Py | — | — | Minería de procesos con PM4Py sobre la negociación. |
+| **Documentación Técnica** | [`backend/docs/`](backend/docs/) | MkDocs local | `127.0.0.1:8000` | — | Documentación técnica y arquitectura construida con MkDocs Material (`cd backend && mkdocs serve`). |
 
-## Contenido del repositorio
+Más detalle en [`docs/`](docs/), [`adr/`](adr/), [`model/`](model/) y la [documentación del backend](backend/docs/). Los endpoints del BFF están en `localhost:8081/swagger-ui.html`.
 
-| Carpeta                  | Qué contiene                                                                                                                                                                                               |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`model/`](model/)       | Modelos BPMN: `cursosNuestraVersion.bpmn` (refinado, 7PMG) y `cursosOriginal.bpmn` (base de cátedra), más el [informe de justificación](model/informeDeJustificacionDeCambiosyDecisionesDeModeladoBPMN.md) |
-| [`flowable/`](flowable/) | Motor de procesos: Spring Boot 2.7.18 + Flowable 6.8.0, BPMN desplegable, DMN de viabilidad, listeners, delegates y API REST                                                                               |
-| [`backend/`](backend/)   | Backend-for-Frontend (Spring Boot 3) con la BD de la institución. Ver su [README](backend/README.md) y documentación técnica en [`backend/docs/`](backend/docs/) |
-| [`materiales/`](materiales/) | App de escritorio (Swing) para *Preparar materiales* por la **API Java** de Flowable (§4.2.1), más el análisis de §4.3. Ver su [README](materiales/README.md)                                           |
-| [`comunicaciones/`](comunicaciones/) | App de escritorio (Swing) que simula las comunicaciones de la empresa por la **API REST** de Flowable (§4.2.2). Ver su [README](comunicaciones/README.md)                                      |
-| [`docs/`](docs/)         | Enunciado, documentación funcional por sección del proceso y el **[informe del proyecto](docs/informe/)** con el reparto de la defensa                                                                      |
-| [`adr/`](adr/)           | Decisiones de arquitectura (compensación, cancelación no interruptiva, aulas simuladas, [qué va a la BD y qué queda como variable](adr/datos-proceso-vs-bd.md))                                            |
-| [`mineria/`](mineria/)   | Minería de procesos con PM4Py sobre la etapa de negociación (§4.4), con el event log y la [conclusión](mineria/conclusion.md)                                                                              |
+## Inicio rápido
 
----
-
-## Mapa de servicios: qué hace cada URL
-
-| URL                                                      | Qué es / para qué sirve                                                                                                                              | Cómo se levanta                                     |
-| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| `http://localhost:8080`                                  | **App Flowable**: motor de procesos embebido. Es el corazón del sistema                                                                              | Docker (perfil `prod`) o Maven (perfil `dev`)       |
-| `http://localhost:8080/health`                           | Healthcheck público, sin autenticación. Devuelve `UP`                                                                                                | —                                                   |
-| `http://localhost:8080/groups`                           | Lista los grupos del motor. Público. Sirve para verificar que el seed corrió                                                                         | —                                                   |
-| `http://localhost:8080/me`                               | Devuelve el usuario autenticado, sus grupos y roles. **Requiere HTTP Basic**                                                                         | —                                                   |
-| `http://localhost:8080/process-api/**`                   | **API REST oficial de Flowable**: desplegar procesos, iniciar instancias, consultar y completar tareas. Es la que consumen las apps externas         | —                                                   |
-| `http://localhost:8088/flowable-ui/`                     | **Flowable UI**: Task App (bandeja de tareas), Modeler, Admin App e IDM App (usuarios y grupos). Sirve para operar el proceso a mano durante la demo | Docker                                              |
-| `localhost:5432`                                         | **PostgreSQL**: base compartida por el motor y la UI                                                                                                 | Docker                                              |
-| `http://localhost:8081`                                  | **Sitio web institucional**: portada pública para solicitar capacitaciones y acceso con credenciales (§4.1)                                         | Docker                                              |
-| `http://localhost:8081/api/**`                           | **Backend BFF**: API que consumen el sitio y las apps externas; contiene la BD de la institución (empresas y cursos)                                 | Docker                                              |
-| `http://localhost:8081/swagger-ui.html`                  | **Swagger UI / OpenAPI**: documentación interactiva y catálogo de endpoints de la API REST del backend                                              | Docker                                              |
-| `http://localhost:8081/api/flowable/**`                  | API interna que usa el motor para volcar a la BD de la institución el estado del curso, sus datos (programa, presupuesto, fecha, informe) y el acceso de la empresa. Protegida por API key | —                           |
-
-> [!NOTE]
-> La app Flowable y Flowable UI comparten la **misma base de datos**. Por eso un usuario creado desde la UI sirve para autenticarse contra la API REST, y viceversa.
-
-Las dos apps de escritorio **no ocupan ningún puerto**: no son servidores, son clientes. La de materiales habla con PostgreSQL por la API Java del motor y la de comunicaciones con la API REST de `8080`.
-
----
-
-## Apps de escritorio: los tres comandos
-
-Con el stack levantado (ver [1. Levantar](#1-levantar)), esto es todo lo que hace falta para probarlas. El detalle de cada una está en su paso y en el README de su carpeta.
-
-**Preparación de materiales** (§4.2.1, API Java) — entrar con `administrativo1` / `password`:
-
-```bash
-cd materiales && ./build.sh && cd ..
-```
-
-```bash
-java -jar materiales/target/app.jar
-```
-
-**Comunicaciones de la empresa** (§4.2.2, API REST):
-
-```bash
-cd comunicaciones && ./build.sh && cd ..
-```
-
-```bash
-java -jar comunicaciones/target/app.jar
-```
-
-**Análisis de las ejecuciones** (§4.3) — también está como botón en la app de materiales:
-
-```bash
-java -cp materiales/target/app.jar com.materiales.app.analysis.AnalysisApp
-```
-
-> [!IMPORTANT]
-> `./build.sh` es obligatorio antes del primer `java -jar`, y hay que repetirlo después de cualquier `mvn clean`: `mvn test` compila pero no empaqueta, así que sin ese paso el jar no existe y sale `Unable to access jarfile`.
-
----
-
-## Credenciales: dónde va cada contraseña
-
-| URL / recurso                                       | Usuario              | Contraseña            | Para qué                                                                                                                                                      |
-| --------------------------------------------------- | -------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `http://localhost:8088/flowable-ui/`                | `admin`              | `test`                | Entrar a Flowable UI (Task, Modeler, Admin, IDM)                                                                                                              |
-| `http://localhost:8080/process-api/**` (HTTP Basic) | `admin`              | `test`                | Administrar el motor por API REST                                                                                                                             |
-| `http://localhost:8080/**` (HTTP Basic)             | `jefeadministrativo` | `password`            | Rol: registrar/elaborar/revisar propuesta, archivar solicitud, enviar informe                                                                                 |
-| idem                                                | `administrativo1`    | `password`            | Rol: lista definitiva, materiales, recursos, compensaciones                                                                                                   |
-| idem                                                | `jefedocente`        | `password`            | Rol: definir docente, elaborar informe de resultados                                                                                                          |
-| idem                                                | `docente1`           | `password`            | Rol: desarrollar curso                                                                                                                                        |
-| idem                                                | `docente2`           | `password`            | idem                                                                                                                                                          |
-| `localhost:5432` (PostgreSQL)                       | `flowable`           | `flowable`            | Base `flowable`. Definido en [`docker-compose.yml`](docker-compose.yml)                                                                                       |
-| Backend → Flowable (cuenta técnica)                 | `admin`              | `test`                | `flowable.username` / `flowable.password` en [`backend/src/main/resources/application.properties`](backend/src/main/resources/application.properties)         |
-| `http://localhost:8081/api/flowable/**`             | header `X-API-KEY`   | `flowable-secret-key` | Autentica al motor contra el backend. Definido en [`flowable/.../application.properties`](flowable/src/main/resources/application.properties) y en el backend |
-| `http://localhost:8081/login`                       | los mismos de arriba | los mismos de arriba  | Login del sitio. Acepta tanto al personal de la institución como a las empresas                                                                               |
-| `http://localhost:8081/api/auth/login`              | los mismos de arriba | los mismos de arriba  | El mismo login, para clientes REST. Abre sesión (`JSESSIONID`)                                                                                                |
-
-**De dónde sale cada uno:**
-
-- `admin` / `test` lo crea el bootstrap del contenedor `flowable-ui` la primera vez que arranca contra una base vacía.
-- Los cinco usuarios de negocio con contraseña `password` los crea el seed de [`IdentitySeeder.java`](flowable/src/main/java/com/flowable/app/config/IdentitySeeder.java), que **corre en todos los perfiles, `prod` incluido**: recién levantado el stack con Docker ya están disponibles. Para saltearlo, `institucion.seed.enabled=false`.
-- Son cinco porque el enunciado (§3.3) define **Administración con 2 personas** (una es el jefe administrativo) y **Docentes con 3** (uno es el jefe del equipo).
-
-> [!IMPORTANT]
-> El seed **crea pero nunca borra**: solo da de alta lo que falta (usuarios, grupos y membresías), así que es idempotente y se puede volver a correr sin riesgo. Pero si tu base viene de antes del ajuste a cinco usuarios, va a seguir teniendo un `administrativo2` huérfano, y el listener de asignación lo va a considerar como candidato. Para limpiarla, `docker compose down -v` y volver a levantar.
-
----
-
-## Comandos, en orden
-
-### Requisitos previos
-
-JDK 17+, Apache Maven 3.8+, Git, Docker y Docker Compose.
+**Requisitos:** JDK 17+, Maven 3.8+, Docker y Docker Compose.
 
 ```bash
 git clone https://github.com/AlieniAgustin/GTPN-GestionCursos-Flowable.git
-```
+cd GTPN-GestionCursos-Flowable
 
----
-
-### 1. Levantar
-
-#### 1.1 Compilar el JAR (obligatorio antes de levantar)
-
-Los `Dockerfile` **no compilan**: solo copian el fat JAR ya generado. Si salteás este paso, `docker compose up --build` falla porque `target/app.jar` no existe (está en `.gitignore`, no se versiona). Hay que hacerlo en los **dos** módulos:
-
-```bash
-cd flowable && ./build.sh
-```
-
-```bash
-cd backend && ./build.sh
-```
-
-Cada script corre `mvn clean package -DskipTests` y deja el artefacto en `target/app.jar` de su módulo.
-
-#### 1.2 Levantar los contenedores
-
-```bash
-docker compose up --build -d
-```
-
-Levanta cuatro servicios en orden de dependencia: `flowable-postgres`, `flowable-app` (espera a que Postgres esté sano), `flowable-backend` y `flowable-ui` (ambos esperan a que la app esté sana).
-
-```bash
-docker compose ps
-```
-
-#### 1.3 Verificar que el seed corrió
-
-El seed de usuarios y grupos corre **en cada arranque de la app, en cualquier perfil**, así que no hay ningún paso manual: en cuanto `flowable-app` queda sano, los cinco usuarios de negocio, los dos grupos y la cuenta técnica `admin`/`test` ya están en la base.
-
-```bash
-curl -s http://localhost:8080/groups
-```
-
-Debe devolver `{"groups":["Administracion","Docentes"],"quantityGroups":2}`.
-
-Y un usuario de negocio tiene que poder autenticarse:
-
-```bash
-curl -s -u administrativo1:password http://localhost:8080/me
-```
-
-En los logs del contenedor queda el detalle de lo que creó:
-
-```bash
-docker compose logs flowable-app | grep -i "Seeded\|Identity seed"
-```
-
-#### 1.4 Ver logs
-
-```bash
-docker compose logs -f flowable-app
-```
-
----
-
-### 2. Bajar
-
-Detener los contenedores conservando los datos:
-
-```bash
-docker compose down
-```
-
-Detener **y borrar el volumen** de PostgreSQL (deja la base vacía: se pierden despliegues e instancias; los usuarios y grupos los vuelve a crear el seed en el próximo arranque):
-
-```bash
-docker compose down -v
-```
-
----
-
-### 3. Compilar
-
-```bash
-cd flowable && mvn clean compile
-```
-
----
-
-### 4. Testear
-
-```bash
-cd flowable && mvn test -DforkCount=0
-```
-
-> [!NOTE]
-> `AppTest` levanta el contexto completo contra PostgreSQL. Para correr únicamente los tests en memoria con H2: `mvn test -DforkCount=0 -Dtest='!AppTest'`.
-
----
-
-### 5. Correr la app local (perfil `dev`)
-
-Requiere el contenedor de PostgreSQL levantado, porque [`application-dev.properties`](flowable/src/main/resources/application-dev.properties) apunta a `jdbc:postgresql://localhost:5432/flowable`.
-
-Si el puerto 8080 está ocupado por el contenedor `flowable-app`, usá otro puerto:
-
-```bash
-cd flowable && mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8090
-```
-
-Si bajaste los contenedores de la app y querés el 8080:
-
-```bash
-cd flowable && mvn spring-boot:run
-```
-
-Diferencias entre perfiles:
-
-|                           | `dev`                       | `prod`                                                                                                     |
-| ------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Base de datos             | PostgreSQL `localhost:5432` | PostgreSQL `postgres:5432` (sobreescribible por `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`) |
-| Seed de usuarios y grupos | **Sí**                      | **Sí** (desactivable con `institucion.seed.enabled=false`)                                                 |
-| Consola H2                | —                           | deshabilitada                                                                                              |
-
----
-
-### 6. Correr el backend BFF
-
-```bash
-cd backend && mvn spring-boot:run
-```
-
-Solo hace falta si lo querés correr fuera de Docker: `docker compose up` ya lo levanta. Arranca en `http://localhost:8081` y espera PostgreSQL en `localhost:5432` y el motor en `http://localhost:8080`.
-
-**Autenticación.** Las rutas de negocio necesitan sesión, que se mantiene con la cookie `JSESSIONID`; sin ella, la API responde `401`.
-
-El mismo endpoint acepta los dos tipos de usuario (§4.1): el personal de la institución, que se valida contra el IDM de Flowable, y las empresas, con la cuenta que les crea *Habilitar acceso de la empresa*. La respuesta trae el `role`, que es lo que decide qué cursos ve cada uno.
-
-```bash
-curl -s -c cookies.txt -X POST http://localhost:8081/api/auth/login -H 'Content-Type: application/json' -d '{"username":"jefeadministrativo","password":"password"}'
-```
-
-Devuelve `{"username":"jefeadministrativo","role":"INSTITUCION","authenticated":true}`. Para comprobar si la sesión sigue viva:
-
-```bash
-curl -s -b cookies.txt http://localhost:8081/api/auth/me
-```
-
-El usuario y la contraseña de una empresa salen de los logs del motor/Docker al habilitarse el acceso (la contraseña temporal no se persiste en variables del proceso por seguridad): el enunciado permite simular esa comunicación.
-
-**Registrar una solicitud e iniciar su instancia** (§4.1.1). Devuelve `201` con el curso y el `processInstanceId` ya vinculado:
-
-```bash
-curl -s -b cookies.txt -X POST http://localhost:8081/api/courses -H 'Content-Type: application/json' -d '{"contact":{"name":"ACME SA","email":"contacto@acme.com","phone":"+543581234567"},"name":"Curso de Flowable","description":"Capacitacion en BPMN","participantCount":12,"possibleDates":["2027-03-01"]}'
-```
-
-**Consultar los cursos.** Una empresa ve solo los suyos; el personal de la institución, todos (§4.1.2). Pedir el curso de otra empresa devuelve `404`, no `403`, para no revelar que existe.
-
-```bash
-curl -s -b cookies.txt http://localhost:8081/api/courses
-```
-
-```bash
-curl -s -b cookies.txt http://localhost:8081/api/courses/52
-```
-
-**Consultar la bandeja de tareas** del usuario autenticado: las que tiene asignadas más las que puede reclamar por su grupo candidato (§4.1.3).
-
-```bash
-curl -s -b cookies.txt http://localhost:8081/api/tasks
-```
-
-**Consultar el detalle de una tarea.** Devuelve el payload tipado y el `actionUrl` al que hay que postear para completarla. Si la tarea no tiene estrategia asociada, responde `404` con el motivo:
-
-```bash
-curl -s -b cookies.txt http://localhost:8081/api/tasks/{taskId}/detail
-```
-
-**Completar una tarea** usando el `actionUrl` devuelto. Por ejemplo, *Definir docente*:
-
-```bash
-curl -s -b cookies.txt -X POST http://localhost:8081/api/tasks/{taskId}/define-teacher -H 'Content-Type: application/json' -d '{"userId":"docente1"}'
-```
-
-Las otras tres acciones son `/deliver-course`, `/prepare-report` y `/send-report`.
-
-El detalle y el completado solo funcionan sobre tareas que estén en la bandeja del usuario: una tarea de otro rol responde `404` con el motivo.
-
-**API interna** que usa el motor para volcar datos a la BD de la institución. No lleva sesión sino API key.
-
-Estado final del curso, al terminar la instancia:
-
-```bash
-curl -s -X PUT http://localhost:8081/api/flowable/courses/{processId} -H 'X-API-KEY: flowable-secret-key' -H 'Content-Type: application/json' -d '{"status":"FINALIZADO"}'
-```
-
-Valores válidos de `status`: `FINALIZADO`, `CANCELADO`, `RECHAZADO`, `NO_VIABLE`, `SIN_RESPUESTA`.
-
-Datos del curso (§3.2). Todos los campos son opcionales y **solo se pisan los que llegan con valor**, porque el proceso los produce en etapas distintas:
-
-```bash
-curl -s -X PUT http://localhost:8081/api/flowable/courses/{processId}/details -H 'X-API-KEY: flowable-secret-key' -H 'Content-Type: application/json' -d '{"program":"4 modulos, 16 horas","budget":180000.00,"agreedDate":"2027-03-01","report":"11 de 12 participantes aprobaron"}'
-```
-
-Qué dato vive en la BD y cuál queda como variable del proceso está documentado en [`adr/datos-proceso-vs-bd.md`](adr/datos-proceso-vs-bd.md).
-
-#### 6.1 Documentación Técnica del Backend (MkDocs y Swagger)
-
-El módulo backend cuenta con documentación técnica detallada:
-
-- **Sitio de arquitectura con MkDocs Material** (`backend/docs/`):
-  Explica en profundidad la arquitectura, seguridad (filtros Spring Security), integración con Flowable BPM, patrón Strategy para tareas de usuario y guías de testing.
-  ```bash
-  cd backend && mkdocs serve
-  # O desde la raíz del repo:
-  mkdocs serve -f backend/mkdocs.yml
-  ```
-  Acceso en vivo: [http://127.0.0.1:8000/](http://127.0.0.1:8000/).
-
-- **Swagger UI / OpenAPI 3**:
-  Con el contenedor `flowable-backend` o la app local levantada en el puerto `8081`:
-  - **Swagger UI:** [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html)
-  - **OpenAPI JSON:** [http://localhost:8081/v3/api-docs](http://localhost:8081/v3/api-docs)
-
----
-
-### 7. Probar la API REST
-
-Healthcheck, sin autenticación:
-
-```bash
-curl -s http://localhost:8080/health
-```
-
-Identidad y roles del usuario autenticado:
-
-```bash
-curl -s -u admin:test http://localhost:8080/me
-```
-
-```bash
-curl -s -u docente1:password http://localhost:8080/me
-```
-
-Procesos desplegados:
-
-```bash
-curl -s -u admin:test http://localhost:8080/process-api/repository/process-definitions
-```
-
-**Iniciar una instancia.** El proceso arranca por un evento de mensaje (`Solicitud de curso`), no por `processDefinitionKey`:
-
-```bash
-curl -s -u admin:test -X POST http://localhost:8080/process-api/runtime/process-instances -H 'Content-Type: application/json' -d '{"message":"Solicitud de curso"}'
-```
-
-La respuesta trae las variables que calculan los listeners y el DMN: `cantidadCursosActivos` y `viable`.
-
-Consultar las tareas activas:
-
-```bash
-curl -s -u admin:test http://localhost:8080/process-api/runtime/tasks
-```
-
-Tareas de una instancia concreta:
-
-```bash
-curl -s -u admin:test "http://localhost:8080/process-api/runtime/tasks?processInstanceId={processInstanceId}"
-```
-
-**Bandeja de un usuario**: tareas asignadas a él más las que puede reclamar por su grupo candidato. Es la consulta que usan las apps externas para armar la lista de pendientes.
-
-```bash
-curl -s -u administrativo1:password "http://localhost:8080/process-api/runtime/tasks?candidateOrAssigned=administrativo1"
-```
-
-**Reclamar** una tarea de grupo (las asignadas directamente a un usuario no se reclaman) — responde `200`:
-
-```bash
-curl -s -u administrativo1:password -X POST http://localhost:8080/process-api/runtime/tasks/{taskId} -H 'Content-Type: application/json' -d '{"action":"claim","assignee":"administrativo1"}'
-```
-
-**Completar** una tarea — responde `200`:
-
-```bash
-curl -s -u administrativo1:password -X POST http://localhost:8080/process-api/runtime/tasks/{taskId} -H 'Content-Type: application/json' -d '{"action":"complete"}'
-```
-
-**Simular las comunicaciones de la empresa** enviando mensajes a la instancia. Nombres definidos en el BPMN: `Aceptación`, `Rechazo`, `Solicitud de modificaciones`, `Nómina de participantes`, `Cancelación`, `Corrección de datos`, `Consulta de avance`.
-
-Primero hay que averiguar el `executionId` de la actividad que está esperando ese mensaje:
-
-```bash
-curl -s -u admin:test "http://localhost:8080/process-api/runtime/executions?processInstanceId={processInstanceId}"
-```
-
-Mientras la instancia espera respuesta, aparecen las ejecuciones `aceptacion`, `rechazo`, `modificaciones` y el temporizador `plazo5dias`. Con el id de la que corresponda — responde `204`:
-
-```bash
-curl -s -u admin:test -X PUT http://localhost:8080/process-api/runtime/executions/{executionId} -H 'Content-Type: application/json' -d '{"action":"messageEventReceived","messageName":"Aceptación"}'
-```
-
-Tras la aceptación arranca el subproceso de preparación y aparecen en paralelo las tareas `prepararmateriales` y `evaluarrecursos`, ambas sin asignar y con `administracion` como grupo candidato.
-
-Historial de instancias terminadas (base del análisis de la sección 4.3 del enunciado):
-
-```bash
-curl -s -u admin:test "http://localhost:8080/process-api/history/historic-process-instances?finished=true"
+# Build padre: compila ambos módulos y levanta todo el stack con Docker Compose
+./build.sh
 ```
 
 > [!TIP]
-> Para probar el escenario 7 (falta de aulas), bajá `aulas.disponibles` a `1` en [`application.properties`](flowable/src/main/resources/application.properties) y recompilá.
+> **Build Padre (`./build.sh`):**
+> Se encarga de compilar en orden `flowable` y `backend`, verificar que existan sus artefactos `target/app.jar` y levantar el stack con `docker compose up --build -d`.
+> - Solo compilar sin levantar Docker: `./build.sh -b`
+> - Compilar, levantar y cargar datos de prueba: `./build.sh -s`
+> - Detener el stack: `./build.sh -d`
 
----
-
-### 8. Preparar la demo
-
-Deja el stack con **una instancia parada en cada estado**, para no recorrer el flujo
-entero en vivo durante la presentación. Al terminar imprime qué quedó dónde y con qué
-usuario verlo.
+Verificar que el motor y el seed están listos:
 
 ```bash
-.venv/bin/python scripts/preparar_demo.py --limpiar
+curl -s http://localhost:8080/groups
+curl -s -u administrativo1:password http://localhost:8080/me
 ```
 
-`--limpiar` cierra lo que haya en curso antes de empezar. Hace falta porque solo cinco
-cursos pueden estar en ejecución a la vez (§3.1): sin cupo, las solicitudes nuevas salen
-*no viables* y los escenarios no se arman. Usa el venv de [`mineria/`](mineria/README.md).
-
-Para los dos escenarios que dependen de los plazos y de los recursos, hay variables
-comentadas en [`docker-compose.yml`](docker-compose.yml):
-
-- **Escenario 7 (falta de aulas):** `AULAS_DISPONIBLES: 1` y pedir aula física en dos cursos.
-- **Plazos en vivo:** `PROCESO_PLAZO_RESPUESTA: PT1M` para no esperar cinco días.
-
----
-
-### 9. Cargar datos de prueba
-
-Da de alta empresas y solicitudes por la API del BFF —igual que lo haría el sitio web— y las deja repartidas en cuatro estados: aceptada y en preparación, rechazada, con modificaciones pendientes y recién ingresada. Sirve para tener algo que mostrar en la demo y recorridos variados para el análisis de §4.3 y la minería de §4.4.
+Cargar datos de prueba (empresas y solicitudes en distintos estados):
 
 ```bash
 ./scripts/seed-demo.sh 8
 ```
 
-El **esquema no lo crea el script**: las tablas las genera Hibernate al arrancar el BFF (`spring.jpa.hibernate.ddl-auto=update`). Para ver cómo quedó la base:
+Para bajar el stack: `docker compose down` (conserva datos) o `docker compose down -v` (borra la base).
+
+### Credenciales
+
+| Recurso | Usuario | Contraseña |
+| --- | --- | --- |
+| Flowable UI y `/process-api` | `admin` | `test` |
+| Administración: `jefeadministrativo`, `administrativo1` | — | `password` |
+| Docentes: `jefedocente`, `docente1`, `docente2` | — | `password` |
+| PostgreSQL (base `flowable`) | `flowable` | `flowable` |
+| API interna `/api/flowable/**` | header `X-API-KEY` | `flowable-secret-key` |
+
+> [!NOTE]
+> `IdentitySeeder` crea usuarios y grupos en cada arranque, en todos los perfiles, pero nunca borra. Si tu base es anterior y tiene un `administrativo2` huérfano, ejecutá `docker compose down -v`.
+
+## Uso
+
+Iniciar una instancia (el proceso arranca por mensaje, no por `processDefinitionKey`):
 
 ```bash
-docker exec flowable-postgres psql -U flowable -d flowable -c 'select id, name, budget, agreed_date, status from courses order by id;'
+curl -s -u admin:test -X POST http://localhost:8080/process-api/runtime/process-instances \
+  -H 'Content-Type: application/json' -d '{"message":"Solicitud de curso"}'
 ```
 
----
-
-### 10. Correr la app de materiales (§4.2.1)
-
-App de escritorio, local a la intranet, que usa la **API Java** de Flowable: arma un `ProcessEngine` embebido contra la **misma base** del motor y trabaja con `IdentityService` y `TaskService`. No pasa por la API REST ni por el BFF.
+Simular a la empresa enviando un mensaje a la ejecución que lo espera (`GET /process-api/runtime/executions?processInstanceId=...` para obtener el id):
 
 ```bash
-cd materiales && ./build.sh
+curl -s -u admin:test -X PUT http://localhost:8080/process-api/runtime/executions/{executionId} \
+  -H 'Content-Type: application/json' -d '{"action":"messageEventReceived","messageName":"Aceptación"}'
 ```
 
-```bash
-java -jar materiales/target/app.jar
-```
+Mensajes del BPMN: `Aceptación`, `Rechazo`, `Solicitud de modificaciones`, `Nómina de participantes`, `Cancelación`, `Corrección de datos`, `Consulta de avance`.
 
-Necesita el PostgreSQL del stack levantado y entorno gráfico. Si la base está en otra máquina de la intranet, o con otras credenciales:
+En la práctica es más cómodo usar el sitio (`localhost:8081`), Flowable UI o la app de comunicaciones.
 
-```bash
-java -Ddb.url=jdbc:postgresql://otra-maquina:5432/flowable -Ddb.username=flowable -Ddb.password=flowable -jar materiales/target/app.jar
-```
+## Apps de escritorio
 
-También se puede por variables de entorno (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`) o editando [`materiales.properties`](materiales/src/main/resources/materiales.properties).
-
-**Cómo usarla:** entrá con un usuario del grupo Administración (`administrativo1` / `password`, por ejemplo). La ventana lista las tareas *Preparar materiales* asignadas y las reclamables por el grupo, con el curso y la empresa de cada instancia. **Reclamar** toma una disponible; **Completar** la cierra pidiendo un detalle opcional de los materiales, que queda en la variable `detalleMateriales`.
-
-Para tener tareas que mostrar, dejá alguna solicitud aceptada y en preparación: `./scripts/seed-demo.sh` ya genera varias.
-
-La ventana tiene además el botón **Análisis de ejecuciones**, que muestra las tres consultas de §4.3 (ver más abajo).
-
-Tres cosas que la app **no** hace a propósito: no crea ni migra tablas (`databaseSchemaUpdate = false`, el dueño del esquema es la app del motor, y si las versiones no coinciden falla al arrancar), no activa el async executor, así que no compite por los jobs ni por los temporizadores, y deshabilita el event registry, que no usa y que al arrancar dispararía un chequeo de Liquibase.
+Necesitan el stack levantado y entorno gráfico.
 
 ```bash
-cd materiales && mvn test
-```
+# Preparar materiales (API Java): entrar con administrativo1 / password
+(cd materiales && ./build.sh) && java -jar materiales/target/app.jar
 
----
+# Comunicaciones de la empresa (API REST)
+(cd comunicaciones && ./build.sh) && java -jar comunicaciones/target/app.jar
 
-### 11. Correr la app de comunicaciones (§4.2.2)
-
-App de escritorio que hace de empresa: elegís una solicitud y le mandás aceptación, rechazo, pedido de modificaciones, la nómina de participantes o la cancelación. Todo por la **API REST** del motor (`/process-api`), sin pasar por el BFF ni por la API Java.
-
-```bash
-cd comunicaciones && ./build.sh
-```
-
-```bash
-java -jar comunicaciones/target/app.jar
-```
-
-Necesita el motor levantado y entorno gráfico. Si está en otra máquina o con otra cuenta:
-
-```bash
-java -Dflowable.base-url=http://otra-maquina:8080/process-api -Dflowable.username=admin -Dflowable.password=test -jar comunicaciones/target/app.jar
-```
-
-También por variables de entorno (`FLOWABLE_BASE_URL`, `FLOWABLE_USERNAME`, `FLOWABLE_PASSWORD`) o editando [`comunicaciones.properties`](comunicaciones/src/main/resources/comunicaciones.properties).
-
-**Cómo usarla:** la tabla de arriba lista las instancias en curso con su curso, empresa y el id del curso en la BD. Al seleccionar una, abajo aparecen **solo las comunicaciones habilitadas en ese estado**: esperando respuesta a la propuesta salen aceptar, rechazar y pedir modificaciones; en preparación, la nómina y la cancelación; mientras corre el curso, ninguna. Eso no lo deduce la app con reglas propias: le pregunta al motor qué ejecuciones están suscriptas a cada mensaje, así que siempre coincide con el estado real.
-
-Las que llevan datos los piden antes de enviar: la fecha acordada en la aceptación (`fechaCurso`), las observaciones en el pedido de modificaciones (`observaciones`) y los participantes en la nómina (`participantes`, uno por línea o separados por comas). La fecha se valida antes de llamar al motor.
-
-Para tener solicitudes que mostrar: `./scripts/seed-demo.sh`.
-
-```bash
-cd comunicaciones && mvn test
-```
-
-> [!TIP]
-> Esta app es la forma práctica de generar muchas instancias terminadas con recorridos variados, que es lo que necesitan el análisis de §4.3 y la minería de §4.4 para dar algo interesante.
-
----
-
-## Análisis de las ejecuciones (§4.3)
-
-Las tres consultas sobre el historial del motor, por la API Java. Están en la app de materiales —el enunciado permite incorporarlas ahí— con dos formas de verlas: el botón **Análisis de ejecuciones** de la ventana, y por consola, que es la que conviene para la captura de resultados:
-
-```bash
+# Análisis de ejecuciones (§4.3); también es un botón en la app de materiales
 java -cp materiales/target/app.jar com.materiales.app.analysis.AnalysisApp
 ```
 
-Acepta las mismas opciones de conexión que la app (`-Ddb.url=...`, `DB_URL`, etc.). Salida:
-
-```text
-1) Resultados de las solicitudes (§4.3.1)
-   Instancias terminadas: 12
-
-   Resultado                            Cantidad     Porcentaje
-   ---------------------------------- ---------- --------------
-   Curso finalizado                            5          41.7%
-   Cancelación                                 2          16.7%
-   Rechazo de la propuesta                     3          25.0%
-   Solicitud no viable                         1           8.3%
-   Cierre por falta de respuesta               1           8.3%
-   ---------------------------------- ---------- --------------
-   Total                                      12         100.0%
-
-2) Preparación en paralelo (§4.3.2)
-   Preparaciones completadas normalmente: 5
-   Excluidas: 2 por cancelación, 1 en curso
-   Instancias que nunca entraron en preparación: 5
-
-   Rama                                 Muestras       Promedio
-   ---------------------------------- ---------- --------------
-   Inscripciones                               5     1 h 12 min
-   Materiales                                  5    35 min 10 s
-   Recursos                                    5      2 h 4 min
-
-3) Distribución de tareas de usuario (§4.3.3)
-   Tareas completadas: 37
-   ...
-```
-
-Cómo se mide cada cosa:
-
-- **Resultados**: la variable `resultadoCurso` de cada instancia terminada, la que dejan los caminos de cierre de §3.4. Los porcentajes van sobre el total de terminadas. Las cinco filas aparecen siempre, aunque estén en cero.
-- **Ramas de la preparación**: la activación es el momento en que el gateway paralelo abre las tres ramas, así que es la misma para las tres; cada rama termina con su última actividad, y la de recursos con la última de las acciones **seleccionadas**. Se miden solo las preparaciones que llegaron al fin del subproceso: una cancelación lo interrumpe antes, así que queda excluida, y el informe dice cuántas excluyó y por qué.
-- **Distribución de tareas**: tareas de usuario terminadas y sin motivo de borrado, agrupadas por responsable. Eso deja afuera las pendientes y las que el motor borró al interrumpir la preparación. Los cinco integrantes aparecen siempre, aunque tengan cero.
-
 > [!TIP]
-> Recién levantado el stack el informe sale casi vacío: `seed-demo.sh` deja las instancias en estados intermedios y ninguna termina. Para que las tres tablas tengan contenido hay que cerrar instancias, y la forma rápida es la app de comunicaciones (paso 10): aceptar, rechazar y cancelar varias solicitudes.
+> El análisis sale casi vacío con datos recién sembrados. Aceptá, rechazá y cancelá solicitudes desde la app de comunicaciones para generar instancias terminadas.
 
----
+## Configuración
 
-## Acortar los plazos para la demo (§3.5)
+### Plazos
 
-El enunciado pide cinco días de espera antes de cada recordatorio y una fecha de inicio de curso acordada en ejecución. Ninguno de los dos está fijo en el BPMN: el modelo usa `${plazoRespuesta}` y `${fechaCurso}`, y los valores por defecto salen de dos properties.
+| Property | Variable de entorno | Default | Controla |
+| --- | --- | --- | --- |
+| `proceso.plazo-respuesta` | `PROCESO_PLAZO_RESPUESTA` | `P5D` | Espera antes de cada recordatorio |
+| `proceso.fecha-curso-offset` | `PROCESO_FECHA_CURSO_OFFSET` | `P7D` | Aceptación → inicio del curso, si la empresa no manda fecha |
 
-| Property                     | Variable de entorno           | Default | Qué controla                                                                              |
-| ---------------------------- | ----------------------------- | ------- | ----------------------------------------------------------------------------------------- |
-| `proceso.plazo-respuesta`    | `PROCESO_PLAZO_RESPUESTA`     | `P5D`   | Espera del gateway antes de cada recordatorio (son 2 como máximo)                          |
-| `proceso.fecha-curso-offset` | `PROCESO_FECHA_CURSO_OFFSET`  | `P7D`   | Desde la aceptación hasta el inicio del curso, **solo** si la empresa no manda fecha       |
+Duraciones ISO-8601 (`P5D`, `PT1M`); los meses no sirven. Para acortarlas en la demo, descomentá las variables en [`docker-compose.yml`](docker-compose.yml) y ejecutá `docker compose up -d flowable-app`. También se pueden fijar por instancia con las variables `plazoRespuesta` y `fechaCurso`.
 
-Son duraciones ISO-8601 de días, horas, minutos y segundos (`P5D`, `PT1M`, `PT30S`); los meses (`P1M`) no sirven.
+Para simular falta de aulas, bajá `aulas.disponibles` a `1` (`AULAS_DISPONIBLES` en Docker).
 
-Para la demo con Docker, descomentar las dos variables en [`docker-compose.yml`](docker-compose.yml) y `docker compose up -d flowable-app`:
-
-```bash
-PROCESO_PLAZO_RESPUESTA=PT1M PROCESO_FECHA_CURSO_OFFSET=PT2M mvn spring-boot:run
-```
-
-Los plazos también se pueden fijar por instancia, y eso le gana a la property: `plazoRespuesta` como variable al iniciarla, y `fechaCurso` (o `fechaAcordada`) en el mensaje `Aceptación`, que es de donde la toma la app de comunicaciones del enunciado §4.2.2:
+### Desarrollo
 
 ```bash
-curl -s -u admin:test -X PUT http://localhost:8080/process-api/runtime/executions/{executionId} -H 'Content-Type: application/json' -d '{"action":"messageEventReceived","messageName":"Aceptación","variables":[{"name":"fechaCurso","type":"string","value":"2026-03-01T09:00"}]}'
+cd flowable && mvn spring-boot:run                       # perfil dev, requiere PostgreSQL
+cd flowable && mvn test -DforkCount=0                    # AppTest necesita PostgreSQL
+cd flowable && mvn test -DforkCount=0 -Dtest='!AppTest'  # solo tests con H2
+cd backend  && mvn spring-boot:run
 ```
 
-Si la aceptación no trae fecha, el motor la deriva del offset y lo deja en el log; la instancia nunca queda trabada esperando la variable.
-
----
-
-## Estado de implementación vs enunciado
-
-### Implementado
-
-- Modelo BPMN ejecutable desplegado (`Process_Curso`), con compensación, cancelación no interruptiva y eventos de mensaje.
-- **Decision task DMN** de viabilidad ([`evaluarViabilidad.dmn`](flowable/src/main/resources/dmn/evaluarViabilidad.dmn)) alimentada desde el motor por `CountActiveCoursesListener`.
-- **Task Listener** `AssignLeastBusyListener`: asigna *Confeccionar lista definitiva* al administrativo con menos tareas pendientes.
-- **Execution Listener** `UpdateCourseStatusListener`: notifica el estado final del curso al backend.
-- Delegates `ReserveClassroomDelegate` / `ReleaseClassroomDelegate` con el **web service de aulas simulado** (`aulas.disponibles`).
-- Seguridad HTTP Basic contra el IDM de Flowable, con roles derivados de los grupos.
-- Seed de los cinco usuarios y los dos grupos de §3.3, idempotente y activo en todos los perfiles (`prod` incluido).
-- Actividad automática **Habilitar acceso de la empresa** (`EnableCompanyAccessDelegate`): le pide al BFF la cuenta de la empresa, que se crea la primera vez y se reutiliza en las contrataciones siguientes (§4.1.2).
-- **Plazos parametrizables** (§3.5): `proceso.plazo-respuesta` y `proceso.fecha-curso-offset`, sin fechas fijas en el modelo.
-- **App de preparación de materiales** (§4.2.1): de escritorio, por la API Java de Flowable, con login contra el IDM, bandeja de tareas asignadas y reclamables, reclamo y completado.
-- **App de comunicaciones de la empresa** (§4.2.2): de escritorio, por la API REST, con las cinco comunicaciones y solo las habilitadas en el estado actual de cada instancia.
-- **Análisis de las ejecuciones** (§4.3): las tres consultas sobre el historial, por consola y desde la app de materiales.
-- **Minería de procesos** (§4.4): event log de la etapa de negociación, los tres recorridos más frecuentes y los gráficos con PM4Py.
-- **Sitio web institucional** (§4.1): sección pública de solicitud, login para personal y empresas, consulta de cursos con el estado en vivo, bandeja de tareas con reclamo y las seis pantallas de tarea (propuesta con PDF versionado, revisión, recursos, docente, informe y envío).
-- Suite de tests automatizados cubriendo el motor de procesos, BFF, seguridad y aplicaciones de escritorio.
-
-### Pendiente
-
-| Enunciado                                | Qué falta                                                                                                                                            |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| § 1.1 Recordatorios *(opcional)*         | El límite de dos recordatorios está dentro del script y no en el flujo: funciona bien, pero el modelo no lo refleja. Ver [`mineria/conclusion.md`](mineria/conclusion.md) |
-
----
-
-## Estructura de archivos
+## Estructura
 
 ```text
-├── docker-compose.yml                # PostgreSQL + app Flowable + backend BFF + Flowable UI
-├── scripts/
-│   └── seed-demo.sh                  # Datos de prueba: empresas y solicitudes variadas
-├── docs/
-│   └── ProyectoCursos_V3.pdf         # Enunciado vigente de la cátedra
-├── model/
-│   ├── cursosNuestraVersion.bpmn     # Modelo refinado (7PMG)
-│   ├── cursosOriginal.bpmn           # Modelo conceptual de cátedra
-│   └── informeDeJustificacionDeCambiosyDecisionesDeModeladoBPMN.md
-├── adr/                              # Decisiones de arquitectura
-├── flowable/                         # Motor de procesos
-│   ├── build.sh                      # mvn clean package -DskipTests → target/app.jar
-│   ├── Dockerfile                    # Imagen final: solo copia target/app.jar
-│   └── src/main/
-│       ├── java/com/flowable/app/
-│       │   ├── App.java              # Entrypoint
-│       │   ├── config/              # IdentitySeeder: usuarios y grupos (§3.3)
-│       │   ├── delegates/            # Reservar / liberar aula, habilitar acceso de la empresa
-│       │   ├── listeners/            # Viabilidad, asignación, estado, cierre, plazos
-│       │   └── security/             # HTTP Basic contra el IDM de Flowable
-│       └── resources/
-│           ├── processes/Institución_de_capacitación.bpmn20.xml
-│           ├── dmn/evaluarViabilidad.dmn
-│           └── application*.properties
-├── comunicaciones/                   # App de escritorio de comunicaciones de la empresa (§4.2.2)
-│   ├── build.sh                      # mvn clean package -DskipTests → target/app.jar
-│   └── src/main/java/com/comunicaciones/app/
-│       ├── CommunicationsApp.java    # Entrypoint: config + ventana
-│       ├── client/                   # Cliente REST (HttpClient del JDK) y su configuración
-│       ├── service/                  # Solicitudes, comunicaciones habilitadas y envío
-│       └── ui/                       # Swing: tabla de solicitudes y botones por estado
-├── materiales/                       # App de escritorio de materiales (§4.2.1)
-│   ├── build.sh                      # mvn clean package -DskipTests → target/app.jar
-│   └── src/main/java/com/materiales/app/
-│       ├── MaterialsApp.java         # Entrypoint: motor embebido + login + ventana
-│       ├── analysis/                 # Las tres consultas de §4.3 + informe por consola
-│       ├── engine/                   # Conexión a la BD del motor y armado del ProcessEngine
-│       ├── service/                  # Login contra el IDM, bandeja, reclamo y completado
-│       └── ui/                       # Swing: login, tabla de tareas y acciones
-└── backend/                          # Backend-for-Frontend + BD de la institución
-    ├── build.sh                      # mvn clean package -DskipTests → target/app.jar
-    ├── Dockerfile                    # Imagen final: solo copia target/app.jar
-    └── src/main/java/com/backend/proxy/
-        ├── controller/               # Auth, cursos, tareas y la API interna del motor
-        ├── entity/                   # Company y Course (§3.2)
-        ├── service/                  # Alta de cursos, acceso de empresas, tareas
-        └── strategy/task/            # Payload y actionUrl por tipo de tarea
+├── flowable/          Motor de procesos
+├── backend/           BFF y BD de la institución
+├── materiales/        App de escritorio (API Java)
+├── comunicaciones/    App de escritorio (API REST)
+├── mineria/           Minería de procesos
+├── model/             Modelos BPMN
+├── adr/               Decisiones de arquitectura
+├── docs/              Enunciado e informe
+└── scripts/           Datos y preparación de la demo
 ```
 
----
+> [!NOTE]
+> Pendiente (opcional, §1.1): el límite de dos recordatorios está en un script y no en el flujo del modelo. Ver [`mineria/conclusion.md`](mineria/conclusion.md).
 
-## Equipo de trabajo
+## Equipo
 
-- **Materia:** Gestión y Tecnologías de Procesos de Negocio (GTPN)
-- **Profesor:** Dr. Ariel Gonzalez
-- **Integrantes:**
-  - Agustin Alieni
-  - Agustin Cesari
-  - Damian Dalio
-  - Hernan Jara
-  - Francisco Natale
+Materia GTPN, profesor Dr. Ariel Gonzalez.
+
+Agustin Alieni, Agustin Cesari, Damian Dalio, Hernan Jara y Francisco Natale.

@@ -13,6 +13,23 @@ Esta guía detalla los pasos para configurar el entorno local, compilar y ejecut
 
 ---
 
+## Dónde Vive Cada Servicio (Topología del Ecosistema)
+
+El sistema se compone de varios servicios distribuidos entre contenedores Docker, aplicaciones de escritorio y herramientas de soporte:
+
+| Servicio | Directorio en el Repositorio | Contenedor Docker | URL / Puerto en Host | Resolución Interna (Compose) | Responsabilidad |
+|---|---|---|---|---|---|
+| **Backend Proxy (BFF)** | [`backend/`](file:///home/francisco/GTPN-GestionCursos-Flowable/backend/) | `flowable-backend` | [http://localhost:8081](http://localhost:8081) | `http://backend:8081` | Spring Boot 3 BFF, API REST, portal web Thymeleaf y Swagger UI en `/swagger-ui.html`. |
+| **Flowable Engine** | [`flowable/`](file:///home/francisco/GTPN-GestionCursos-Flowable/flowable/) | `flowable-app` | [http://localhost:8080](http://localhost:8080) | `http://flowable-app:8080` | Motor BPMN 2.0 y DMN (Spring Boot 2.7 + Flowable 6.8), listeners y API REST. |
+| **Flowable UI** | Imagen oficial `flowable/flowable-ui` | `flowable-ui` | [http://localhost:8088/flowable-ui/](http://localhost:8088/flowable-ui/) | `http://flowable-ui:8080` | Panel web para administración, modelador BPMN y consulta de IDM / tareas. |
+| **PostgreSQL** | Imagen oficial `postgres:15-alpine` | `flowable-postgres` | `localhost:5432` | `postgres:5432` | Base relacional compartida (`db: flowable`, `user: flowable`). Persistida en volumen `postgres_data`. |
+| **Documentación MkDocs** | [`backend/docs/`](file:///home/francisco/GTPN-GestionCursos-Flowable/backend/docs/) | Servidor local MkDocs | [http://127.0.0.1:8000](http://127.0.0.1:8000) | — | Sitio de documentación técnica y arquitectura del backend. |
+| **App de Materiales** | [`materiales/`](file:///home/francisco/GTPN-GestionCursos-Flowable/materiales/) | Proceso Java Swing | — (acceso directo a Java/BD) | — | Aplicación de escritorio para la preparación y registro de materiales. |
+| **App de Comunicaciones**| [`comunicaciones/`](file:///home/francisco/GTPN-GestionCursos-Flowable/comunicaciones/) | Proceso Java Swing | — (consume HTTP `:8080` y `:8081`) | — | Simulador de interacción de la empresa para responder propuestas y enviar nóminas. |
+| **Minería de Procesos** | [`mineria/`](file:///home/francisco/GTPN-GestionCursos-Flowable/mineria/) | Scripts Python / PM4Py | — | — | Análisis de trazas de eventos del proceso de negociación (§4.4). |
+
+---
+
 ## Paso 1: Infraestructura de Base de Datos y Flowable
 
 Desde la raíz del repositorio, inicia los servicios de soporte:
@@ -47,13 +64,24 @@ El archivo `application.properties` viene preconfigurado con valores por defecto
 
 ## Paso 3: Compilación y Ejecución
 
-### Opción A: Modo Desarrollo con Maven
+### Opción A: Orquestación Total con Build Padre (Recomendado)
+Desde la raíz del proyecto, el script `./build.sh` compila ambos módulos (`flowable` y `backend`) y levanta todo el stack con Docker Compose:
+
+```bash
+# Compilar todo y levantar los contenedores:
+./build.sh
+
+# O compilar, levantar y poblar datos de prueba:
+./build.sh -s
+```
+
+### Opción B: Modo Desarrollo con Maven (Solo Backend)
 ```bash
 cd backend
 mvn spring-boot:run
 ```
 
-### Opción B: Script de Compilación a Jar
+### Opción C: Compilación Local de Backend a Jar
 ```bash
 cd backend
 ./build.sh
@@ -63,21 +91,28 @@ java -jar target/app.jar
 
 ---
 
-## Paso 4: Verificación
+## Paso 4: Acceso a la Interfaz de Usuario (UI) y Verificación
 
-Una vez que el servicio esté arriba:
+Con el backend iniciado (puerto `8081`):
 
-1. **Health Check:**
-   ```bash
-   curl http://localhost:8081/health
-   # Respuesta esperada: {"status":"UP"}
-   ```
+### 1. Portal Público de Solicitudes (Sin Login)
+- **URL:** [http://localhost:8081/](http://localhost:8081/)
+- **Uso:** Cualquier empresa o cliente puede solicitar una capacitación completando el formulario público (§4.1.1). Al enviarlo, se guarda el curso en la base de datos y se dispara el proceso BPMN en Flowable.
 
-2. **Swagger UI:**
-   Abre en el navegador [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html) para explorar los endpoints disponibles.
+### 2. Login Web Institucional y Empresas
+- **URL de Acceso:** [http://localhost:8081/login](http://localhost:8081/login)
+- **Credenciales para ingresar:**
 
-3. **Portal Web:**
-   Ingresa a [http://localhost:8081/](http://localhost:8081/) para ver el sitio web Thymeleaf.
+| Tipo de Usuario | Usuarios de Prueba | Contraseña | Destino post-login |
+|---|---|---|---|
+| **Administración** | `jefeadministrativo`, `administrativo1` | `password` | Redirige automáticamente a la bandeja de tareas ([`/tareas`](http://localhost:8081/tareas)) para elaborar/revisar propuestas y recursos. |
+| **Cuerpo Docente** | `jefedocente`, `docente1`, `docente2` | `password` | Redirige a la bandeja ([`/tareas`](http://localhost:8081/tareas)) para definir docentes y dictar cursos. |
+| **Empresas Clientes** | Cuentas generadas automáticamente (ej. con `./build.sh -s` o `./scripts/seed-demo.sh 8`) | Contraseña de empresa | Redirige automáticamente a su portal de seguimiento ([`/mis-cursos`](http://localhost:8081/mis-cursos)). |
+
+### 3. Exploración Interactiva de la API
+- **Swagger UI:** [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html)
+- **Health check:** [http://localhost:8081/health](http://localhost:8081/health) (Respuesta esperada: `{"status":"UP"}`)
+
 
 ---
 
