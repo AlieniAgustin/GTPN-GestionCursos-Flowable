@@ -78,17 +78,95 @@ Al finalizar **normalmente**, el proceso lanza un evento de compensación sobre 
 
 ## 3. Cómo se demuestra
 
-Es el **escenario 6** de la defensa. Con una instancia en preparación que ya tenga recursos gestionados:
+Es el **escenario 6**. Lo que hay que dejar claro en la defensa son dos cosas: que la cancelación **interrumpe** la preparación, y que se compensa **solo lo que se había gestionado**.
 
-1. Contratar equipamiento y/o reservar aula (completar esas actividades).
-2. Desde la **app de comunicaciones**, con la instancia seleccionada, aparece *Cancelar el curso*: enviarlo.
-3. Las tareas abiertas desaparecen: la preparación se interrumpió.
-4. Queda *Liberar Equipamiento* (la compensación con intervención humana) y *Confirmar liberación de recursos* en la bandeja del grupo.
-5. Al completarlas, la instancia cierra con `resultadoCurso = CANCELADO` y el curso queda `CANCELADO` en la BD de la institución.
+> La preparación de la máquina (compilar, levantar Docker, correr `preparar_demo.py`) está en [02 §3.0](02-viabilidad-y-acuerdo.md#30-preparar-la-máquina-una-sola-vez-antes-de-la-defensa). El truco para ver el diagrama con la instancia resaltada, en [02 §3.1](02-viabilidad-y-acuerdo.md#31-el-truco-para-mostrarlo-gráficamente).
 
-Las variables `aulaLiberada`, `aulaVirtualLiberada` y `equipoLiberado` muestran qué se compensó.
+### El código que hay que mostrar
 
-`CompensationTest` cubre tres casos: solo aula, solo equipamiento, y los dos juntos; en cada uno verifica que se compense **únicamente** lo gestionado.
+| Qué | Dónde |
+|---|---|
+| El subproceso de evento | BPMN **línea 183**, `<subProcess id="cancelacion" triggeredByEvent="true">` |
+| El mensaje que lo dispara, **interruptor** | BPMN **línea 184**, `<startEvent id="recibircancelacion" isInterrupting="true">` |
+| Los tres lanzamientos de compensación | BPMN **líneas 188, 191 y 194**, `<compensateEventDefinition activityRef="...">` |
+| Los bordes que registran el handler | BPMN **líneas 156, 176 y 179**, `cancelActivity="false"` |
+| Las tres actividades de compensación | BPMN **líneas 159** (equipamiento), **165** (aula) y **166** (aula virtual), todas con `isForCompensation="true"` |
+| El delegate que libera el aula | [`ReleaseClassroomDelegate.java`](../../flowable/src/main/java/com/flowable/app/delegates/ReleaseClassroomDelegate.java) |
+| Marcar que fue cancelación | BPMN **línea 197**, `setVariable("cancelado", true)` |
+| La compuerta ¿Cancelado? | BPMN **línea 401**, `${cancelado == true}` |
+| El listener que cierra la escucha | [`CloseCancellationListener.java`](../../flowable/src/main/java/com/flowable/app/listeners/CloseCancellationListener.java) |
+
+Para abrir el BPMN en el editor y saltar a una línea: `Ctrl+G` en VS Code y escribir el número.
+
+### Paso a paso
+
+De la lista que imprimió el script, buscá el escenario **"6. Cancelación con compensación"** y copiá su id. Esa instancia ya está cancelada y esperando que se confirmen las liberaciones, así que para mostrar la secuencia completa conviene armar una nueva en vivo.
+
+**Opción A — mostrar la que ya está preparada (más rápido):**
+
+1. Mostrá el diagrama con el comando de [02 §3.1](02-viabilidad-y-acuerdo.md#31-el-truco-para-mostrarlo-gráficamente): el círculo rojo está en el recuadro **Cancelación**, sobre *Confirmar liberación de recursos*. Las tareas de la preparación **ya no están**: se interrumpieron.
+2. Mostrá qué se compensó:
+
+```bash
+curl -s -u admin:test "http://localhost:8080/process-api/history/historic-variable-instances?processInstanceId=PEGAR_EL_ID&size=50" | python3 -m json.tool | grep -A2 -E "aulaLiberada|equipoLiberado|aulaVirtualLiberada|cancelado"
+```
+
+3. Entrá al sitio como `administrativo1` / `password` → **Mis tareas**. Está *Confirmar liberación de recursos* en "Disponibles para mi grupo". Apretá **Reclamar** y después **Completar**.
+4. La instancia cierra. Mostralo:
+
+```bash
+docker exec flowable-postgres psql -U flowable -d flowable -c "select id, name, status from courses where status is not null order by id desc limit 3;"
+```
+
+Tiene que decir `CANCELADO`.
+
+**Opción B — hacerlo en vivo de punta a punta (más vistoso):**
+
+1. Buscá en la lista el escenario **"10. Acceso de la empresa y preparación en paralelo"**: esa instancia está en preparación con las tres ramas abiertas.
+2. Entrá al sitio como `administrativo1` → **Mis tareas** → *Evaluar Recursos* → **Reclamar** → **Completar**.
+3. En la pantalla de recursos, **tildá "Aula física" y "Equipamiento especial"** y apretá **Confirmar recursos**. Así hay dos recursos gestionados y la compensación tendrá algo que liberar.
+4. Mostrá que el aula se reservó sola (es un service task, no la hizo nadie):
+
+```bash
+docker compose logs --tail 20 flowable-app | grep -i aula
+```
+
+5. Volvé a **Mis tareas** y completá *Contratar equipamiento* (reclamar + completar). Ahora hay **aula física y equipamiento** gestionados.
+6. Abrí la app de la empresa:
+
+```bash
+java -jar comunicaciones/target/app.jar
+```
+
+7. En la ventana, **seleccioná el curso "Atención al Cliente"**. Abajo aparece **Cancelación** entre las comunicaciones habilitadas (solo aparece porque la instancia está dentro de la preparación). Apretá **Enviar**.
+8. **Acá está el momento de la demo:** volvé al sitio, recargá **Mis tareas**. Las tareas de la preparación **desaparecieron** — el mensaje interruptor las canceló todas de una. En su lugar aparecen *Liberar Equipamiento* y después *Confirmar liberación de recursos*.
+9. Mostrá el diagrama otra vez: el token está adentro del recuadro **Cancelación**.
+10. Completá *Liberar Equipamiento* y *Confirmar liberación de recursos* (reclamar + completar cada una).
+11. Verificá que se compensó **solo lo gestionado**:
+
+```bash
+curl -s -u admin:test "http://localhost:8080/process-api/history/historic-variable-instances?processInstanceId=PEGAR_EL_ID&size=50" | python3 -m json.tool | grep -B1 -A2 "Liberada\|Liberado"
+```
+
+Van a estar `aulaLiberada: true` y `equipoLiberado: true`, y **`aulaVirtualLiberada` no va a existir**, porque nunca se solicitó aula virtual. Ese es el punto 3 del enunciado, y no hay ningún `if` en el código que lo decida: lo hace el motor con los handlers de compensación.
+
+### Correr el test en vivo
+
+`CompensationTest` cubre los tres casos (solo aula, solo equipamiento, los dos):
+
+```bash
+cd flowable && mvn test -DforkCount=0 -Dtest=CompensationTest && cd ..
+```
+
+Son tres tests y los tres tienen que dar verde. Si te preguntan cómo verifican que **no** se compense lo que no se gestionó, el test lo comprueba chequeando que la variable de liberación del recurso no usado no exista.
+
+### Si algo sale mal en vivo
+
+| Síntoma | Qué hacer |
+|---|---|
+| La app de comunicaciones no ofrece *Cancelación* | La instancia no está en preparación. Elegí una que sí lo esté, o fijate el diagrama |
+| Tras cancelar no aparece ninguna tarea | Puede que no se hubiera gestionado ningún recurso: entonces no hay nada que compensar y va directo a *Confirmar liberación*. Es correcto, y vale la pena decirlo |
+| *Liberar Equipamiento* no aparece | Solo sale si se completó *Contratar equipamiento* antes. Es exactamente lo que el escenario quiere mostrar |
 
 ## 4. Preguntas probables
 

@@ -36,6 +36,16 @@ Completo: el BPMN ejecutable, el DMN de viabilidad, los listeners de §3.4, los 
 
 ---
 
+## 🔴 Pendiente detectado al preparar la demo
+
+- [ ] **El estado `NO_VIABLE` no llega a la base.** Cuando la solicitud sale no viable, la instancia termina tan rápido que el `UpdateCourseStatusListener` avisa al backend **antes** de que `CourseService.processCourse` haya guardado el `process_instance_id` en la fila del curso. El backend busca el curso por ese id, no lo encuentra y responde `404 "Course not found"`; el estado queda sin registrar. Se ve en `docker compose logs flowable-app` como `Error al actualizar el estado del curso en backend: 404`.
+
+  Afecta a §3.4, que pide registrar los cinco resultados —incluido *no viable*—. Los otros cuatro funcionan bien porque esas instancias viven lo suficiente.
+
+  **Arreglo propuesto:** el proceso ya arranca con `businessKey = courseId` ([`CourseService`](backend/src/main/java/com/backend/proxy/service/CourseService.java)), y ese dato sí está disponible desde el primer instante. Que `PUT /api/flowable/courses/{id}` acepte también el business key, o que el listener lo mande, resuelve la carrera sin cambiar el modelo. ( )
+
+---
+
 ## 2. Base de datos de la institución (§3.2)
 
 Completo. Las entidades `Company` y `Course` viven en [`backend/src/main/java/com/backend/proxy/entity/`](backend/src/main/java/com/backend/proxy/entity/) y el criterio de qué se persiste está en [`adr/datos-proceso-vs-bd.md`](adr/datos-proceso-vs-bd.md).

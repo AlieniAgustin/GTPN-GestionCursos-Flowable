@@ -64,10 +64,211 @@ El temporizador usa `${plazoRespuesta}`, una variable, no una duración fija: pa
 
 ## 3. Cómo se demuestra
 
-- **Escenario 5 (límite de cursos):** con cinco cursos aceptados, dar de alta una solicitud nueva desde el sitio. Termina sola con `resultadoCurso = NO_VIABLE` y el log imprime cuántos cursos activos contó. Test: `CourseLimitExceededTest`.
-- **Escenario 2 (modificaciones):** pedir modificaciones desde la app de comunicaciones con observaciones, revisar la propuesta en el sitio y ver la **versión 2 del PDF**. Test: `ProposalModificationsTest`.
-- **Escenario 3 (rechazo):** rechazar desde la app de comunicaciones y completar *Archivar solicitud* desde la bandeja. Test: `ProposalRejectionTest`.
-- **Escenario 4 (sin respuesta):** levantar el motor con `PROCESO_PLAZO_RESPUESTA=PT1M`, esperar los dos recordatorios y completar *Archivar solicitud*. Test: `NoResponseTest`.
+### 3.0 Preparar la máquina (una sola vez, antes de la defensa)
+
+Todo se corre desde la carpeta del proyecto. Abrí una terminal y entrá:
+
+```bash
+cd ~/Desktop/"Computer's Science"/"4rd year"/"Gestion y Tecnologias de Procesos de Negocio"/GTPN-GestionCursos-Flowable
+```
+
+**1. Compilar los dos jars** (las imágenes de Docker no compilan, solo copian el jar):
+
+```bash
+cd flowable && ./build.sh && cd ../backend && ./build.sh && cd ..
+```
+
+**2. Levantar los cuatro servicios:**
+
+```bash
+docker compose up -d --build
+```
+
+Esperá ~40 segundos y comprobá que los cuatro digan `healthy` o `Up`:
+
+```bash
+docker compose ps
+```
+
+**3. Dejar una instancia parada en cada escenario:**
+
+```bash
+.venv/bin/python scripts/preparar_demo.py --limpiar
+```
+
+Al terminar imprime una lista con **qué instancia quedó en cada escenario y con qué usuario verla**. Sacale una foto o dejá esa terminal abierta: vas a necesitar los ids.
+
+> Si falla con `No module named requests`, falta el entorno de Python. Se arma una sola vez con los comandos de [`mineria/README.md`](../../mineria/README.md).
+
+**4. Dejar abierto en el navegador:** `http://localhost:8081` — el sitio de la institución.
+
+Los usuarios son `jefeadministrativo`, `administrativo1`, `jefedocente`, `docente1` y `docente2`. **La contraseña de todos es `password`.**
+
+### 3.1 El truco para mostrarlo gráficamente
+
+Esto es lo que conviene tener a mano: Flowable sabe dibujar el diagrama **con la instancia resaltada en rojo** donde está parada. Con el id de una instancia:
+
+```bash
+curl -s -u admin:test "http://localhost:8080/process-api/runtime/process-instances/PEGAR_EL_ID_ACA/diagram" -o /tmp/diagrama.png && xdg-open /tmp/diagrama.png
+```
+
+Se abre el visor de imágenes con el BPMN completo y un **círculo rojo** sobre el nodo donde está esperando. Es la forma más directa de mostrar "miren, la instancia está acá".
+
+> **No uses el Admin App de Flowable UI** (`localhost:8088`). Viene apuntando a otro motor por defecto y hay que reconfigurarlo; en la defensa no carga nada. Todo lo que necesitás está en el sitio propio y en este comando.
+
+---
+
+### Escenario 5 — Límite de cursos en ejecución (§3.1)
+
+**Qué mostrar:** que una solicitud nueva se cierra sola, sin llegar a elaborar propuesta, cuando ya hay cinco cursos en ejecución.
+
+**El código:**
+
+| Qué | Dónde |
+|---|---|
+| Listener que cuenta | [`CountActiveCoursesListener.java`](../../flowable/src/main/java/com/flowable/app/listeners/CountActiveCoursesListener.java) |
+| La consulta al motor | [`CourseProcessService.java:29`](../../flowable/src/main/java/com/flowable/app/services/CourseProcessService.java#L29) |
+| La decision task | BPMN **línea 302**, `<serviceTask id="evaluarviabilidad" flowable:type="dmn">` |
+| La tabla de decisión | [`evaluarViabilidad.dmn`](../../flowable/src/main/resources/dmn/evaluarViabilidad.dmn) |
+| El flujo que marca el resultado | BPMN **línea 374**, `setVariable('resultadoCurso','NO_VIABLE')` |
+
+**Paso a paso:**
+
+1. En el navegador, entrá a `http://localhost:8081` (sin loguearte: la portada es pública).
+2. Completá el formulario con cualquier dato. En **Fechas preferidas** poné una fecha futura, por ejemplo `2027-09-01`.
+3. Apretá **Enviar solicitud**. Aparece "Solicitud registrada" con un número.
+4. Mostrá en la terminal que se cerró sola y por qué:
+
+```bash
+docker compose logs --tail 30 flowable-app | grep -E "active courses|Otros cursos"
+```
+
+Se ve `Otros cursos activos: 5`. Como `5 >= 5`, el DMN devolvió `viable = false`.
+
+5. Mostrá el resultado que registró la instancia:
+
+```bash
+curl -s -u admin:test "http://localhost:8080/process-api/history/historic-variable-instances?variableName=resultadoCurso&size=200" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d['data'][-1]['variable']['value'])"
+```
+
+Devuelve `NO_VIABLE`.
+
+> **Ojo con este caso:** el curso queda en la tabla `courses` **sin** la columna `status`
+> cargada. Hay una condición de carrera conocida: la instancia no viable termina tan
+> rápido que el listener de cierre avisa al backend antes de que el alta haya guardado el
+> `process_instance_id`, así que el backend responde 404 y el estado no se registra. Se
+> ve en los logs del motor como `Error al actualizar el estado del curso en backend: 404`.
+> Está anotado en [`TODO.md`](../../TODO.md). **En la defensa, mostrá el `resultadoCurso`
+> del historial** —que sí es correcto— y no la columna `status` para este escenario en
+> particular. Para los otros cuatro resultados (finalizado, cancelado, rechazado, sin
+> respuesta) la columna se carga bien, porque esas instancias viven lo suficiente.
+
+**Test que lo cubre:** `CourseLimitExceededTest`. Para correrlo en vivo:
+
+```bash
+cd flowable && mvn test -DforkCount=0 -Dtest=CourseLimitExceededTest && cd ..
+```
+
+> El `-DforkCount=0` hace falta siempre en esta máquina: la ruta del proyecto tiene un apóstrofe (`Computer's Science`) y sin eso Maven falla al lanzar el proceso de tests. Está explicado en el [README](../../README.md).
+
+---
+
+### Escenario 3 — Rechazo de la propuesta (§1.1)
+
+**Qué mostrar:** la empresa rechaza, la solicitud va a *Archivar solicitud* y el proceso cierra como `RECHAZADO`.
+
+**El código:**
+
+| Qué | Dónde |
+|---|---|
+| La compuerta de espera | BPMN **línea 271**, `<eventBasedGateway id="esperarrespuesta">` |
+| El evento de rechazo | BPMN **línea 261**, `<intermediateCatchEvent id="rechazo">` |
+| La tarea de archivo | BPMN **línea 284**, `<userTask id="archivarsolicitud" flowable:assignee="jefeadministrativo">` |
+| El flujo que marca el resultado | BPMN **línea 379**, `setVariable('resultadoCurso','RECHAZADO')` |
+
+**Paso a paso:**
+
+1. De la lista que imprimió el script, buscá el escenario **"2/3/4. Respuesta de la empresa"** y copiá su id de instancia.
+2. Mostrá dónde está parada con el comando del diagrama (3.1): se ve el círculo rojo sobre los cuatro eventos de *Esperar respuesta* a la vez. **Ese es el punto fuerte de la compuerta basada en eventos:** el proceso espera las cuatro cosas en paralelo.
+3. Abrí la **app de comunicaciones** (la que simula a la empresa). En otra terminal:
+
+```bash
+java -jar comunicaciones/target/app.jar
+```
+
+4. Se abre una ventana. En la lista de solicitudes, **hacé clic en la del curso "Seguridad e Higiene"**.
+5. Abajo aparecen solo las comunicaciones habilitadas en ese momento: *Aceptación*, *Rechazo* y *Solicitud de modificaciones*. **Elegí "Rechazo"** y apretá **Enviar**.
+6. Volvé al sitio, entrá como `jefeadministrativo` / `password` y andá a **Mis tareas**. Apareció **Archivar solicitud**. Apretá **Completar**.
+7. Mostrá el cierre:
+
+```bash
+docker exec flowable-postgres psql -U flowable -d flowable -c "select id, name, status from courses where name='Seguridad e Higiene' order by id desc limit 1;"
+```
+
+**Test:** `ProposalRejectionTest`.
+
+---
+
+### Escenario 4 — Cierre por falta de respuesta (§1.1)
+
+**Qué mostrar:** pasan los plazos, salen **dos** recordatorios y recién entonces se archiva.
+
+**El código:**
+
+| Qué | Dónde |
+|---|---|
+| El temporizador (sin fecha fija) | BPMN **línea 272**, `<intermediateCatchEvent id="plazo5dias">` con `<timeDuration>${plazoRespuesta}</timeDuration>` |
+| El script que cuenta | BPMN **líneas 277-283**, `<scriptTask id="enviarrecordatorio">` |
+| La compuerta del límite | BPMN **línea 289**, `¿Se enviaron 2 recordatorios?` |
+| Sus dos salidas | BPMN **línea 364** (`no` → volver a esperar) y **línea 382** (`si` → archivar) |
+| El flujo que marca el resultado | BPMN **línea 384**, `setVariable('resultadoCurso','SIN_RESPUESTA')` |
+
+**Paso a paso:**
+
+El script ya dejó una instancia con los dos recordatorios mandados y parada en *Archivar solicitud*. Buscá en la lista el escenario **"4. Cierre por falta de respuesta"**.
+
+1. Mostrá que salieron exactamente dos:
+
+```bash
+docker compose logs flowable-app | grep "Recordatorio"
+```
+
+Sale `Recordatorio 1 enviado` y `Recordatorio 2 enviado`. **Nada más**: es la prueba de que se respeta el máximo de §1.1.
+
+2. Mostrá el contador de la instancia:
+
+```bash
+curl -s -u admin:test "http://localhost:8080/process-api/history/historic-variable-instances?processInstanceId=PEGAR_EL_ID&variableName=recordatorios"
+```
+
+3. Entrá al sitio como `jefeadministrativo`, **Mis tareas** → **Archivar solicitud** → **Completar**.
+
+**Si te preguntan por qué no esperamos cinco días reales:** porque el temporizador es una variable, no una fecha fija. Se baja a un minuto sin tocar el modelo. Para mostrarlo en vivo, en [`docker-compose.yml`](../../docker-compose.yml) hay una línea comentada; se descomenta:
+
+```yaml
+PROCESO_PLAZO_RESPUESTA: PT1M
+```
+
+y se recarga el motor con `docker compose up -d flowable-app`. A partir de ahí cada vuelta tarda un minuto y se ven los recordatorios apareciendo en vivo en los logs:
+
+```bash
+docker compose logs -f flowable-app
+```
+
+(Se corta con `Ctrl+C`.)
+
+**Test:** `NoResponseTest`.
+
+---
+
+### Si algo sale mal en vivo
+
+| Síntoma | Qué hacer |
+|---|---|
+| El sitio no abre | `docker compose ps` — si alguno no está `Up`, `docker compose up -d` |
+| La solicitud nueva sale siempre NO VIABLE | Es correcto si hay 5 cursos activos. Para liberar: `.venv/bin/python scripts/preparar_demo.py --limpiar` |
+| No aparece la tarea en la bandeja | Fijate con qué usuario entraste: cada tarea la ve solo su responsable o su grupo |
+| La app de comunicaciones no lista nada | El motor no responde; revisá `docker compose ps` |
 
 ## 4. Preguntas probables
 
