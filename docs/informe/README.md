@@ -138,12 +138,15 @@ que se ejecuta por consola.
 |---|---|---|
 | — | [00 — Preparación de la demo](escenarios/00-preparacion-de-la-demo.md) | — |
 | 1 | [Aceptación y finalización normal](escenarios/01-aceptacion-y-finalizacion-normal-con-liberacion-de-recursos.md) | Alieni |
+| 2 | [Modificaciones y nueva propuesta](escenarios/02-modificaciones-y-nueva-propuesta.md) | Cesari |
 | 3 | [Rechazo de la propuesta](escenarios/03-rechazo-de-la-propuesta.md) | Alieni |
 | 4 | [Cierre por falta de respuesta](escenarios/04-cierre-por-falta-de-respuesta.md) | Alieni |
 | 5 | [Límite de cursos en ejecución](escenarios/05-limite-de-cursos-en-ejecucion.md) | Alieni |
 | 6 | [Cancelación con compensación](escenarios/06-cancelacion-con-compensacion.md) | Alieni |
+| 9 | [Solicitud desde el sitio e inicio de la instancia](escenarios/09-solicitud-desde-el-sitio.md) | Cesari |
+| — | [Preparación en paralelo y evaluación de recursos](escenarios/preparacion-en-paralelo-y-recursos.md) | Cesari |
 
-Los escenarios 2, 7, 8, 9, 10 y 11 todavía no tienen guion: son de Cesari, Damián y Fran.
+Los escenarios 7, 8, 10 y 11 todavía no tienen guion: son de Damián y Fran.
 
 ---
 
